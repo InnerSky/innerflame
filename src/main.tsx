@@ -1,23 +1,23 @@
-import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import App from './App.tsx';
+import { StrictMode } from 'react';
+import App from './App';
 import './index.css';
-import { AuthProvider } from './contexts/AuthContext.tsx';
-import { registerSW } from 'virtual:pwa-register';
+import { AuthProvider } from './contexts/AuthContext';
+// import { registerSW } from 'virtual:pwa-register';
 
-// Register service worker
-const updateSW = registerSW({
-  onNeedRefresh() {
-    if (confirm('New content available. Reload?')) {
-      updateSW(true);
-    }
-  },
-  onOfflineReady() {
-    console.log('App ready to work offline');
-  },
-});
+// Skip the service worker registration
+// const updateSW = registerSW({
+//   onNeedRefresh() {
+//     if (confirm('New version available. Reload?')) {
+//       updateSW(true);
+//     }
+//   },
+// });
 
-createRoot(document.getElementById('root')!).render(
+const container = document.getElementById('root');
+const root = createRoot(container!);
+
+root.render(
   <StrictMode>
     <AuthProvider>
       <App />
