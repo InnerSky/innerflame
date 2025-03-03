@@ -25,7 +25,7 @@ export function AnimatedSection({
 
   return (
     <div
-      ref={immediate ? undefined : ref}
+      ref={immediate ? undefined : (ref as React.RefObject<HTMLDivElement>)}
       className={cn(
         "transition-all duration-1000",
         shouldAnimate
