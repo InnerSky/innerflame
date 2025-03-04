@@ -1,0 +1,352 @@
+import { AnimatedSection } from "@/components/animated-section";
+import { Card, CardContent } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
+
+export default function UsagePolicy() {
+  return (
+    <div className="container mx-auto py-16 px-4 max-w-4xl">
+      <AnimatedSection>
+        <div className="prose prose-lg dark:prose-invert max-w-none">
+          <div className="text-center mb-16">
+            <h1 className="text-5xl font-bold mb-4 bg-gradient-to-r from-orange-500 to-red-500 bg-clip-text text-transparent">Usage Policy</h1>
+            <p className="text-sm text-muted-foreground inline-block border border-muted rounded-full px-4 py-1">Effective March 4, 2025</p>
+          </div>
+
+          <Card className="mb-16 shadow-md border-orange-100 dark:border-orange-900/30">
+            <CardContent className="pt-6">
+              <p className="text-lg">
+                This Usage Policy (also referred to as our "Acceptable Use Policy" or "AUP") applies to anyone who uses InnerFlame products and services, and is intended to help our users stay safe and ensure our products and services are being used responsibly.
+              </p>
+            </CardContent>
+          </Card>
+
+          <p className="mb-8 text-lg">
+            The Usage Policy is categorized according to who can use our products and for what purposes. We will update our policy as our technology and the associated risks evolve or as we learn about unanticipated risks from our users.
+          </p>
+
+          <div className="grid gap-6 md:grid-cols-3 mb-10">
+            <Card className="shadow-sm hover:shadow-md transition-shadow duration-200 border-l-4 border-l-orange-500">
+              <CardContent className="p-6">
+                <h3 className="text-lg font-semibold mb-2">Universal Usage Standards</h3>
+                <p className="text-muted-foreground text-sm">Our Universal Usage Standards apply to all users including individuals, developers, and businesses.</p>
+              </CardContent>
+            </Card>
+            
+            <Card className="shadow-sm hover:shadow-md transition-shadow duration-200 border-l-4 border-l-red-500">
+              <CardContent className="p-6">
+                <h3 className="text-lg font-semibold mb-2">High-Risk Use Case Requirements</h3>
+                <p className="text-muted-foreground text-sm">Our High-Risk Use Case Requirements apply to specific use cases that pose an elevated risk of harm.</p>
+              </CardContent>
+            </Card>
+            
+            <Card className="shadow-sm hover:shadow-md transition-shadow duration-200 border-l-4 border-l-amber-500">
+              <CardContent className="p-6">
+                <h3 className="text-lg font-semibold mb-2">Disclosure Requirements</h3>
+                <p className="text-muted-foreground text-sm">Our Disclosure Requirements apply to specific use cases where it is especially important for users to understand that they are interacting with an AI system.</p>
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="bg-muted/30 p-6 rounded-lg mb-12 border border-muted">
+            <p className="mb-6">
+              North Mirror LLC's Trust and Safety Team will implement detections and monitoring to enforce our Usage Policies so please review these policies carefully before using our products. If we learn that you have violated our Usage Policy, we may throttle, suspend, or terminate your access to our products and services. If you discover that our platform outputs are inaccurate, biased or harmful, please notify us at <a href="mailto:support@northmirror.com" className="text-primary hover:underline">support@northmirror.com</a> or report it directly in the product through the support center.
+            </p>
+
+            <p>
+              This Usage Policy is calibrated to strike an optimal balance between enabling beneficial uses and mitigating potential harms. North Mirror LLC may enter into contracts with certain governmental customers that tailor use restrictions to that customer's public mission and legal authorities if, in North Mirror LLC's judgment, the contractual use restrictions and applicable safeguards are adequate to mitigate the potential harms addressed by this Usage Policy.
+            </p>
+          </div>
+
+          <h2 className="text-3xl font-bold mb-8 pb-2 border-b border-muted">Universal Usage Standards</h2>
+
+          {/* Child Safety */}
+          <div className="mb-12">
+            <div className="flex items-center gap-2 mb-4">
+              <Badge variant="destructive" className="px-3 py-1 text-xs">Critical</Badge>
+              <h3 className="text-2xl font-semibold">Do Not Compromise Children's Safety</h3>
+            </div>
+            <p className="mb-3 text-muted-foreground">This includes using our products or services to:</p>
+            <ul className="mb-6 space-y-2 pl-6">
+              <li className="pl-2">Create, distribute, or promote child sexual abuse material. We strictly prohibit and will report to relevant authorities and organizations where appropriate any content that exploits or abuses minors</li>
+              <li className="pl-2">Facilitate the trafficking, sextortion, or any other form of exploitation of a minor</li>
+              <li className="pl-2">Facilitate minor grooming, including generating content designed to impersonate a minor</li>
+              <li className="pl-2">Facilitate or depict child abuse of any form, including instructions for how to conceal abuse</li>
+              <li className="pl-2">Promote or facilitate pedophilic relationships, including via roleplay with the model</li>
+              <li className="pl-2">Fetishize minors</li>
+            </ul>
+          </div>
+
+          {/* Critical Infrastructure */}
+          <div className="mb-12">
+            <div className="flex items-center gap-2 mb-4">
+              <Badge variant="destructive" className="px-3 py-1 text-xs">Critical</Badge>
+              <h3 className="text-2xl font-semibold">Do Not Compromise Critical Infrastructure</h3>
+            </div>
+            <p className="mb-3 text-muted-foreground">This includes using our products or services to:</p>
+            <ul className="mb-6 space-y-2 pl-6">
+              <li className="pl-2">Facilitate the destruction or disruption of critical infrastructure such as power grids, water treatment facilities, telecommunication networks, or air traffic control systems</li>
+              <li className="pl-2">Obtain unauthorized access to critical systems such as voting machines, healthcare databases, and financial markets</li>
+              <li className="pl-2">Interfere with the operation of military bases and related infrastructure</li>
+            </ul>
+          </div>
+
+          {/* Violence & Hate */}
+          <div className="mb-12">
+            <div className="flex items-center gap-2 mb-4">
+              <Badge variant="destructive" className="px-3 py-1 text-xs">Critical</Badge>
+              <h3 className="text-2xl font-semibold">Do Not Incite Violence or Hateful Behavior</h3>
+            </div>
+            <p className="mb-3 text-muted-foreground">This includes using our products or services to:</p>
+            <ul className="mb-6 space-y-2 pl-6">
+              <li className="pl-2">Incite, facilitate, or promote violent extremism, terrorism, or hateful behavior</li>
+              <li className="pl-2">Depict support for organizations or individuals associated with violent extremism, terrorism, or hateful behavior</li>
+              <li className="pl-2">Facilitate or promote any act of violence or intimidation targeting individuals, groups, animals, or property</li>
+              <li className="pl-2">Promote discriminatory practices or behaviors against individuals or groups on the basis of one or more protected attributes such as race, ethnicity, religion, nationality, gender, sexual orientation, or any other identifying trait</li>
+            </ul>
+          </div>
+
+          {/* Privacy & Identity */}
+          <div className="mb-12">
+            <div className="flex items-center gap-2 mb-4">
+              <Badge variant="secondary" className="px-3 py-1 text-xs bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400">Important</Badge>
+              <h3 className="text-2xl font-semibold">Do Not Compromise Someone's Privacy or Identity</h3>
+            </div>
+            <p className="mb-3 text-muted-foreground">This includes using our products or services to:</p>
+            <ul className="mb-6 space-y-2 pl-6">
+              <li className="pl-2">Compromise security or gain unauthorized access to computer systems or networks, including spoofing and social engineering</li>
+              <li className="pl-2">Violate the security, integrity, or availability of any user, network, computer, device, or communications system, software application, or network or computing device</li>
+              <li className="pl-2">Violate any person's privacy rights as defined by applicable privacy laws, such as sharing personal information without consent, accessing private data unlawfully, or violating any relevant privacy regulations</li>
+              <li className="pl-2">Misuse, collect, solicit, or gain access to private information without permission such as non-public contact details, health data, biometric or neural data (including facial recognition), or confidential or proprietary data</li>
+              <li className="pl-2">Impersonate a human by presenting results as human-generated, or using results in a manner intended to convince a natural person that they are communicating with a natural person when they are not</li>
+            </ul>
+          </div>
+
+          {/* Weapons & Illegal Goods */}
+          <div className="mb-12">
+            <div className="flex items-center gap-2 mb-4">
+              <Badge variant="destructive" className="px-3 py-1 text-xs">Critical</Badge>
+              <h3 className="text-2xl font-semibold">Do Not Create or Facilitate the Exchange of Illegal or Highly Regulated Weapons or Goods</h3>
+            </div>
+            <p className="mb-3 text-muted-foreground">This includes using our products or services to:</p>
+            <ul className="mb-6 space-y-2 pl-6">
+              <li className="pl-2">Produce, modify, design, market, or distribute weapons, explosives, dangerous materials or other systems designed to cause harm to or loss of human life</li>
+              <li className="pl-2">Engage in or facilitate any illegal activity, such as the use, acquisition, or exchange of illegal and controlled substances, or the facilitation of human trafficking and prostitution</li>
+            </ul>
+          </div>
+
+          {/* Harmful Content */}
+          <div className="mb-12">
+            <div className="flex items-center gap-2 mb-4">
+              <Badge variant="secondary" className="px-3 py-1 text-xs bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400">Important</Badge>
+              <h3 className="text-2xl font-semibold">Do Not Create Psychologically or Emotionally Harmful Content</h3>
+            </div>
+            <p className="mb-3 text-muted-foreground">This includes using our products or services to:</p>
+            <ul className="mb-6 space-y-2 pl-6">
+              <li className="pl-2">Facilitate or conceal any form of self-harm, including disordered eating and unhealthy or compulsive exercise</li>
+              <li className="pl-2">Engage in behaviors that promote unhealthy or unattainable body image or beauty standards</li>
+              <li className="pl-2">Shame, humiliate, intimidate, bully, harass, or celebrate the suffering of individuals</li>
+              <li className="pl-2">Coordinate the harassment or intimidation of an individual or group</li>
+              <li className="pl-2">Generate content depicting sexual violence</li>
+              <li className="pl-2">Generate content depicting animal cruelty or abuse</li>
+              <li className="pl-2">Generate violent or gory content that is inspired by real acts of violence</li>
+              <li className="pl-2">Promote, trivialize, or depict graphic violence or gratuitous gore</li>
+              <li className="pl-2">Develop a product, or support an existing service that facilitates deceptive techniques with the intent of causing emotional harm</li>
+            </ul>
+          </div>
+
+          {/* Misinformation */}
+          <div className="mb-12">
+            <div className="flex items-center gap-2 mb-4">
+              <Badge variant="secondary" className="px-3 py-1 text-xs bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400">Important</Badge>
+              <h3 className="text-2xl font-semibold">Do Not Spread Misinformation</h3>
+            </div>
+            <p className="mb-3 text-muted-foreground">This includes the usage of our products or services to:</p>
+            <ul className="mb-6 space-y-2 pl-6">
+              <li className="pl-2">Create and disseminate deceptive or misleading information about a group, entity or person</li>
+              <li className="pl-2">Create and disseminate deceptive or misleading information about laws, regulations, procedures, practices, standards established by an institution, entity or governing body</li>
+              <li className="pl-2">Create and disseminate deceptive or misleading information with the intention of targeting specific groups or persons with the misleading content</li>
+              <li className="pl-2">Create and advance conspiratorial narratives meant to target a specific group, individual or entity</li>
+              <li className="pl-2">Impersonate real entities or create fake personas to falsely attribute content or mislead others about its origin without consent or legal right</li>
+              <li className="pl-2">Provide false or misleading information related to medical, health or science issues</li>
+            </ul>
+          </div>
+
+          {/* Political Campaigns */}
+          <div className="mb-12">
+            <div className="flex items-center gap-2 mb-4">
+              <Badge variant="secondary" className="px-3 py-1 text-xs">Restricted</Badge>
+              <h3 className="text-2xl font-semibold">Do Not Create Political Campaigns or Interfere in Elections</h3>
+            </div>
+            <p className="mb-3 text-muted-foreground">This includes the usage of our products or services to:</p>
+            <ul className="mb-6 space-y-2 pl-6">
+              <li className="pl-2">Promote or advocate for a particular political candidate, party, issue or position. This includes soliciting votes, financial contributions, or public support for a political entity</li>
+              <li className="pl-2">Engage in political lobbying to actively influence the decisions of government officials, legislators, or regulatory agencies on legislative, regulatory, or policy matters</li>
+              <li className="pl-2">Engage in campaigns, including political campaigns, that promote false or misleading information to discredit or undermine individuals, groups, entities or institutions</li>
+              <li className="pl-2">Incite, glorify or facilitate the disruption of electoral or civic processes</li>
+              <li className="pl-2">Generate false or misleading information on election laws, procedures and security, candidate information, how to participate, or discouraging participation in an election</li>
+            </ul>
+          </div>
+
+          {/* Criminal Justice & Surveillance */}
+          <div className="mb-12">
+            <div className="flex items-center gap-2 mb-4">
+              <Badge variant="secondary" className="px-3 py-1 text-xs">Restricted</Badge>
+              <h3 className="text-2xl font-semibold">Do Not Use for Criminal Justice, Law Enforcement, Censorship or Surveillance Purposes</h3>
+            </div>
+            <p className="mb-3 text-muted-foreground">This includes the usage of our products or services to:</p>
+            <ul className="mb-6 space-y-2 pl-6">
+              <li className="pl-2">Make determinations on criminal justice applications, including making decisions about or determining eligibility for parole or sentencing</li>
+              <li className="pl-2">Target or track a person's physical location, emotional state, or communication without their consent</li>
+              <li className="pl-2">Utilize InnerFlame to assign scores or ratings to individuals based on an assessment of their trustworthiness or social behavior</li>
+              <li className="pl-2">Build or support emotional recognition systems or techniques that are used to infer people's emotions</li>
+              <li className="pl-2">Analyze or identify specific content to censor on behalf of a government organization</li>
+            </ul>
+          </div>
+
+          {/* Fraudulent Practices */}
+          <div className="mb-12">
+            <div className="flex items-center gap-2 mb-4">
+              <Badge variant="secondary" className="px-3 py-1 text-xs bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400">Important</Badge>
+              <h3 className="text-2xl font-semibold">Do Not Engage in Fraudulent, Abusive, or Predatory Practices</h3>
+            </div>
+            <p className="mb-3 text-muted-foreground">This includes using our products or services to:</p>
+            <ul className="mb-6 space-y-2 pl-6">
+              <li className="pl-2">Facilitate the production, acquisition, or distribution of counterfeit or illicitly acquired goods</li>
+              <li className="pl-2">Promote or facilitate the generation or distribution of spam</li>
+              <li className="pl-2">Generate content for fraudulent activities, schemes, scams, phishing, or malware that can result in direct financial or psychological harm</li>
+              <li className="pl-2">Generate content for the purposes of developing or promoting the sale or distribution of fraudulent or deceptive products</li>
+              <li className="pl-2">Generate deceptive or misleading digital content such as fake reviews, comments, or media</li>
+              <li className="pl-2">Engage in or facilitate multi-level marketing, pyramid schemes, or other deceptive business models that use high-pressure sales tactics or exploit participants</li>
+              <li className="pl-2">Promote or facilitate payday loans, title loans, or other high-interest, short-term lending practices that exploit vulnerable individuals</li>
+              <li className="pl-2">Engage in deceptive, abusive behaviors, practices, or campaigns that exploits people due to their age, disability or a specific social or economic situation</li>
+              <li className="pl-2">Promote or facilitate the use of abusive or harassing debt collection practices</li>
+              <li className="pl-2">Develop a product, or support an existing service that deploys subliminal, manipulative, or deceptive techniques to distort behavior by impairing decision-making</li>
+              <li className="pl-2">Plagiarize or engage in academic dishonesty</li>
+            </ul>
+          </div>
+
+          {/* Platform Abuse */}
+          <div className="mb-12">
+            <div className="flex items-center gap-2 mb-4">
+              <Badge variant="secondary" className="px-3 py-1 text-xs">Restricted</Badge>
+              <h3 className="text-2xl font-semibold">Do Not Abuse our Platform</h3>
+            </div>
+            <p className="mb-3 text-muted-foreground">This includes using our products or services to:</p>
+            <ul className="mb-6 space-y-2 pl-6">
+              <li className="pl-2">Coordinate malicious activity across multiple accounts such as creating multiple accounts to avoid detection or circumvent product guardrails</li>
+              <li className="pl-2">Utilize automation in account creation or to engage in spammy behavior</li>
+              <li className="pl-2">Circumvent a ban through the use of a different account, such as the creation of a new account, use of an existing account, or providing access to a person or entity that was previously banned</li>
+              <li className="pl-2">Facilitate or provide account access to InnerFlame to persons or entities who are located in unsupported locations</li>
+              <li className="pl-2">Intentionally bypass capabilities or restrictions established within our products for the purposes of instructing the system to produce harmful outputs without an authorized use-case approved by North Mirror LLC</li>
+              <li className="pl-2">Unauthorized utilization of platform features to train an AI model</li>
+            </ul>
+          </div>
+
+          {/* Sexual Content */}
+          <div className="mb-12">
+            <div className="flex items-center gap-2 mb-4">
+              <Badge variant="destructive" className="px-3 py-1 text-xs">Critical</Badge>
+              <h3 className="text-2xl font-semibold">Do Not Generate Sexually Explicit Content</h3>
+            </div>
+            <p className="mb-3 text-muted-foreground">This includes the usage of our products or services to:</p>
+            <ul className="mb-6 space-y-2 pl-6">
+              <li className="pl-2">Depict or request sexual intercourse or sex acts</li>
+              <li className="pl-2">Generate content related to sexual fetishes or fantasies</li>
+              <li className="pl-2">Facilitate, promote, or depict incest or bestiality</li>
+              <li className="pl-2">Engage in erotic chats</li>
+            </ul>
+          </div>
+
+          <Separator className="my-16" />
+
+          <h2 className="text-3xl font-bold mb-8 pb-2 border-b border-muted">High-Risk Use Case Requirements</h2>
+          <div className="mb-10 bg-muted/20 p-8 rounded-lg border border-muted">
+            <p className="mb-6 text-lg">
+              While InnerFlame is primarily designed for business development purposes, some integrations may pose an elevated risk of harm because they influence domains that are vital to public welfare and social equity. If you intend to use InnerFlame in the following contexts, additional safety measures are required:
+            </p>
+
+            <div className="grid gap-6 md:grid-cols-3 mb-10">
+              <Card className="shadow-sm hover:shadow-md transition-shadow duration-200">
+                <CardContent className="p-6">
+                  <h3 className="text-lg font-semibold mb-2">Business Decision-Making</h3>
+                  <p className="text-muted-foreground text-sm">Integrations where InnerFlame is used to make significant business decisions affecting individuals' employment, financial status, or contractual relationships</p>
+                </CardContent>
+              </Card>
+              
+              <Card className="shadow-sm hover:shadow-md transition-shadow duration-200">
+                <CardContent className="p-6">
+                  <h3 className="text-lg font-semibold mb-2">Financial Guidance</h3>
+                  <p className="text-muted-foreground text-sm">Integrations where InnerFlame provides financial guidance that could significantly impact individuals' financial wellbeing</p>
+                </CardContent>
+              </Card>
+              
+              <Card className="shadow-sm hover:shadow-md transition-shadow duration-200">
+                <CardContent className="p-6">
+                  <h3 className="text-lg font-semibold mb-2">Educational Applications</h3>
+                  <p className="text-muted-foreground text-sm">Integrations where InnerFlame is used for formal educational assessment or training</p>
+                </CardContent>
+              </Card>
+            </div>
+
+            <p className="mb-6 text-lg">
+              If your integration falls into these categories, we require that you implement these additional safety measures:
+            </p>
+
+            <div className="grid gap-6 md:grid-cols-2 mb-6">
+              <Card className="shadow-sm border-l-4 border-l-amber-500">
+                <CardContent className="p-6">
+                  <h3 className="text-lg font-semibold mb-2">Human-in-the-loop</h3>
+                  <p className="text-muted-foreground">When using our products or services to provide advice, recommendations, or subjective decisions that directly impact individuals in high-risk domains, a qualified professional must review the content or decision prior to dissemination or finalization. Your business is responsible for the accuracy and appropriateness of that information.</p>
+                </CardContent>
+              </Card>
+              
+              <Card className="shadow-sm border-l-4 border-l-amber-500">
+                <CardContent className="p-6">
+                  <h3 className="text-lg font-semibold mb-2">Disclosure</h3>
+                  <p className="text-muted-foreground">You must disclose to your customers or end users that you are using our services to help inform your decisions or recommendations.</p>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+
+          <Separator className="my-16" />
+
+          <h2 className="text-3xl font-bold mb-8 pb-2 border-b border-muted">Disclosure Requirements</h2>
+          <div className="bg-muted/20 p-8 rounded-lg border border-muted mb-16">
+            <p className="mb-6 text-lg">
+              The following use cases must disclose to their users that they are interacting with an AI system rather than a human:
+            </p>
+
+            <ul className="space-y-4 mb-6">
+              <li className="bg-white dark:bg-neutral-800 p-4 rounded-lg shadow-sm flex items-start gap-3 border border-muted">
+                <Badge className="mt-1">Required</Badge>
+                <div>
+                  <h4 className="font-medium">All customer-facing chatbots</h4>
+                  <p className="text-muted-foreground text-sm">Including any external-facing or interactive AI agent</p>
+                </div>
+              </li>
+              
+              <li className="bg-white dark:bg-neutral-800 p-4 rounded-lg shadow-sm flex items-start gap-3 border border-muted">
+                <Badge className="mt-1">Required</Badge>
+                <div>
+                  <h4 className="font-medium">Services serving minors</h4>
+                  <p className="text-muted-foreground text-sm">Organizations providing minors with the ability to directly interact with products that incorporate InnerFlame</p>
+                </div>
+              </li>
+            </ul>
+          </div>
+
+          <div className="bg-gradient-to-r from-orange-50 to-orange-100 dark:from-orange-950/20 dark:to-red-950/20 p-8 rounded-lg border border-orange-200 dark:border-orange-900/30 flex flex-col items-center justify-center text-center mb-12">
+            <p className="text-lg mb-4">
+              For any questions regarding this Usage Policy, please contact:
+            </p>
+            <a href="mailto:support@northmirror.com" className="text-xl text-primary hover:underline font-medium inline-flex items-center gap-2">
+              support@northmirror.com
+            </a>
+          </div>
+        </div>
+      </AnimatedSection>
+    </div>
+  );
+} 
