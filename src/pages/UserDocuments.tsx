@@ -887,7 +887,7 @@ const UserDocuments = () => {
                       <FileText className="h-16 w-16 mx-auto mb-4 opacity-20" />
                       <p className="mb-4">Select a document to view or edit its content</p>
                     </div>
-                    <Button onClick={createNewDocument} variant="subtle" className="transition-colors">
+                    <Button onClick={createNewDocument} variant="default" className="transition-colors">
                       <FilePlus className="mr-2 h-[1.2rem] w-[1.2rem]" />
                       Create New Document
                     </Button>
@@ -950,7 +950,7 @@ const UserDocuments = () => {
                         <FileText className="h-16 w-16 mx-auto mb-4 opacity-20" />
                         <p className="mb-4">Select a document to view or edit its content</p>
                       </div>
-                      <Button onClick={createNewDocument} variant="subtle" className="transition-colors">
+                      <Button onClick={createNewDocument} variant="default" className="transition-colors">
                         <FilePlus className="mr-2 h-[1.2rem] w-[1.2rem]" />
                         Create New Document
                       </Button>

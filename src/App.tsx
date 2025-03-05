@@ -2,13 +2,16 @@ import { useState, useEffect, lazy, Suspense } from "react";
 import { BrowserRouter, Routes, Route, Link, useLocation } from "react-router-dom";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { ThemeButtonMobile } from "@/components/ThemeButtonMobile";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { 
   ChevronRight,
   Users,
-  BookOpen
+  BookOpen,
+  LogOut,
+  Settings as SettingsIcon
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { AuthModal } from "@/components/auth/AuthModal";
@@ -24,6 +27,7 @@ import Settings from "./pages/Settings";
 import UsagePolicy from "./pages/UsagePolicy";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import UserDocuments from "./pages/UserDocuments";
+import { SignOutDialog } from "@/components/SignOutDialog";
 const OfflinePage = lazy(() => import("./pages/OfflinePage"));
 
 function App() {
@@ -40,7 +44,7 @@ function AppContent() {
   const [scrolled, setScrolled] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const location = useLocation();
-  const { user, loading } = useAuth();
+  const { user, loading, signOut } = useAuth();
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
   
   // Check if we're on the user documents page
@@ -178,27 +182,33 @@ function AppContent() {
                 </Button>
               </Link>
               <Separator className="my-3" />
-              <div className="flex items-center justify-between px-3">
-                <span className="text-sm">Theme</span>
-                <ThemeToggle />
-              </div>
-              <Separator className="my-3" />
-              {loading ? (
-                <Button disabled className="w-full text-sm sm:text-base">
-                  <span className="animate-pulse">Loading...</span>
-                </Button>
-              ) : user ? (
+              <ThemeButtonMobile />
+              {user && (
                 <Link to="/settings">
                   <Button 
-                    variant="outline" 
-                    className="w-full text-sm sm:text-base"
+                    variant="ghost" 
+                    className="w-full justify-start text-sm sm:text-base"
                     onClick={() => {
                       setIsMenuOpen(false);
                     }}
                   >
                     Settings
+                    <SettingsIcon className="ml-auto h-4 w-4" />
                   </Button>
                 </Link>
+              )}
+              <Separator className="my-3 opacity-50" />
+              {loading ? (
+                <Button disabled className="w-full text-sm sm:text-base">
+                  <span className="animate-pulse">Loading...</span>
+                </Button>
+              ) : user ? (
+                <SignOutDialog 
+                  onSignOut={() => {
+                    setIsMenuOpen(false);
+                    signOut && signOut();
+                  }}
+                />
               ) : (
                 <AuthModal 
                   trigger={
