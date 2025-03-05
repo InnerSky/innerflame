@@ -157,7 +157,16 @@ const AdminPage = () => {
               <CardDescription>Manage articles, resources, and other content</CardDescription>
             </CardHeader>
             <CardContent>
-              <p>Content management features will be implemented here.</p>
+              <div className="space-y-4">
+                <div>
+                  <h3 className="text-lg font-medium mb-2">Document Management</h3>
+                  <Button onClick={() => navigate('/user-documents')}>
+                    Manage User Documents
+                  </Button>
+                </div>
+                <Separator />
+                <p>Additional content management features will be implemented here.</p>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -169,7 +178,39 @@ const AdminPage = () => {
               <CardDescription>Configure application settings</CardDescription>
             </CardHeader>
             <CardContent>
-              <p>Site settings will be implemented here.</p>
+              <div className="space-y-4">
+                <div>
+                  <h3 className="text-lg font-medium mb-2">Database Tests</h3>
+                  <Button 
+                    onClick={async () => {
+                      if (!user) return;
+                      try {
+                        const { data, error } = await supabase
+                          .from('entities')
+                          .insert({
+                            user_id: user.id,
+                            title: 'Test Document',
+                            content: 'This is a test document to verify the entities table.',
+                            entity_type: 'user_document',
+                          })
+                          .select()
+                          .single();
+                        
+                        if (error) throw error;
+                        
+                        alert('Test document created successfully: ' + data.id);
+                      } catch (err) {
+                        console.error('Error creating test document:', err);
+                        alert('Error creating test document: ' + JSON.stringify(err));
+                      }
+                    }}
+                  >
+                    Test Entities Table
+                  </Button>
+                </div>
+                <Separator />
+                <p>Additional site settings will be implemented here.</p>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
