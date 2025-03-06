@@ -11,6 +11,7 @@ import { Spinner } from '@/components/Spinner';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import { MarkdownRenderer } from '@/components/markdown-renderer';
 import { 
   AlertCircle, 
   FilePlus, 
@@ -32,7 +33,9 @@ import {
   Copy,
   MoreHorizontal,
   Plus,
-  Home
+  Home,
+  Eye,
+  FileEdit
 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { 
@@ -115,6 +118,7 @@ const UserDocuments = () => {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [pendingDocument, setPendingDocument] = useState<Document | null>(null);
   const [showDiscardDialog, setShowDiscardDialog] = useState(false);
+  const [isPreviewMode, setIsPreviewMode] = useState(false);
   const saveTimeoutRef = useRef<number | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const isMobile = useMediaQuery('(max-width: 768px)');
@@ -567,6 +571,31 @@ const UserDocuments = () => {
     navigate('/');
   };
 
+  // Toggle markdown preview mode
+  const togglePreviewMode = () => {
+    setIsPreviewMode(!isPreviewMode);
+  };
+
+  // Helper function to count words in mixed language text
+  const countWords = (text: string | null): number => {
+    if (!text) return 0;
+    
+    // First, extract all CJK (Chinese, Japanese, Korean) characters
+    // This regex matches CJK Unified Ideographs (Chinese characters)
+    const cjkPattern = /[\u4e00-\u9fff\u3400-\u4dbf\uf900-\ufaff\u3300-\u33ff\ufe30-\ufe4f\uf900-\ufaff\uff00-\uffef\u2e80-\u2eff\u3000-\u303f\u31c0-\u31ef\u3200-\u32ff]/g;
+    
+    // Extract CJK characters and count them individually
+    const cjkMatches = text.match(cjkPattern) || [];
+    const cjkCount = cjkMatches.length;
+    
+    // Remove CJK characters and count remaining words (western text)
+    const westernText = text.replace(cjkPattern, '');
+    const westernWords = westernText.split(/\s+/).filter(Boolean).length;
+    
+    // Total word count is CJK characters plus western words
+    return cjkCount + westernWords;
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -754,7 +783,7 @@ const UserDocuments = () => {
                                       className="text-xs opacity-60"
                                     >
                                       {doc.content ? 
-                                        `${doc.content.split(/\s+/).filter(Boolean).length} words` : 
+                                        `${countWords(doc.content)} words` : 
                                         'Empty'
                                       }
                                     </Badge>
@@ -836,24 +865,52 @@ const UserDocuments = () => {
               <div className="flex flex-col h-[calc(100vh-65px)]">
                 {selectedDocument ? (
                   <div className="flex flex-col h-full">
-                    <div className="mb-2">
-                      <Input
-                        className="text-xl font-semibold mb-2"
-                        placeholder="Document Title"
-                        value={title}
-                        onChange={(e) => setTitle(e.target.value)}
-                      />
+                    <div className="mb-2 flex items-center gap-2">
+                      <div className="flex-grow">
+                        <Input
+                          className="text-xl font-semibold"
+                          placeholder="Document Title"
+                          value={title}
+                          onChange={(e) => setTitle(e.target.value)}
+                        />
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={togglePreviewMode}
+                        className="flex items-center gap-1 h-9 rounded-md"
+                        aria-label={isPreviewMode ? "Switch to edit mode" : "Switch to preview mode"}
+                      >
+                        {isPreviewMode ? (
+                          <>
+                            <FileEdit className="h-4 w-4" />
+                            <span>Edit</span>
+                          </>
+                        ) : (
+                          <>
+                            <Eye className="h-4 w-4" />
+                            <span>Preview</span>
+                          </>
+                        )}
+                      </Button>
                     </div>
-                    <Textarea
-                      ref={textareaRef}
-                      className="flex-grow min-h-[200px] font-mono resize-none transition-all focus:shadow-md"
-                      placeholder="Document content..."
-                      value={content}
-                      onChange={(e) => setContent(e.target.value)}
-                    />
+                    
+                    {isPreviewMode ? (
+                      <div className="flex-grow overflow-auto bg-card p-4 rounded-md border">
+                        <MarkdownRenderer content={content} />
+                      </div>
+                    ) : (
+                      <Textarea
+                        ref={textareaRef}
+                        className="flex-grow min-h-[200px] font-mono resize-none transition-all focus:shadow-md"
+                        placeholder="Document content..."
+                        value={content}
+                        onChange={(e) => setContent(e.target.value)}
+                      />
+                    )}
                     <div className="mt-2 text-xs text-muted-foreground flex justify-between items-center h-8">
                       <span>
-                        {content ? content.split(/\s+/).filter(Boolean).length : 0} words, 
+                        {content ? countWords(content) : 0} words, 
                         {content ? content.length : 0} characters
                       </span>
                       <div className="flex items-center space-x-2">
@@ -899,24 +956,52 @@ const UserDocuments = () => {
                 <CardContent className="p-4 flex flex-col h-full">
                   {selectedDocument ? (
                     <div className="flex flex-col h-full">
-                      <div className="mb-2">
-                        <Input
-                          className="text-xl font-semibold mb-2"
-                          placeholder="Document Title"
-                          value={title}
-                          onChange={(e) => setTitle(e.target.value)}
-                        />
+                      <div className="mb-2 flex items-center gap-2">
+                        <div className="flex-grow">
+                          <Input
+                            className="text-xl font-semibold"
+                            placeholder="Document Title"
+                            value={title}
+                            onChange={(e) => setTitle(e.target.value)}
+                          />
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={togglePreviewMode}
+                          className="flex items-center gap-1 h-9 rounded-md"
+                          aria-label={isPreviewMode ? "Switch to edit mode" : "Switch to preview mode"}
+                        >
+                          {isPreviewMode ? (
+                            <>
+                              <FileEdit className="h-4 w-4" />
+                              <span>Edit</span>
+                            </>
+                          ) : (
+                            <>
+                              <Eye className="h-4 w-4" />
+                              <span>Preview</span>
+                            </>
+                          )}
+                        </Button>
                       </div>
-                      <Textarea
-                        ref={textareaRef}
-                        className="flex-grow min-h-[200px] font-mono resize-none transition-all focus:shadow-md"
-                        placeholder="Document content..."
-                        value={content}
-                        onChange={(e) => setContent(e.target.value)}
-                      />
+                      
+                      {isPreviewMode ? (
+                        <div className="flex-grow overflow-auto bg-card p-4 rounded-md border">
+                          <MarkdownRenderer content={content} />
+                        </div>
+                      ) : (
+                        <Textarea
+                          ref={textareaRef}
+                          className="flex-grow min-h-[200px] font-mono resize-none transition-all focus:shadow-md"
+                          placeholder="Document content..."
+                          value={content}
+                          onChange={(e) => setContent(e.target.value)}
+                        />
+                      )}
                       <div className="mt-2 text-xs text-muted-foreground flex justify-between items-center h-8">
                         <span>
-                          {content ? content.split(/\s+/).filter(Boolean).length : 0} words, 
+                          {content ? countWords(content) : 0} words, 
                           {content ? content.length : 0} characters
                         </span>
                         <div className="flex items-center space-x-2">

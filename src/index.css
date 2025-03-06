@@ -86,3 +86,68 @@
 html {
   scroll-behavior: smooth;
 }
+
+/* Custom Scrollbar Styles */
+@layer utilities {
+  /* For Webkit browsers (Chrome, Safari, newer versions of Opera) */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: hsl(var(--secondary) / 0.5);
+    border-radius: 4px;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: hsl(var(--primary) / 0.6);
+    border-radius: 4px;
+    transition: background-color 0.2s ease;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--primary) / 0.8);
+  }
+
+  ::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+
+  /* For Firefox */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--primary) / 0.6) hsl(var(--secondary) / 0.5);
+  }
+
+  /* Custom styles for textarea and select elements */
+  textarea::-webkit-scrollbar,
+  select::-webkit-scrollbar,
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  textarea::-webkit-scrollbar-thumb,
+  select::-webkit-scrollbar-thumb,
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: hsl(var(--primary) / 0.8);
+    border-radius: 3px;
+  }
+
+  /* Dark mode specific scrollbar styles */
+  .dark ::-webkit-scrollbar-track {
+    background: hsl(var(--secondary) / 0.2);
+  }
+  
+  .dark ::-webkit-scrollbar-thumb {
+    background: hsl(var(--primary) / 0.7);
+  }
+  
+  .dark ::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--primary) / 0.9);
+  }
+  
+  .dark * {
+    scrollbar-color: hsl(var(--primary) / 0.7) hsl(var(--secondary) / 0.2);
+  }
+}
