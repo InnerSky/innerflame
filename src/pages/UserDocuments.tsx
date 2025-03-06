@@ -12,6 +12,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { MarkdownRenderer } from '@/components/markdown-renderer';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
   AlertCircle, 
   FilePlus, 
@@ -35,7 +36,10 @@ import {
   Plus,
   Home,
   Eye,
-  FileEdit
+  FileEdit,
+  ChevronLeft,
+  ChevronRight,
+  History,
 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { 
@@ -55,7 +59,6 @@ import {
   DialogClose
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { motion, AnimatePresence } from 'framer-motion';
 
 // Define the Document type
 interface Document {
@@ -63,8 +66,29 @@ interface Document {
   title: string;
   content: string | null;
   entity_type: string;
-  created_at: string;
-  updated_at: string;
+  created_at: string | null;
+  updated_at: string | null;
+  user_id: string;
+  metadata?: any;
+  current_version_id?: string;
+  version_number?: number;
+}
+
+// Interface for entity version
+interface EntityVersion {
+  id: string;
+  entity_id: string;
+  entity_type: string;
+  version_number: number;
+  full_content: any; // Using any for Json type to simplify
+  created_at: string | null;
+  is_current: boolean | null;
+  version_type: string;
+  base_version_id: string | null;
+  significance: string | null;
+  user_label: string | null;
+  changes: any | null;
+  created_by_message_id: string | null;
 }
 
 // Status indicator for saving
@@ -123,6 +147,11 @@ const UserDocuments = () => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const isMobile = useMediaQuery('(max-width: 768px)');
   
+  // Version control state
+  const [showVersionModal, setShowVersionModal] = useState(false);
+  const [documentVersions, setDocumentVersions] = useState<EntityVersion[]>([]);
+  const [viewingVersionIndex, setViewingVersionIndex] = useState(0);
+
   // Close drawer when clicking outside on mobile
   useEffect(() => {
     const handleClickOutside = (e: Event) => {
@@ -184,27 +213,74 @@ const UserDocuments = () => {
   useEffect(() => {
     const fetchDocuments = async () => {
       if (!user) return;
-
+      
+      setLoading(true);
       try {
-        const { data, error } = await supabase
+        // First, fetch all entities of type user_document
+        const { data: entitiesData, error: entitiesError } = await supabase
           .from('entities')
           .select('*')
           .eq('user_id', user.id)
           .eq('entity_type', 'user_document')
           .order('updated_at', { ascending: false });
+          
+        if (entitiesError) throw entitiesError;
+        
+        if (!entitiesData || entitiesData.length === 0) {
+          setDocuments([]);
+          setFilteredDocuments([]);
+          setLoading(false);
+          return;
+        }
 
-        if (error) throw error;
-
-        setDocuments(data || []);
-        setFilteredDocuments(data || []);
-        if (data && data.length > 0) {
-          setSelectedDocument(data[0]);
-          setTitle(data[0].title);
-          setContent(data[0].content || '');
+        // Get the latest version for each entity
+        const entityIds = entitiesData.map(entity => entity.id);
+        
+        const { data: versionsData, error: versionsError } = await supabase
+          .from('entity_versions')
+          .select('*')
+          .in('entity_id', entityIds)
+          .eq('is_current', true);
+          
+        if (versionsError) throw versionsError;
+        
+        // Create a map of entity_id -> current version
+        const versionMap = new Map();
+        versionsData?.forEach(version => {
+          versionMap.set(version.entity_id, version);
+        });
+        
+        // Combine entity data with their latest versions
+        const documentsWithVersions = entitiesData.map(entity => {
+          const version = versionMap.get(entity.id);
+          
+          // Use our helper function to extract content
+          const versionContent = version ? extractContent(version.full_content) : 
+            { title: entity.title, content: null };
+            
+          return {
+            ...entity,
+            // Use version content if available, otherwise fallback to entity
+            content: versionContent.content,
+            current_version_id: version?.id,
+            version_number: version?.version_number,
+          };
+        });
+        
+        setDocuments(documentsWithVersions);
+        setFilteredDocuments(documentsWithVersions);
+        
+        if (documentsWithVersions.length > 0) {
+          const firstDoc = documentsWithVersions[0];
+          setSelectedDocument(firstDoc);
+          setTitle(firstDoc.title);
+          setContent(firstDoc.content || '');
         }
       } catch (err) {
         console.error('Error fetching documents:', err);
-        setError('Failed to load documents');
+        toast.error('Error', {
+          description: 'Failed to load documents',
+        });
       } finally {
         setLoading(false);
       }
@@ -229,8 +305,8 @@ const UserDocuments = () => {
     // Apply sorting
     setFilteredDocuments(prev => {
       return [...prev].sort((a, b) => {
-        const dateA = new Date(a.updated_at).getTime();
-        const dateB = new Date(b.updated_at).getTime();
+        const dateA = new Date(a.updated_at || '').getTime();
+        const dateB = new Date(b.updated_at || '').getTime();
         return sortDirection === 'desc' ? dateB - dateA : dateA - dateB;
       });
     });
@@ -290,26 +366,56 @@ const UserDocuments = () => {
 
     setSaveStatus('saving');
     try {
-      const newDocument = {
+      // Step 1: Create the entity entry
+      const newEntity = {
         user_id: user.id,
-        title: 'Untitled Document',
-        content: '',
+        title: 'Untitled Document', // We still store title in the entity for quick access
+        content: null, // No longer store content here
         entity_type: 'user_document',
       };
 
-      const { data, error } = await supabase
+      const { data: entityData, error: entityError } = await supabase
         .from('entities')
-        .insert(newDocument)
+        .insert(newEntity)
         .select()
         .single();
 
-      if (error) throw error;
+      if (entityError) throw entityError;
 
-      setDocuments([data, ...documents]);
-      setFilteredDocuments([data, ...filteredDocuments]);
-      setSelectedDocument(data);
-      setTitle(data.title);
-      setContent(data.content || '');
+      // Step 2: Create the initial version (version 1)
+      const initialVersion = {
+        entity_id: entityData.id,
+        entity_type: 'user_document',
+        version_number: 1,
+        full_content: {
+          title: 'Untitled Document',
+          content: '',
+        },
+        version_type: 'initial',
+        is_current: true,
+      };
+
+      const { data: versionData, error: versionError } = await supabase
+        .from('entity_versions')
+        .insert(initialVersion)
+        .select()
+        .single();
+
+      if (versionError) throw versionError;
+
+      // Combine entity and version data for our Document interface
+      const newDocument: Document = {
+        ...entityData,
+        content: '',  // Directly use empty string rather than trying to extract from versionData
+        current_version_id: versionData.id,
+        version_number: versionData.version_number,
+      };
+
+      setDocuments([newDocument, ...documents]);
+      setFilteredDocuments([newDocument, ...filteredDocuments]);
+      setSelectedDocument(newDocument);
+      setTitle(newDocument.title);
+      setContent(newDocument.content || '');
       setLastSaved(new Date());
       setSaveStatus('saved');
       toast.success('Document created', {
@@ -334,26 +440,97 @@ const UserDocuments = () => {
     }
   };
 
+  // Helper function to safely extract content from full_content
+  const extractContent = (fullContent: any): { title: string, content: string | null } => {
+    if (!fullContent) return { title: '', content: null };
+    
+    // If it's a string (serialized JSON), parse it
+    if (typeof fullContent === 'string') {
+      try {
+        return JSON.parse(fullContent);
+      } catch (e) {
+        console.error('Error parsing full_content:', e);
+        return { title: '', content: null };
+      }
+    }
+    
+    // If it's already an object, return it
+    if (typeof fullContent === 'object') {
+      return {
+        title: fullContent.title || '',
+        content: fullContent.content || null
+      };
+    }
+    
+    return { title: '', content: null };
+  };
+
   const saveDocument = async () => {
     if (!selectedDocument || !user) return Promise.resolve();
 
     setSaveStatus('saving');
     try {
-      const updates = {
-        title,
-        content,
-        updated_at: new Date().toISOString(),
+      const currentTime = new Date().toISOString();
+      
+      // Step 1: Update the basic entity info
+      const entityUpdates = {
+        title, // Still update title in the entity for quick access
+        updated_at: currentTime,
       };
 
-      const { error } = await supabase
+      const { error: entityError } = await supabase
         .from('entities')
-        .update(updates)
+        .update(entityUpdates)
         .eq('id', selectedDocument.id);
 
-      if (error) throw error;
+      if (entityError) throw entityError;
 
-      // Update the document in the local state
-      const updatedDocument = { ...selectedDocument, ...updates };
+      // Step 2: Create a new version
+      const newVersionNumber = (selectedDocument.version_number || 1) + 1;
+      
+      const newVersion = {
+        entity_id: selectedDocument.id,
+        entity_type: selectedDocument.entity_type,
+        version_number: newVersionNumber,
+        full_content: {
+          title,
+          content,
+        },
+        version_type: 'update',
+        is_current: true,
+        base_version_id: selectedDocument.current_version_id,
+        created_at: currentTime,
+      };
+
+      // Step 2.1: Mark previous version as not current
+      if (selectedDocument.current_version_id) {
+        const { error: updateError } = await supabase
+          .from('entity_versions')
+          .update({ is_current: false })
+          .eq('id', selectedDocument.current_version_id);
+          
+        if (updateError) throw updateError;
+      }
+
+      // Step 2.2: Create the new version
+      const { data: versionData, error: versionError } = await supabase
+        .from('entity_versions')
+        .insert(newVersion)
+        .select()
+        .single();
+
+      if (versionError) throw versionError;
+
+      // Update local document state
+      const updatedDocument = { 
+        ...selectedDocument, 
+        title,
+        content,
+        updated_at: currentTime,
+        current_version_id: versionData.id,
+        version_number: newVersionNumber
+      };
+      
       setSelectedDocument(updatedDocument);
       
       // Update documents in both lists
@@ -433,12 +610,21 @@ const UserDocuments = () => {
     if (!documentToDelete) return;
     
     try {
-      const { error } = await supabase
+      // Delete all versions first
+      const { error: versionsError } = await supabase
+        .from('entity_versions')
+        .delete()
+        .eq('entity_id', documentToDelete.id);
+        
+      if (versionsError) throw versionsError;
+      
+      // Then delete the entity
+      const { error: entityError } = await supabase
         .from('entities')
         .delete()
         .eq('id', documentToDelete.id);
         
-      if (error) throw error;
+      if (entityError) throw entityError;
       
       // Remove from lists
       const newDocuments = documents.filter(doc => doc.id !== documentToDelete.id);
@@ -495,29 +681,62 @@ const UserDocuments = () => {
   
   const duplicateDocument = async (document: Document, event?: React.MouseEvent) => {
     if (event) {
-      event.stopPropagation(); // Prevent selecting the document when clicking
+      event.stopPropagation();
+      if (event.nativeEvent) {
+        event.nativeEvent.stopImmediatePropagation();
+      }
     }
     
     if (!user) return;
     
     try {
-      const duplicatedDocument = {
+      // Step 1: Create a duplicate entity
+      const newEntity = {
         user_id: user.id,
         title: `${document.title} (Copy)`,
-        content: document.content,
-        entity_type: 'user_document',
+        content: null, // No longer store content here
+        entity_type: document.entity_type,
       };
-
-      const { data, error } = await supabase
+      
+      const { data: entityData, error: entityError } = await supabase
         .from('entities')
-        .insert(duplicatedDocument)
+        .insert(newEntity)
         .select()
         .single();
-
-      if (error) throw error;
-
-      setDocuments([data, ...documents]);
-      setFilteredDocuments([data, ...filteredDocuments]);
+        
+      if (entityError) throw entityError;
+      
+      // Step 2: Create the initial version of the duplicate
+      const initialVersion = {
+        entity_id: entityData.id,
+        entity_type: document.entity_type,
+        version_number: 1,
+        full_content: {
+          title: `${document.title} (Copy)`,
+          content: document.content,
+        },
+        version_type: 'initial',
+        is_current: true,
+      };
+      
+      const { data: versionData, error: versionError } = await supabase
+        .from('entity_versions')
+        .insert(initialVersion)
+        .select()
+        .single();
+        
+      if (versionError) throw versionError;
+      
+      // Create the new document object
+      const newDocument: Document = {
+        ...entityData,
+        content: document.content,
+        current_version_id: versionData.id,
+        version_number: 1,
+      };
+      
+      setDocuments([newDocument, ...documents]);
+      setFilteredDocuments([newDocument, ...filteredDocuments]);
       
       toast.success('Document duplicated', {
         description: 'Document has been duplicated successfully',
@@ -596,6 +815,131 @@ const UserDocuments = () => {
     return cjkCount + westernWords;
   };
 
+  // Function to fetch all versions of a document
+  const fetchDocumentVersions = async () => {
+    if (!selectedDocument) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('entity_versions')
+        .select('*')
+        .eq('entity_id', selectedDocument.id)
+        .order('version_number', { ascending: false });
+      
+      if (error) throw error;
+      
+      if (data && data.length > 0) {
+        setDocumentVersions(data);
+        // Set viewing index to the current version (should be index 0 if sorted desc)
+        setViewingVersionIndex(0);
+      } else {
+        setDocumentVersions([]);
+      }
+      
+      setShowVersionModal(true);
+    } catch (err) {
+      console.error('Error fetching document versions:', err);
+      toast.error('Error', {
+        description: 'Failed to load document versions',
+      });
+    }
+  };
+
+  // Function to activate a historical version
+  const activateVersion = async (version: EntityVersion) => {
+    if (!selectedDocument || !user) return;
+    
+    setSaveStatus('saving');
+    try {
+      const currentTime = new Date().toISOString();
+      
+      // Extract content from the selected version
+      const versionContent = extractContent(version.full_content);
+      
+      // Create a new version based on the historical content
+      const newVersionNumber = (selectedDocument.version_number || 1) + 1;
+      
+      const newVersion = {
+        entity_id: selectedDocument.id,
+        entity_type: selectedDocument.entity_type,
+        version_number: newVersionNumber,
+        full_content: {
+          title: versionContent.title || title,
+          content: versionContent.content,
+        },
+        version_type: 'restore',
+        is_current: true,
+        base_version_id: version.id, // Reference the version we're restoring from
+        created_at: currentTime,
+      };
+
+      // Mark all versions as not current
+      const { error: updateError } = await supabase
+        .from('entity_versions')
+        .update({ is_current: false })
+        .eq('entity_id', selectedDocument.id);
+        
+      if (updateError) throw updateError;
+
+      // Create the new version
+      const { data: versionData, error: versionError } = await supabase
+        .from('entity_versions')
+        .insert(newVersion)
+        .select()
+        .single();
+
+      if (versionError) throw versionError;
+
+      // Update entity with new title and timestamp
+      const { error: entityError } = await supabase
+        .from('entities')
+        .update({
+          title: versionContent.title || title,
+          updated_at: currentTime,
+        })
+        .eq('id', selectedDocument.id);
+
+      if (entityError) throw entityError;
+
+      // Update local document state
+      const updatedDocument = { 
+        ...selectedDocument, 
+        title: versionContent.title || title,
+        content: versionContent.content,
+        updated_at: currentTime,
+        current_version_id: versionData.id,
+        version_number: newVersionNumber
+      };
+      
+      setSelectedDocument(updatedDocument);
+      setTitle(updatedDocument.title);
+      setContent(updatedDocument.content || '');
+      
+      // Update documents in both lists
+      const updateDocInList = (list: Document[]) => {
+        return list.map((doc) => (doc.id === selectedDocument.id ? updatedDocument : doc));
+      };
+      
+      setDocuments(updateDocInList(documents));
+      setFilteredDocuments(updateDocInList(filteredDocuments));
+      
+      setLastSaved(new Date());
+      setSaveStatus('saved');
+      setShowVersionModal(false);
+      
+      toast.success('Version restored', {
+        description: `Document restored to content from version ${version.version_number}`,
+      });
+      
+    } catch (err) {
+      console.error('Error restoring version:', err);
+      setSaveStatus('error');
+      toast.error('Error', {
+        description: 'Failed to restore version',
+      });
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -617,39 +961,29 @@ const UserDocuments = () => {
   }
 
   return (
-    <div className="overflow-x-auto">
-      <motion.div 
-        className={`container mx-auto ${isMobile ? 'py-0' : 'py-8'} px-4 md:px-6 md:min-w-[1024px]`}
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.3 }}
-      >
-        <div className={`flex justify-between items-center ${isMobile ? 'py-1 mb-1' : 'mb-6'}`}>
-          <div className="flex items-center">
-            {isMobile && (
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                onClick={toggleDrawer}
-                id="drawer-toggle-button"
-                className="mr-3 -ml-2"
-                aria-label="Toggle document list"
-              >
-                <List className="h-5 w-5" />
-              </Button>
-            )}
-          </div>
-          <div className="flex items-center space-x-2">
+    <div className="flex flex-col h-screen">
+      {/* Top navigation */}
+      <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="container flex h-14 max-w-screen-2xl items-center">
+          {isMobile && (
             <Button 
-              onClick={goToHome} 
               variant="ghost" 
-              size="icon"
-              className="h-9 w-9 rounded-full"
-              aria-label="Go to Home"
+              className="mr-2" 
+              onClick={toggleDrawer}
+              aria-label="Toggle document list"
             >
-              <Home className="h-[1.2rem] w-[1.2rem]" />
+              <List className="h-5 w-5" />
             </Button>
-            <ThemeToggle />
+          )}
+          <Button 
+            variant="ghost" 
+            className="mr-2" 
+            onClick={goToHome}
+          >
+            <Home className="h-5 w-5" />
+            <span className="sr-only">Home</span>
+          </Button>
+          <div className="mr-4 hidden md:flex">
             <Button 
               onClick={createNewDocument} 
               disabled={saveStatus === 'saving'}
@@ -657,16 +991,22 @@ const UserDocuments = () => {
               className="h-9 px-4 transition-colors"
               aria-label="Create new document"
             >
-              <Plus className="h-[1.2rem] w-[1.2rem] mr-2" />
-              New Document
+              <FilePlus className="mr-2 h-4 w-4" />
+              <span>New Document</span>
             </Button>
           </div>
+          
+          <div className="flex-1"></div>
+          <ThemeToggle />
         </div>
-
-        <div className="grid grid-cols-12 gap-6 relative">
+      </header>
+      
+      {isMobile ? (
+        // Mobile layout
+        <div className="flex flex-col flex-1">
           {/* Mobile Drawer Background Overlay */}
           <AnimatePresence>
-            {isMobile && drawerOpen && (
+            {drawerOpen && (
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 0.5 }}
@@ -679,21 +1019,20 @@ const UserDocuments = () => {
             )}
           </AnimatePresence>
           
-          {/* Document List Sidebar */}
+          {/* Document List Drawer */}
           <AnimatePresence>
             <motion.div 
-              id="document-list-drawer"
-              className={`col-span-12 md:col-span-3 ${isMobile ? 'fixed left-0 top-0 bottom-0 z-20 w-[80%] max-w-[320px]' : ''}`}
-              initial={isMobile ? { x: -320 } : { x: 0 }}
-              animate={isMobile ? (drawerOpen ? { x: 0 } : { x: -320 }) : { x: 0 }}
-              exit={isMobile ? { x: -320 } : { x: 0 }}
+              className="fixed left-0 top-0 bottom-0 z-20 w-[80%] max-w-[320px]"
+              initial={{ x: -320 }}
+              animate={drawerOpen ? { x: 0 } : { x: -320 }}
+              exit={{ x: -320 }}
               transition={{ type: 'spring', stiffness: 300, damping: 30 }}
               style={{ 
-                display: isMobile && !drawerOpen ? 'none' : 'block',
-                height: isMobile ? '100%' : 'auto'
+                display: !drawerOpen ? 'none' : 'block',
+                height: '100%'
               }}
             >
-              <Card className={`${isMobile ? 'h-full rounded-none' : 'h-[calc(100vh-8rem)]'} flex flex-col`}>
+              <Card className="h-full rounded-none">
                 <CardContent className="p-4 flex flex-col h-full">
                   <div className="flex justify-between items-center mb-4">
                     <h2 className="text-xl font-semibold">Documents</h2>
@@ -718,11 +1057,9 @@ const UserDocuments = () => {
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
-                      {isMobile && (
-                        <Button variant="ghost" size="sm" onClick={() => setDrawerOpen(false)} className="ml-1">
-                          <X className="h-4 w-4" />
-                        </Button>
-                      )}
+                      <Button variant="ghost" size="sm" onClick={() => setDrawerOpen(false)} className="ml-1">
+                        <X className="h-4 w-4" />
+                      </Button>
                     </div>
                   </div>
                   
@@ -745,110 +1082,86 @@ const UserDocuments = () => {
                   </div>
                   
                   <ScrollArea className="flex-grow">
-                    <AnimatePresence>
-                      {filteredDocuments.length === 0 ? (
-                        <div className="text-center py-8 text-muted-foreground">
-                          {searchQuery ? (
-                            <p>No documents match your search</p>
-                          ) : (
-                            <p>No documents found</p>
-                          )}
-                        </div>
-                      ) : (
-                        <div className="space-y-1">
-                          {filteredDocuments.map((doc) => (
-                            <motion.div 
-                              key={doc.id}
-                              initial={{ opacity: 0, y: 10 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              exit={{ opacity: 0, height: 0 }}
-                              transition={{ duration: 0.2 }}
+                    {filteredDocuments.length === 0 ? (
+                      <div className="text-center py-8 text-muted-foreground">
+                        {searchQuery ? (
+                          <p>No documents match your search</p>
+                        ) : (
+                          <p>No documents found</p>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="space-y-1">
+                        {filteredDocuments.map((doc) => (
+                          <div
+                            key={doc.id}
+                            className={`flex items-center rounded group relative ${
+                              selectedDocument?.id === doc.id ? 'bg-muted' : 'hover:bg-accent hover:text-accent-foreground'
+                            }`}
+                          >
+                            <button
+                              className="w-full text-left p-2 rounded min-h-[3rem]"
+                              onClick={() => {
+                                selectDocument(doc);
+                                if (isMobile) setDrawerOpen(false);
+                              }}
                             >
-                              <div
-                                className={`flex items-center rounded group relative ${
-                                  selectedDocument?.id === doc.id ? 'bg-muted' : 'hover:bg-accent hover:text-accent-foreground'
-                                }`}
-                              >
-                                <button
-                                  className="w-full text-left p-2 rounded min-h-[3rem]"
-                                  onClick={() => selectDocument(doc)}
+                              <div className="font-medium truncate">{doc.title}</div>
+                              <div className="flex justify-between items-center">
+                                <span className="text-xs text-muted-foreground">
+                                  {new Date(doc.updated_at || '').toLocaleDateString()}
+                                </span>
+                                <Badge 
+                                  variant="outline" 
+                                  className="text-xs opacity-60"
                                 >
-                                  <div className="font-medium truncate">{doc.title}</div>
-                                  <div className="flex justify-between items-center">
-                                    <span className="text-xs text-muted-foreground">
-                                      {new Date(doc.updated_at).toLocaleDateString()}
-                                    </span>
-                                    <Badge 
-                                      variant="outline" 
-                                      className="text-xs opacity-60"
-                                    >
-                                      {doc.content ? 
-                                        `${countWords(doc.content)} words` : 
-                                        'Empty'
-                                      }
-                                    </Badge>
-                                  </div>
-                                </button>
-                                <DropdownMenu>
-                                  <DropdownMenuTrigger asChild>
-                                    <Button 
-                                      variant="secondary"
-                                      size="icon"
-                                      className="opacity-0 group-hover:opacity-100 transition-opacity absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 dropdown-trigger z-20"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        // Prevent the drawer from closing when opening the dropdown
-                                        e.nativeEvent.stopImmediatePropagation();
-                                      }}
-                                    >
-                                      <MoreHorizontal className="h-4 w-4" />
-                                    </Button>
-                                  </DropdownMenuTrigger>
-                                  <DropdownMenuContent 
-                                    align="end" 
-                                    className="dropdown-content z-50"
-                                    sideOffset={5}
-                                    onClick={(e) => {
-                                      // Prevent document selection when clicking menu items
-                                      e.stopPropagation();
-                                    }}
-                                  >
-                                    <DropdownMenuItem 
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        // Prevent the drawer from closing when clicking menu items
-                                        e.nativeEvent.stopImmediatePropagation();
-                                        duplicateDocument(doc, e);
-                                      }}
-                                    >
-                                      <Copy className="mr-2 h-4 w-4" />
-                                      Duplicate
-                                    </DropdownMenuItem>
-                                    <DropdownMenuSeparator />
-                                    <DropdownMenuItem 
-                                      className="text-red-500 focus:text-red-500" 
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        // Prevent the drawer from closing when clicking menu items
-                                        e.nativeEvent.stopImmediatePropagation();
-                                        confirmDeleteDocument(doc, e);
-                                      }}
-                                    >
-                                      <Trash2 className="mr-2 h-4 w-4" />
-                                      Delete
-                                    </DropdownMenuItem>
-                                  </DropdownMenuContent>
-                                </DropdownMenu>
+                                  {doc.content ? 
+                                    `${countWords(doc.content)} words` : 
+                                    'Empty'
+                                  }
+                                </Badge>
                               </div>
-                              <Separator className="my-1" />
-                            </motion.div>
-                          ))}
-                        </div>
-                      )}
-                    </AnimatePresence>
+                            </button>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button 
+                                  variant="secondary"
+                                  size="icon"
+                                  className="opacity-0 group-hover:opacity-100 transition-opacity absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem 
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    duplicateDocument(doc, e);
+                                  }}
+                                >
+                                  <Copy className="mr-2 h-4 w-4" />
+                                  Duplicate
+                                </DropdownMenuItem>
+                                <DropdownMenuItem 
+                                  className="text-red-500 focus:text-red-500" 
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    confirmDeleteDocument(doc, e);
+                                  }}
+                                >
+                                  <Trash2 className="mr-2 h-4 w-4" />
+                                  Delete
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </ScrollArea>
                   
-                  <div className="mt-2 text-xs text-muted-foreground">
+                  <div className="mt-4 text-xs text-muted-foreground">
                     {filteredDocuments.length} {filteredDocuments.length === 1 ? 'document' : 'documents'}
                     {searchQuery && documents.length !== filteredDocuments.length && (
                       <> (filtered from {documents.length})</>
@@ -858,288 +1171,456 @@ const UserDocuments = () => {
               </Card>
             </motion.div>
           </AnimatePresence>
-
-          {/* Document Editor */}
-          <div className={`${isMobile ? 'col-span-12' : 'col-span-12 md:col-span-9'}`}>
-            {isMobile ? (
-              <div className="flex flex-col h-[calc(100vh-65px)]">
-                {selectedDocument ? (
-                  <div className="flex flex-col h-full">
-                    <div className="mb-2 flex items-center gap-2">
-                      <div className="flex-grow">
-                        <Input
-                          className="text-xl font-semibold"
-                          placeholder="Document Title"
-                          value={title}
-                          onChange={(e) => setTitle(e.target.value)}
-                        />
-                      </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={togglePreviewMode}
-                        className="flex items-center gap-1 h-9 rounded-md"
-                        aria-label={isPreviewMode ? "Switch to edit mode" : "Switch to preview mode"}
-                      >
-                        {isPreviewMode ? (
-                          <>
-                            <FileEdit className="h-4 w-4" />
-                            <span>Edit</span>
-                          </>
-                        ) : (
-                          <>
-                            <Eye className="h-4 w-4" />
-                            <span>Preview</span>
-                          </>
-                        )}
-                      </Button>
-                    </div>
-                    
+          
+          {/* Main Content */}
+          <div className="flex-grow px-4 pt-4 flex flex-col">
+            {selectedDocument ? (
+              <div className="flex flex-col h-full">
+                <div className="mb-2 flex items-center gap-2">
+                  <div className="flex-grow">
+                    <Input
+                      className="text-xl font-semibold"
+                      placeholder="Document Title"
+                      value={title}
+                      onChange={(e) => setTitle(e.target.value)}
+                    />
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={togglePreviewMode}
+                    className="flex items-center gap-1 h-9 rounded-md"
+                    aria-label={isPreviewMode ? "Switch to edit mode" : "Switch to preview mode"}
+                  >
                     {isPreviewMode ? (
-                      <div className="flex-grow overflow-auto bg-card p-4 rounded-md border">
-                        <MarkdownRenderer content={content} />
-                      </div>
+                      <>
+                        <FileEdit className="h-4 w-4" />
+                        <span>Edit</span>
+                      </>
                     ) : (
-                      <Textarea
-                        ref={textareaRef}
-                        className="flex-grow min-h-[200px] font-mono resize-none transition-all focus:shadow-md"
-                        placeholder="Document content..."
-                        value={content}
-                        onChange={(e) => setContent(e.target.value)}
-                      />
+                      <>
+                        <Eye className="h-4 w-4" />
+                        <span>Preview</span>
+                      </>
                     )}
-                    <div className="mt-2 text-xs text-muted-foreground flex justify-between items-center h-8">
-                      <span>
-                        {content ? countWords(content) : 0} words, 
-                        {content ? content.length : 0} characters
-                      </span>
-                      <div className="flex items-center space-x-2">
-                        {renderSaveStatus()}
-                        {(saveStatus === 'unsaved' || saveStatus === 'error' || saveStatus === 'saving') && (
-                          <Button 
-                            size="sm" 
-                            onClick={saveDocument} 
-                            disabled={saveStatus === 'saving'}
-                            className="transition-transform active:scale-95 ml-2"
-                          >
-                            {saveStatus === 'saving' ? (
-                              <>
-                                <Spinner size="sm" className="mr-2" />
-                                Saving...
-                              </>
-                            ) : (
-                              <>
-                                <Save className="mr-2 h-4 w-4" />
-                                Save
-                              </>
-                            )}
-                          </Button>
-                        )}
-                      </div>
-                    </div>
+                  </Button>
+                </div>
+                
+                {isPreviewMode ? (
+                  <div className="flex-grow overflow-auto bg-card p-4 rounded-md border">
+                    <MarkdownRenderer content={content} />
                   </div>
                 ) : (
-                  <div className="text-center py-12 flex flex-col items-center justify-center h-full">
-                    <div className="mb-6 text-muted-foreground">
-                      <FileText className="h-16 w-16 mx-auto mb-4 opacity-20" />
-                      <p className="mb-4">Select a document to view or edit its content</p>
-                    </div>
-                    <Button onClick={createNewDocument} variant="default" className="transition-colors">
-                      <FilePlus className="mr-2 h-[1.2rem] w-[1.2rem]" />
-                      Create New Document
-                    </Button>
-                  </div>
+                  <Textarea
+                    ref={textareaRef}
+                    className="flex-grow min-h-[200px] font-mono resize-none transition-all focus:shadow-md"
+                    placeholder="Document content..."
+                    value={content}
+                    onChange={(e) => setContent(e.target.value)}
+                  />
                 )}
+                <div className="mt-2 text-xs text-muted-foreground flex justify-between items-center h-8">
+                  <span>
+                    {content ? countWords(content) : 0} words, 
+                    {content ? content.length : 0} characters
+                  </span>
+                  <div className="flex items-center space-x-2">
+                    {selectedDocument?.version_number && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 px-2 text-xs"
+                        onClick={fetchDocumentVersions}
+                      >
+                        <History className="mr-1 h-3.5 w-3.5" />
+                        <span>v{selectedDocument.version_number}</span>
+                      </Button>
+                    )}
+                    {renderSaveStatus()}
+                    {(saveStatus === 'unsaved' || saveStatus === 'error' || saveStatus === 'saving') && (
+                      <Button 
+                        size="sm" 
+                        onClick={saveDocument}
+                        disabled={saveStatus === 'saving' || !hasUnsavedChanges()}
+                      >
+                        <Save className="mr-2 h-4 w-4" />
+                        Save
+                      </Button>
+                    )}
+                  </div>
+                </div>
               </div>
             ) : (
-              <Card className="h-[calc(100vh-8rem)] flex flex-col">
-                <CardContent className="p-4 flex flex-col h-full">
-                  {selectedDocument ? (
-                    <div className="flex flex-col h-full">
-                      <div className="mb-2 flex items-center gap-2">
-                        <div className="flex-grow">
-                          <Input
-                            className="text-xl font-semibold"
-                            placeholder="Document Title"
-                            value={title}
-                            onChange={(e) => setTitle(e.target.value)}
-                          />
-                        </div>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={togglePreviewMode}
-                          className="flex items-center gap-1 h-9 rounded-md"
-                          aria-label={isPreviewMode ? "Switch to edit mode" : "Switch to preview mode"}
-                        >
-                          {isPreviewMode ? (
-                            <>
-                              <FileEdit className="h-4 w-4" />
-                              <span>Edit</span>
-                            </>
-                          ) : (
-                            <>
-                              <Eye className="h-4 w-4" />
-                              <span>Preview</span>
-                            </>
-                          )}
-                        </Button>
-                      </div>
-                      
-                      {isPreviewMode ? (
-                        <div className="flex-grow overflow-auto bg-card p-4 rounded-md border">
-                          <MarkdownRenderer content={content} />
-                        </div>
-                      ) : (
-                        <Textarea
-                          ref={textareaRef}
-                          className="flex-grow min-h-[200px] font-mono resize-none transition-all focus:shadow-md"
-                          placeholder="Document content..."
-                          value={content}
-                          onChange={(e) => setContent(e.target.value)}
-                        />
-                      )}
-                      <div className="mt-2 text-xs text-muted-foreground flex justify-between items-center h-8">
-                        <span>
-                          {content ? countWords(content) : 0} words, 
-                          {content ? content.length : 0} characters
-                        </span>
-                        <div className="flex items-center space-x-2">
-                          {renderSaveStatus()}
-                          {(saveStatus === 'unsaved' || saveStatus === 'error' || saveStatus === 'saving') && (
-                            <Button 
-                              size="sm" 
-                              onClick={saveDocument} 
-                              disabled={saveStatus === 'saving'}
-                              className="transition-transform active:scale-95 ml-2"
-                            >
-                              {saveStatus === 'saving' ? (
-                                <>
-                                  <Spinner size="sm" className="mr-2" />
-                                  Saving...
-                                </>
-                              ) : (
-                                <>
-                                  <Save className="mr-2 h-4 w-4" />
-                                  Save
-                                </>
-                              )}
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="text-center py-12 flex flex-col items-center justify-center h-full">
-                      <div className="mb-6 text-muted-foreground">
-                        <FileText className="h-16 w-16 mx-auto mb-4 opacity-20" />
-                        <p className="mb-4">Select a document to view or edit its content</p>
-                      </div>
-                      <Button onClick={createNewDocument} variant="default" className="transition-colors">
-                        <FilePlus className="mr-2 h-[1.2rem] w-[1.2rem]" />
-                        Create New Document
-                      </Button>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+              <div className="text-center py-12 flex flex-col items-center justify-center h-full">
+                <div className="mb-6 text-muted-foreground">
+                  <FileText className="h-16 w-16 mx-auto mb-4 opacity-20" />
+                  <p className="mb-4">Select a document or create a new one</p>
+                </div>
+                <Button onClick={createNewDocument} variant="default" className="transition-colors">
+                  <FilePlus className="mr-2 h-5 w-5" />
+                  Create New Document
+                </Button>
+              </div>
             )}
           </div>
         </div>
-        
-        {/* Delete Confirmation Dialog */}
-        <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-          <DialogContent className="delete-dialog" onInteractOutside={(e) => {
-            // Prevent interaction outside from closing the drawer
-            e.preventDefault();
-          }}>
+      ) : (
+        // Desktop layout
+        <div className="flex flex-1 container max-w-screen-2xl mx-auto">
+          <div className="w-80 h-full flex-shrink-0 overflow-hidden border-r">
+            <div className="h-full p-4 flex flex-col">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-semibold">Documents</h2>
+                <div className="flex items-center">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="sm">
+                        <Filter className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={toggleSort}>
+                        {sortDirection === 'desc' ? (
+                          <><SortDesc className="mr-2 h-4 w-4" /> Newest First</>
+                        ) : (
+                          <><SortAsc className="mr-2 h-4 w-4" /> Oldest First</>
+                        )}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setSearchQuery('')}>
+                        Clear Filters
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              </div>
+              
+              <div className="relative mb-4">
+                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search documents..."
+                  className="pl-8 pr-8"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+                {searchQuery && (
+                  <button 
+                    className="absolute right-2 top-2.5"
+                    onClick={clearSearch}
+                  >
+                    <X className="h-4 w-4 text-muted-foreground hover:text-foreground" />
+                  </button>
+                )}
+              </div>
+              
+              <ScrollArea className="flex-grow">
+                {filteredDocuments.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    {searchQuery ? (
+                      <p>No documents match your search</p>
+                    ) : (
+                      <p>No documents found</p>
+                    )}
+                  </div>
+                ) : (
+                  <div className="space-y-1">
+                    {filteredDocuments.map((doc) => (
+                      <div
+                        key={doc.id}
+                        className={`flex items-center rounded group relative ${
+                          selectedDocument?.id === doc.id ? 'bg-muted' : 'hover:bg-accent hover:text-accent-foreground'
+                        }`}
+                      >
+                        <button
+                          className="w-full text-left p-2 rounded min-h-[3rem]"
+                          onClick={() => selectDocument(doc)}
+                        >
+                          <div className="font-medium truncate">{doc.title}</div>
+                          <div className="flex justify-between items-center">
+                            <span className="text-xs text-muted-foreground">
+                              {new Date(doc.updated_at || '').toLocaleDateString()}
+                            </span>
+                            <Badge 
+                              variant="outline" 
+                              className="text-xs opacity-60"
+                            >
+                              {doc.content ? 
+                                `${countWords(doc.content)} words` : 
+                                'Empty'
+                              }
+                            </Badge>
+                          </div>
+                        </button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button 
+                              variant="secondary"
+                              size="icon"
+                              className="opacity-0 group-hover:opacity-100 transition-opacity absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                duplicateDocument(doc, e);
+                              }}
+                            >
+                              <Copy className="mr-2 h-4 w-4" />
+                              Duplicate
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                              className="text-red-500 focus:text-red-500" 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                confirmDeleteDocument(doc, e);
+                              }}
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </ScrollArea>
+              
+              <div className="mt-4 text-xs text-muted-foreground">
+                {filteredDocuments.length} {filteredDocuments.length === 1 ? 'document' : 'documents'}
+                {searchQuery && documents.length !== filteredDocuments.length && (
+                  <> (filtered from {documents.length})</>
+                )}
+              </div>
+            </div>
+          </div>
+          
+          <div className="flex-grow px-4 md:px-8 py-6 flex flex-col">
+            {selectedDocument ? (
+              <div className="flex flex-col h-full">
+                <div className="mb-2 flex items-center gap-2">
+                  <div className="flex-grow">
+                    <Input
+                      className="text-xl font-semibold"
+                      placeholder="Document Title"
+                      value={title}
+                      onChange={(e) => setTitle(e.target.value)}
+                    />
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={togglePreviewMode}
+                    className="flex items-center gap-1 h-9 rounded-md"
+                    aria-label={isPreviewMode ? "Switch to edit mode" : "Switch to preview mode"}
+                  >
+                    {isPreviewMode ? (
+                      <>
+                        <FileEdit className="h-4 w-4" />
+                        <span>Edit</span>
+                      </>
+                    ) : (
+                      <>
+                        <Eye className="h-4 w-4" />
+                        <span>Preview</span>
+                      </>
+                    )}
+                  </Button>
+                </div>
+                
+                {isPreviewMode ? (
+                  <div className="flex-grow overflow-auto bg-card p-4 rounded-md border">
+                    <MarkdownRenderer content={content} />
+                  </div>
+                ) : (
+                  <Textarea
+                    ref={textareaRef}
+                    className="flex-grow min-h-[200px] font-mono resize-none transition-all focus:shadow-md"
+                    placeholder="Document content..."
+                    value={content}
+                    onChange={(e) => setContent(e.target.value)}
+                  />
+                )}
+                <div className="mt-2 text-xs text-muted-foreground flex justify-between items-center h-8">
+                  <span>
+                    {content ? countWords(content) : 0} words, 
+                    {content ? content.length : 0} characters
+                  </span>
+                  <div className="flex items-center space-x-2">
+                    {selectedDocument?.version_number && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 px-2 text-xs"
+                        onClick={fetchDocumentVersions}
+                      >
+                        <History className="mr-1 h-3.5 w-3.5" />
+                        <span>v{selectedDocument.version_number}</span>
+                      </Button>
+                    )}
+                    {renderSaveStatus()}
+                    {(saveStatus === 'unsaved' || saveStatus === 'error' || saveStatus === 'saving') && (
+                      <Button 
+                        size="sm" 
+                        onClick={saveDocument}
+                        disabled={saveStatus === 'saving' || !hasUnsavedChanges()}
+                      >
+                        <Save className="mr-2 h-4 w-4" />
+                        Save
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-12 flex flex-col items-center justify-center h-full">
+                <div className="mb-6 text-muted-foreground">
+                  <FileText className="h-16 w-16 mx-auto mb-4 opacity-20" />
+                  <p className="mb-4">Select a document to view or edit its content</p>
+                </div>
+                <Button onClick={createNewDocument} variant="default" className="transition-colors">
+                  <FilePlus className="mr-2 h-5 w-5" />
+                  Create New Document
+                </Button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+      
+      {/* Version History Modal - Accessible from both mobile and desktop */}
+      {showVersionModal && documentVersions.length > 0 && (
+        <Dialog open={showVersionModal} onOpenChange={setShowVersionModal}>
+          <DialogContent className="sm:max-w-[700px] max-h-[80vh] flex flex-col">
             <DialogHeader>
-              <DialogTitle>Delete Document</DialogTitle>
+              <DialogTitle>Version History</DialogTitle>
               <DialogDescription>
-                Are you sure you want to delete "{documentToDelete?.title}"? This action cannot be undone.
+                Browse through previous versions of this document
               </DialogDescription>
             </DialogHeader>
-            <DialogFooter className="flex justify-between">
-              <DialogClose asChild onClick={(e) => {
-                // Prevent the drawer from closing when canceling
-                e.stopPropagation();
-                if (e.nativeEvent) {
-                  e.nativeEvent.stopImmediatePropagation();
-                }
-              }}>
-                <Button variant="outline">Cancel</Button>
-              </DialogClose>
-              <Button variant="destructive" onClick={(e) => {
-                // Prevent the drawer from closing when confirming
-                e.stopPropagation();
-                if (e.nativeEvent) {
-                  e.nativeEvent.stopImmediatePropagation();
-                }
-                deleteDocument();
-              }}>
-                Delete
+            
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center space-x-2">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setViewingVersionIndex(Math.min(viewingVersionIndex + 1, documentVersions.length - 1))}
+                  disabled={viewingVersionIndex >= documentVersions.length - 1}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setViewingVersionIndex(Math.max(viewingVersionIndex - 1, 0))}
+                  disabled={viewingVersionIndex <= 0}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+                
+                <span className="text-sm">
+                  Version {documentVersions[viewingVersionIndex]?.version_number || '?'} of {documentVersions.length}
+                </span>
+              </div>
+              
+              <Badge variant={(documentVersions[viewingVersionIndex]?.is_current === true) ? "default" : "outline"}>
+                {(documentVersions[viewingVersionIndex]?.is_current === true) ? "Current Version" : "Historical Version"}
+              </Badge>
+            </div>
+            
+            <div className="flex-grow overflow-auto border rounded-md p-4 bg-card">
+              {documentVersions[viewingVersionIndex] && (
+                <>
+                  <h3 className="text-xl font-semibold mb-4">
+                    {extractContent(documentVersions[viewingVersionIndex].full_content).title}
+                  </h3>
+                  <div className="prose prose-sm max-w-none dark:prose-invert">
+                    {extractContent(documentVersions[viewingVersionIndex].full_content).content ? (
+                      <MarkdownRenderer content={extractContent(documentVersions[viewingVersionIndex].full_content).content || ''} />
+                    ) : (
+                      <p className="text-muted-foreground italic">No content</p>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+            
+            <DialogFooter className="mt-4">
+              <Button
+                variant="outline"
+                onClick={() => setShowVersionModal(false)}
+              >
+                Cancel
               </Button>
+              
+              {documentVersions[viewingVersionIndex] && (documentVersions[viewingVersionIndex].is_current !== true) && (
+                <Button
+                  onClick={() => activateVersion(documentVersions[viewingVersionIndex])}
+                >
+                  Make Active
+                </Button>
+              )}
             </DialogFooter>
           </DialogContent>
         </Dialog>
-        
-        {/* Discard Changes Confirmation Dialog */}
-        <Dialog open={showDiscardDialog} onOpenChange={setShowDiscardDialog}>
-          <DialogContent className="discard-dialog" onInteractOutside={(e) => {
-            // Prevent interaction outside from closing the drawer
-            e.preventDefault();
-          }}>
-            <DialogHeader>
-              <DialogTitle>Unsaved Changes</DialogTitle>
-              <DialogDescription>
-                You have unsaved changes in "{selectedDocument?.title}". Do you want to discard these changes and switch documents?
-              </DialogDescription>
-            </DialogHeader>
-            <DialogFooter className="flex justify-between">
-              <DialogClose asChild onClick={(e) => {
-                // Prevent the drawer from closing when canceling
-                e.stopPropagation();
-                if (e.nativeEvent) {
-                  e.nativeEvent.stopImmediatePropagation();
-                }
-                setShowDiscardDialog(false);
-                setPendingDocument(null);
-              }}>
-                <Button variant="outline">Cancel</Button>
-              </DialogClose>
-              <Button 
-                variant="default" 
-                onClick={(e) => {
-                  // Prevent the drawer from closing
-                  e.stopPropagation();
-                  if (e.nativeEvent) {
-                    e.nativeEvent.stopImmediatePropagation();
-                  }
-                  // Save current document before switching
-                  saveDocument().then(() => {
-                    handleDiscardChanges();
-                  });
-                }}
-              >
-                Save & Switch
-              </Button>
-              <Button 
-                variant="destructive" 
-                onClick={(e) => {
-                  // Prevent the drawer from closing
-                  e.stopPropagation();
-                  if (e.nativeEvent) {
-                    e.nativeEvent.stopImmediatePropagation();
-                  }
+      )}
+      
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Document</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete "{documentToDelete?.title}"? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex justify-between">
+            <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={deleteDocument}>
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Discard Changes Confirmation Dialog */}
+      <Dialog open={showDiscardDialog} onOpenChange={setShowDiscardDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Unsaved Changes</DialogTitle>
+            <DialogDescription>
+              You have unsaved changes in "{selectedDocument?.title}". Do you want to discard these changes and switch documents?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex justify-between">
+            <Button variant="outline" onClick={() => setShowDiscardDialog(false)}>
+              Cancel
+            </Button>
+            <Button 
+              variant="default" 
+              onClick={() => {
+                saveDocument().then(() => {
                   handleDiscardChanges();
-                }}
-              >
-                Discard Changes
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </motion.div>
+                });
+              }}
+            >
+              Save & Switch
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={handleDiscardChanges}
+            >
+              Discard Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

@@ -106,34 +106,34 @@ export type Database = {
       }
       entities: {
         Row: {
-          id: string
-          user_id: string
-          title: string
           content: string | null
+          created_at: string | null
           entity_type: string
+          id: string
           metadata: Json | null
-          created_at: string
-          updated_at: string
+          title: string
+          updated_at: string | null
+          user_id: string
         }
         Insert: {
-          id?: string
-          user_id: string
-          title: string
           content?: string | null
+          created_at?: string | null
           entity_type: string
+          id?: string
           metadata?: Json | null
-          created_at?: string
-          updated_at?: string
+          title: string
+          updated_at?: string | null
+          user_id: string
         }
         Update: {
-          id?: string
-          user_id?: string
-          title?: string
           content?: string | null
+          created_at?: string | null
           entity_type?: string
+          id?: string
           metadata?: Json | null
-          created_at?: string
-          updated_at?: string
+          title?: string
+          updated_at?: string | null
+          user_id?: string
         }
         Relationships: [
           {
@@ -142,7 +142,70 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]
-          }
+          },
+        ]
+      }
+      entity_versions: {
+        Row: {
+          base_version_id: string | null
+          changes: Json | null
+          created_at: string | null
+          created_by_message_id: string | null
+          entity_id: string
+          entity_type: string
+          full_content: Json | null
+          id: string
+          is_current: boolean | null
+          significance: string | null
+          user_label: string | null
+          version_number: number
+          version_type: string
+        }
+        Insert: {
+          base_version_id?: string | null
+          changes?: Json | null
+          created_at?: string | null
+          created_by_message_id?: string | null
+          entity_id: string
+          entity_type: string
+          full_content?: Json | null
+          id?: string
+          is_current?: boolean | null
+          significance?: string | null
+          user_label?: string | null
+          version_number: number
+          version_type?: string
+        }
+        Update: {
+          base_version_id?: string | null
+          changes?: Json | null
+          created_at?: string | null
+          created_by_message_id?: string | null
+          entity_id?: string
+          entity_type?: string
+          full_content?: Json | null
+          id?: string
+          is_current?: boolean | null
+          significance?: string | null
+          user_label?: string | null
+          version_number?: number
+          version_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "entity_versions_base_version_id_fkey"
+            columns: ["base_version_id"]
+            isOneToOne: false
+            referencedRelation: "entity_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "entity_versions_created_by_message_id_fkey"
+            columns: ["created_by_message_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
         ]
       }
       insights: {
@@ -168,6 +231,136 @@ export type Database = {
           title?: string | null
         }
         Relationships: []
+      }
+      message_references: {
+        Row: {
+          created_at: string | null
+          entity_id: string
+          entity_type: string
+          id: string
+          message_id: string
+          reference_type: string
+        }
+        Insert: {
+          created_at?: string | null
+          entity_id: string
+          entity_type: string
+          id?: string
+          message_id: string
+          reference_type: string
+        }
+        Update: {
+          created_at?: string | null
+          entity_id?: string
+          entity_type?: string
+          id?: string
+          message_id?: string
+          reference_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_references_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      message_tags: {
+        Row: {
+          created_at: string | null
+          created_by: string
+          id: string
+          message_id: string
+          tag: string
+        }
+        Insert: {
+          created_at?: string | null
+          created_by: string
+          id?: string
+          message_id: string
+          tag: string
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string
+          id?: string
+          message_id?: string
+          tag?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_tags_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      messages: {
+        Row: {
+          content: string
+          content_embedding: string | null
+          context_id: string | null
+          context_type: string | null
+          created_at: string | null
+          detected_intent: string[] | null
+          display_thread_id: string | null
+          has_proposed_changes: boolean | null
+          id: string
+          proposed_entity_changes: Json | null
+          reply_to_message_id: string | null
+          sender_type: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          content_embedding?: string | null
+          context_id?: string | null
+          context_type?: string | null
+          created_at?: string | null
+          detected_intent?: string[] | null
+          display_thread_id?: string | null
+          has_proposed_changes?: boolean | null
+          id?: string
+          proposed_entity_changes?: Json | null
+          reply_to_message_id?: string | null
+          sender_type: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          content_embedding?: string | null
+          context_id?: string | null
+          context_type?: string | null
+          created_at?: string | null
+          detected_intent?: string[] | null
+          display_thread_id?: string | null
+          has_proposed_changes?: boolean | null
+          id?: string
+          proposed_entity_changes?: Json | null
+          reply_to_message_id?: string | null
+          sender_type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "messages_reply_to_message_id_fkey"
+            columns: ["reply_to_message_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       n8n_chat_histories: {
         Row: {

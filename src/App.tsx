@@ -27,6 +27,7 @@ import Settings from "./pages/Settings";
 import UsagePolicy from "./pages/UsagePolicy";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import UserDocuments from "./pages/UserDocuments";
+import Documents from "./features/documents/pages/Documents";
 import { SignOutDialog } from "@/components/SignOutDialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -239,8 +240,10 @@ function AppContent() {
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
   const [isAdmin, setIsAdmin] = useState(false);
   
-  // Check if we're on the user documents page
+  // Check if we're on the user documents page or documents page
   const isUserDocumentsPage = location.pathname === '/user-documents';
+  const isDocumentsPage = location.pathname === '/documents';
+  const hideNavAndFooter = isUserDocumentsPage || isDocumentsPage;
 
   // Check admin status when user changes
   useEffect(() => {
@@ -323,7 +326,7 @@ function AppContent() {
     <>
       <OfflineBanner />
       
-      {!isUserDocumentsPage && (
+      {!hideNavAndFooter && (
         <nav className={`sticky top-0 z-40 transition-all duration-300 ${
           scrolled ? "border-b bg-white/80 backdrop-blur-xl dark:bg-neutral-900/80" : "bg-transparent"
         }`}>
@@ -368,6 +371,12 @@ function AppContent() {
                   <span className="ml-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">→</span>
                 </Button>
               </Link>
+              <Link to="/documents">
+                <Button variant="ghost" className="group">
+                  Documents
+                  <span className="ml-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">→</span>
+                </Button>
+              </Link>
               <Separator orientation="vertical" className="h-6" />
               <ThemeToggle />
               <ProfileMenu />
@@ -391,6 +400,12 @@ function AppContent() {
                   <ChevronRight className="ml-auto h-4 w-4" />
                 </Button>
               </Link>
+              <Link to="/documents">
+                <Button variant="ghost" className="w-full justify-start text-sm sm:text-base">
+                  Documents
+                  <ChevronRight className="ml-auto h-4 w-4" />
+                </Button>
+              </Link>
               <Separator className="my-3" />
               <ThemeButtonMobile />
               <Separator className="my-3" />
@@ -410,6 +425,7 @@ function AppContent() {
           <Route path="/auth/callback" element={<AuthCallback />} />
           <Route path="/admin" element={<AdminPage />} />
           <Route path="/user-documents" element={<UserDocuments />} />
+          <Route path="/documents" element={<Documents />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/offline" element={<OfflinePage />} />
           <Route path="/usage-policy" element={<UsagePolicy />} />
@@ -417,7 +433,7 @@ function AppContent() {
         </Routes>
       </Suspense>
 
-      {!isUserDocumentsPage && (
+      {!hideNavAndFooter && (
         <footer className="border-t bg-gradient-to-b from-white to-orange-50/30 py-12 sm:py-16 dark:from-neutral-900 dark:to-neutral-900/80">
           <div className="mx-auto max-w-7xl px-4 sm:px-6">
             <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
@@ -446,6 +462,9 @@ function AppContent() {
                   </Link>
                   <Link to="/founders-lab">
                     <Button variant="link" className="h-auto p-0 text-xs sm:text-sm hover:text-orange-500 transition-colors">Founder's Lab</Button>
+                  </Link>
+                  <Link to="/documents">
+                    <Button variant="link" className="h-auto p-0 text-xs sm:text-sm hover:text-orange-500 transition-colors">Documents</Button>
                   </Link>
                 </div>
               </div>

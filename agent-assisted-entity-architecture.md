@@ -101,36 +101,24 @@ CREATE TABLE entity_versions (
 );
 ```
 
-**5. Entity-Specific Tables (examples)**
-
+**5. Generic Entities Table**
 ```sql
-CREATE TABLE projects (
+CREATE TABLE entities (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   user_id UUID REFERENCES users(id) NOT NULL,
-  name TEXT NOT NULL,
-  description TEXT,
+  title TEXT NOT NULL,
+  content TEXT, -- Document content
+  entity_type TEXT NOT NULL, -- 'canvas', 'project', 'journal_entry', 'future_press_conference', 'user_document', etc.
+  metadata JSONB DEFAULT '{}', -- For storing type-specific extra data
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
-CREATE TABLE canvases (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  project_id UUID REFERENCES projects(id) NOT NULL,
-  canvas_type TEXT NOT NULL DEFAULT 'lean_canvas', -- lean_canvas, fast_canvas, learner_canvas, etc.
-  title TEXT NOT NULL,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
+-- Create an index on entity_type for faster filtering
+CREATE INDEX entities_entity_type_idx ON entities(entity_type);
 
-CREATE TABLE user_documents (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  user_id UUID REFERENCES users(id) NOT NULL,
-  title TEXT NOT NULL,
-  document_type TEXT NOT NULL DEFAULT 'general', -- 'general', 'philosophy', 'strategy', etc.
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  tags TEXT[] DEFAULT '{}'
-);
+-- Create an index on user_id for faster user-specific queries
+CREATE INDEX entities_user_id_idx ON entities(user_id);
 ```
 
 ## Conversation-Based Version Control
@@ -177,7 +165,7 @@ The system is designed to handle any entity type in a consistent way:
 
 ### Entity Types (Examples)
 
-The system can support various entity types:
+The system can support various entity types through the generic entities table:
 
 1. **Canvas**: Business model canvases (lean, fast, learner, etc.)
 2. **Press Release**: Future press releases for vision planning
@@ -189,9 +177,9 @@ The system can support various entity types:
 
 To add a new entity type:
 
-1. Create a specific table for the entity (if needed)
-2. Start using the new `entity_type` value in references and versions
-3. No changes to core schema required
+1. No schema changes needed - simply use a new `entity_type` value
+2. Define any type-specific fields in the `metadata` JSONB field
+3. Ensure application code handles the new entity type's specific requirements
 
 ## Diff-Based Storage Optimization
 

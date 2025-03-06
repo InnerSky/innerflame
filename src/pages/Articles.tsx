@@ -60,7 +60,7 @@ export default function Articles() {
   return (
     <div className="min-h-screen bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-orange-50 via-white to-white dark:from-neutral-950 dark:via-neutral-900 dark:to-neutral-900">
       {/* Hero Section */}
-      <section className="relative pt-8 pb-2 sm:py-12">
+      <section className="relative py-8 sm:py-12">
         <div className="absolute inset-0 -z-10">
           <div className="absolute inset-0 bg-gradient-to-b from-orange-500/5 to-transparent"></div>
         </div>
@@ -125,7 +125,7 @@ export default function Articles() {
       </section>
 
       {/* Articles Grid */}
-      <section className="py-1 sm:py-8">
+      <section className="py-6 sm:py-8">
         <div className="mx-auto max-w-7xl px-4 sm:px-6">
           {/* Trending Articles */}
           <AnimatedSection className="mb-8">
