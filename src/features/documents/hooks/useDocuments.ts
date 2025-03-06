@@ -1,7 +1,9 @@
 import { useState, useCallback, useEffect } from 'react';
-import { Document, DocumentVersion, SaveStatus, SortDirection } from '../models/document';
+import { Document, DocumentVersion, SaveStatus, SortDirection, DocumentType, ContentFormat } from '../models/document';
 import { DocumentRepository } from '../repositories/documentRepository';
 
+// Note: 'userId' parameter is used with methods that expect a userId string,
+// while Document objects have a 'user_id' property (from Supabase Tables)
 export function useDocuments(userId?: string) {
   const [documents, setDocuments] = useState<Document[]>([]);
   const [filteredDocuments, setFilteredDocuments] = useState<Document[]>([]);
@@ -26,6 +28,10 @@ export function useDocuments(userId?: string) {
   const [showDiscardDialog, setShowDiscardDialog] = useState(false);
   const [documentToDelete, setDocumentToDelete] = useState<Document | null>(null);
   const [pendingDocument, setPendingDocument] = useState<Document | null>(null);
+  
+  // New state for document type and content format
+  const [documentType, setDocumentType] = useState<DocumentType>(DocumentType.UserDocument);
+  const [contentFormat, setContentFormat] = useState<ContentFormat>(ContentFormat.Markdown);
   
   const repository = new DocumentRepository();
   
@@ -110,11 +116,24 @@ export function useDocuments(userId?: string) {
     setSaveStatus('saving');
     
     try {
-      const newDoc = await repository.createDocument(userId, 'Untitled Document', '');
+      // Create document with default metadata including content format
+      const metadata = {
+        contentFormat: ContentFormat.Markdown
+      };
+      
+      const newDoc = await repository.createDocument(
+        userId, 
+        'Untitled Document', 
+        '', 
+        documentType,
+        metadata
+      );
+      
       setDocuments(prev => [newDoc, ...prev]);
       setSelectedDocument(newDoc);
       setTitle(newDoc.title);
       setContent(newDoc.content);
+      setContentFormat(ContentFormat.Markdown);
       setLastSaved(new Date());
       setSaveStatus('saved');
       
@@ -132,9 +151,8 @@ export function useDocuments(userId?: string) {
       console.error('Error creating document:', err);
       setSaveStatus('error');
       setError('Failed to create document');
-      return null;
     }
-  }, [userId, repository]);
+  }, [userId, documentType, repository]);
   
   // Save document
   const saveDocument = useCallback(async () => {
@@ -192,6 +210,12 @@ export function useDocuments(userId?: string) {
     setSelectedDocument(document);
     setTitle(document.title);
     setContent(document.content);
+    setDocumentType(document.entityType);
+    
+    // Set content format from metadata if it exists, or default to Markdown
+    const format = document.metadata?.contentFormat || ContentFormat.Markdown;
+    setContentFormat(format);
+    
     setPendingDocument(null);
     setSaveStatus('idle');
   }, [selectedDocument, hasUnsavedChanges]);
@@ -258,11 +282,11 @@ export function useDocuments(userId?: string) {
   }, [repository]);
   
   // Fetch document versions
-  const fetchDocumentVersions = useCallback(async () => {
+  const fetchDocumentVersions = useCallback(async (documentId: string) => {
     if (!selectedDocument) return;
     
     try {
-      const versions = await repository.getDocumentVersions(selectedDocument.id);
+      const versions = await repository.getDocumentVersions(documentId);
       setDocumentVersions(versions);
       setViewingVersionIndex(0);
       setShowVersionModal(true);
@@ -311,26 +335,96 @@ export function useDocuments(userId?: string) {
     setSortDirection(prev => prev === 'desc' ? 'asc' : 'desc');
   }, []);
   
+  // Update document type
+  const updateDocumentType = useCallback(async (newType: DocumentType) => {
+    if (!selectedDocument || !userId) return;
+    
+    setSaveStatus('saving');
+    
+    try {
+      const updatedDoc = await repository.updateDocumentType(
+        selectedDocument.id,
+        newType
+      );
+      
+      // Update documents list
+      setDocuments(prev => 
+        prev.map(doc => doc.id === updatedDoc.id ? updatedDoc : doc)
+      );
+      
+      // Update selected document
+      setSelectedDocument(updatedDoc);
+      
+      setLastSaved(new Date());
+      setSaveStatus('saved');
+    } catch (err) {
+      console.error('Error updating document type:', err);
+      setSaveStatus('error');
+      setError('Failed to update document type');
+    }
+  }, [selectedDocument, userId, repository]);
+  
+  // Add method to update content format
+  const updateContentFormat = useCallback(async (format: ContentFormat) => {
+    if (!selectedDocument || !userId || !selectedDocument.id) return;
+    
+    setSaveStatus('saving');
+    
+    try {
+      // Get existing metadata or create empty object
+      const metadata = selectedDocument.metadata || {};
+      
+      // Update with new format
+      const updatedMetadata = {
+        ...metadata,
+        contentFormat: format
+      };
+      
+      // Update metadata via repository
+      const updatedDoc = await repository.updateDocumentMetadata(
+        selectedDocument.id,
+        updatedMetadata
+      );
+      
+      // Update selected document
+      setSelectedDocument(updatedDoc);
+      setContentFormat(format);
+      
+      // Update in documents list
+      setDocuments(prev => 
+        prev.map(doc => doc.id === updatedDoc.id ? updatedDoc : doc)
+      );
+      
+      setLastSaved(new Date());
+      setSaveStatus('saved');
+    } catch (error) {
+      console.error('Error updating content format:', error);
+      setSaveStatus('error');
+    }
+  }, [selectedDocument, userId, repository]);
+  
   return {
     // State
     documents,
     filteredDocuments,
     selectedDocument,
+    documentVersions,
+    viewingVersionIndex,
     title,
     content,
     isPreviewMode,
+    lastSaved,
     saveStatus,
     loading,
     error,
-    lastSaved,
     searchQuery,
     sortDirection,
-    documentVersions,
-    viewingVersionIndex,
     showVersionModal,
     showDeleteDialog,
     showDiscardDialog,
     documentToDelete,
+    documentType,
+    contentFormat,
     
     // State setters
     setTitle,
@@ -339,6 +433,8 @@ export function useDocuments(userId?: string) {
     setViewingVersionIndex,
     setShowVersionModal,
     setShowDeleteDialog,
+    setDocumentType,
+    setContentFormat,
     
     // Operations
     fetchDocuments,
@@ -354,6 +450,8 @@ export function useDocuments(userId?: string) {
     togglePreviewMode,
     clearSearch,
     toggleSort,
-    hasUnsavedChanges
+    hasUnsavedChanges,
+    updateDocumentType,
+    updateContentFormat
   };
 } 

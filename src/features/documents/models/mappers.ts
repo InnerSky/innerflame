@@ -1,14 +1,18 @@
-import { Tables } from "@/types/supabase";
-import { Document, DocumentVersion, DocumentContent } from "./document";
+import { Json, Tables } from "@/types/supabase";
+import { Document, DocumentVersion, DocumentContent, DocumentMetadata, DocumentType } from "./document";
 
 // Extract content from JSON
-export function extractContent(fullContent: any): DocumentContent {
+export function extractContent(fullContent: Json | null): DocumentContent {
   if (!fullContent) return { title: '', content: '' };
   
   // Handle string JSON
   if (typeof fullContent === 'string') {
     try {
-      return JSON.parse(fullContent);
+      const parsed = JSON.parse(fullContent);
+      return {
+        title: parsed.title || '',
+        content: parsed.content || ''
+      };
     } catch (e) {
       console.error('Error parsing full_content:', e);
       return { title: '', content: '' };
@@ -17,9 +21,10 @@ export function extractContent(fullContent: any): DocumentContent {
   
   // Handle object
   if (typeof fullContent === 'object') {
+    const content = fullContent as Record<string, any>;
     return {
-      title: fullContent.title || '',
-      content: fullContent.content || ''
+      title: content.title || '',
+      content: content.content || ''
     };
   }
   
@@ -32,16 +37,14 @@ export function mapEntityToDocument(
   currentVersion?: Tables<"entity_versions">
 ): Document {
   return {
-    id: entity.id,
-    title: entity.title,
+    ...entity,                              // Spread base properties
+    entityType: entity.entity_type as DocumentType, // Cast to enum
+    createdAt: new Date(entity.created_at || new Date().toISOString()),
+    updatedAt: new Date(entity.updated_at || new Date().toISOString()),
     content: currentVersion 
       ? extractContent(currentVersion.full_content).content 
       : (entity.content || ''),
-    entityType: entity.entity_type,
-    createdAt: new Date(entity.created_at || new Date().toISOString()),
-    updatedAt: new Date(entity.updated_at || new Date().toISOString()),
-    userId: entity.user_id,
-    metadata: entity.metadata as Record<string, any> || {},
+    metadata: entity.metadata as DocumentMetadata || {},
     
     // Version-related fields
     currentVersionId: currentVersion?.id,
@@ -56,20 +59,12 @@ export function mapEntityVersionToDocumentVersion(
   const contentData = extractContent(version.full_content);
   
   return {
-    id: version.id,
-    entityId: version.entity_id,
-    versionNumber: version.version_number,
-    content: {
-      title: contentData.title,
-      content: contentData.content
-    },
+    ...version,
+    entityType: version.entity_type as DocumentType, // Cast to enum
+    content: contentData,
     createdAt: new Date(version.created_at || new Date().toISOString()),
     isCurrent: version.is_current || false,
-    versionType: version.version_type,
-    baseVersionId: version.base_version_id || undefined,
-    significance: version.significance || undefined,
-    userLabel: version.user_label || undefined,
-    changes: version.changes as Record<string, any> || {},
+    changes: version.changes as Record<string, unknown> || {},
   };
 }
 
@@ -81,13 +76,13 @@ export function mapDocumentToEntity(document: Document): Partial<Tables<"entitie
     content: document.content || null,
     entity_type: document.entityType,
     updated_at: document.updatedAt.toISOString(),
-    user_id: document.userId,
-    metadata: document.metadata as any || null,
+    user_id: document.user_id,
+    metadata: document.metadata as Json || null,
   };
 }
 
 // Map document content to version full_content
-export function createFullContent(title: string, content: string): any {
+export function createFullContent(title: string, content: string): Json {
   return {
     title,
     content

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { useDocuments } from '../hooks/useDocuments';
@@ -10,10 +10,22 @@ import { DocumentList } from '../components/DocumentList';
 import { DocumentEditor } from '../components/DocumentEditor';
 import { VersionHistoryModal } from '../components/VersionHistoryModal';
 import { DeleteConfirmationDialog, DiscardChangesDialog } from '../components/ConfirmationDialogs';
-import { FileText, FilePlus, Home, List } from 'lucide-react';
+import { 
+  File, 
+  FilePlus, 
+  Clock, 
+  List, 
+  FileText, 
+  Search, 
+  XCircle, 
+  AlertCircle,
+  ArrowUpDown,
+  Home
+} from 'lucide-react';
 import { Spinner } from '@/components/Spinner';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AlertCircle } from 'lucide-react';
+import { DocumentTypeSelector } from '../components/DocumentTypeSelector';
+import { DocumentType } from '../models/document';
 
 // Create a hook for media queries
 const useMediaQuery = (query: string): boolean => {
@@ -67,6 +79,8 @@ const Documents = () => {
     showDeleteDialog,
     showDiscardDialog,
     documentToDelete,
+    documentType,
+    contentFormat,
     
     setTitle,
     setContent,
@@ -74,6 +88,7 @@ const Documents = () => {
     setViewingVersionIndex,
     setShowVersionModal,
     setShowDeleteDialog,
+    setDocumentType,
     
     fetchDocuments,
     createNewDocument,
@@ -88,7 +103,9 @@ const Documents = () => {
     togglePreviewMode,
     clearSearch,
     toggleSort,
-    hasUnsavedChanges
+    hasUnsavedChanges,
+    updateDocumentType,
+    updateContentFormat,
   } = useDocuments(user?.id);
   
   // Memoize the hasUnsavedChanges value for proper reactivity
@@ -118,6 +135,14 @@ const Documents = () => {
       setDrawerOpen(false);
     }
   }, [isMobile]);
+  
+  // Add a wrapper function for fetchDocumentVersions
+  const handleVersionHistoryClick = useCallback(() => {
+    if (selectedDocument?.id) {
+      fetchDocumentVersions(selectedDocument.id);
+      setShowVersionModal(true);
+    }
+  }, [selectedDocument, fetchDocumentVersions]);
   
   // Loading state
   if (loading && documents.length === 0) {
@@ -158,7 +183,19 @@ const Documents = () => {
           )}
           
           <div className="flex-1"></div>
-          <ThemeToggle />
+          
+          <div className="flex items-center gap-2">
+            <Button 
+              variant="ghost"
+              size="icon"
+              onClick={goToHome}
+              aria-label="Go to home page"
+              className="mr-1"
+            >
+              <Home className="h-[1.2rem] w-[1.2rem]" />
+            </Button>
+            <ThemeToggle />
+          </div>
           
           <div className="ml-4 flex">
             <Button 
@@ -239,11 +276,15 @@ const Documents = () => {
                 lastSaved={lastSaved}
                 versionNumber={selectedDocument.versionNumber}
                 hasUnsavedChanges={documentHasUnsavedChanges}
+                documentType={selectedDocument.entityType}
+                contentFormat={contentFormat}
                 onTitleChange={setTitle}
                 onContentChange={setContent}
                 onTogglePreview={togglePreviewMode}
                 onSave={saveDocument}
-                onVersionHistoryClick={fetchDocumentVersions}
+                onVersionHistoryClick={handleVersionHistoryClick}
+                onDocumentTypeChange={updateDocumentType}
+                onContentFormatChange={updateContentFormat}
               />
             ) : (
               <div className="text-center py-12 flex flex-col items-center justify-center h-full">
@@ -251,9 +292,17 @@ const Documents = () => {
                   <FileText className="h-16 w-16 mx-auto mb-4 opacity-20" />
                   <p className="mb-4">Select a document or create a new one</p>
                 </div>
+                
+                <div className="mb-4">
+                  <DocumentTypeSelector 
+                    value={documentType} 
+                    onChange={setDocumentType} 
+                  />
+                </div>
+                
                 <Button onClick={createNewDocument} variant="default" className="transition-colors">
                   <FilePlus className="mr-2 h-5 w-5" />
-                  Create New Document
+                  <span>Create New Document</span>
                 </Button>
               </div>
             )}
@@ -287,11 +336,15 @@ const Documents = () => {
                 lastSaved={lastSaved}
                 versionNumber={selectedDocument.versionNumber}
                 hasUnsavedChanges={documentHasUnsavedChanges}
+                documentType={selectedDocument.entityType}
+                contentFormat={contentFormat}
                 onTitleChange={setTitle}
                 onContentChange={setContent}
                 onTogglePreview={togglePreviewMode}
                 onSave={saveDocument}
-                onVersionHistoryClick={fetchDocumentVersions}
+                onVersionHistoryClick={handleVersionHistoryClick}
+                onDocumentTypeChange={updateDocumentType}
+                onContentFormatChange={updateContentFormat}
               />
             ) : (
               <div className="text-center py-12 flex flex-col items-center justify-center h-full">

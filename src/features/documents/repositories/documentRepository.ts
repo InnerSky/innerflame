@@ -1,5 +1,5 @@
 import { supabase } from "@/lib/supabase";
-import { Document, DocumentVersion } from "../models/document";
+import { Document, DocumentVersion, DocumentType, DocumentMetadata } from "../models/document";
 import { 
   mapEntityToDocument, 
   mapEntityVersionToDocumentVersion,
@@ -14,33 +14,26 @@ export class DocumentRepository {
       .from('entities')
       .select('*')
       .eq('user_id', userId)
-      .eq('entity_type', 'user_document')
+      .eq('entity_type', DocumentType.UserDocument)
       .order('updated_at', { ascending: false });
       
     if (entitiesError) throw entitiesError;
-    if (!entities || entities.length === 0) return [];
+    if (!entities) return [];
     
-    // Fetch all current versions
-    const entityIds = entities.map(entity => entity.id);
+    // Fetch current versions
     const { data: versions, error: versionsError } = await supabase
       .from('entity_versions')
       .select('*')
-      .in('entity_id', entityIds)
+      .in('entity_id', entities.map(e => e.id))
       .eq('is_current', true);
       
     if (versionsError) throw versionsError;
     
-    // Map entities to documents
-    const versionMap = new Map();
-    if (versions) {
-      versions.forEach(version => {
-        versionMap.set(version.entity_id, version);
-      });
-    }
-    
-    return entities.map(entity => 
-      mapEntityToDocument(entity, versionMap.get(entity.id))
-    );
+    // Map to domain models
+    return entities.map(entity => {
+      const currentVersion = versions?.find(v => v.entity_id === entity.id);
+      return mapEntityToDocument(entity, currentVersion);
+    });
   }
   
   // Fetch document by ID with all versions
@@ -79,7 +72,13 @@ export class DocumentRepository {
   }
   
   // Create new document
-  async createDocument(userId: string, title: string, content: string): Promise<Document> {
+  async createDocument(
+    userId: string, 
+    title: string, 
+    content: string, 
+    documentType: DocumentType = DocumentType.UserDocument,
+    metadata?: DocumentMetadata
+  ): Promise<Document> {
     // Create entity
     const { data: entity, error: entityError } = await supabase
       .from('entities')
@@ -87,7 +86,8 @@ export class DocumentRepository {
         user_id: userId,
         title: title,
         content: null, // Content will be in version
-        entity_type: 'user_document',
+        entity_type: documentType,
+        metadata: metadata || {} // Add metadata to the entity
       })
       .select()
       .single();
@@ -99,7 +99,7 @@ export class DocumentRepository {
       .from('entity_versions')
       .insert({
         entity_id: entity.id,
-        entity_type: 'user_document',
+        entity_type: documentType,
         version_number: 1,
         full_content: createFullContent(title, content),
         version_type: 'initial',
@@ -118,12 +118,22 @@ export class DocumentRepository {
   async saveDocument(documentId: string, title: string, content: string): Promise<Document> {
     const now = new Date().toISOString();
     
-    // Update entity
+    // Get the existing entity to preserve metadata
+    const { data: existingEntity, error: getError } = await supabase
+      .from('entities')
+      .select('*')
+      .eq('id', documentId)
+      .single();
+      
+    if (getError) throw getError;
+    
+    // Update entity preserving metadata
     const { data: entity, error: entityError } = await supabase
       .from('entities')
       .update({
         title,
-        updated_at: now
+        updated_at: now,
+        metadata: existingEntity.metadata // Preserve existing metadata
       })
       .eq('id', documentId)
       .select()
@@ -204,46 +214,45 @@ export class DocumentRepository {
   
   // Activate a specific version (create new version based on old one)
   async activateVersion(version: DocumentVersion): Promise<Document> {
-    const { entityId, content } = version;
-    const now = new Date().toISOString();
-    
-    // Get the entity
     const { data: entity, error: entityError } = await supabase
       .from('entities')
       .select('*')
-      .eq('id', entityId)
+      .eq('id', version.entity_id)
       .single();
       
     if (entityError) throw entityError;
+    if (!entity) throw new Error('Entity not found');
     
     // Get highest version number
     const { data: versions, error: versionsError } = await supabase
       .from('entity_versions')
       .select('version_number')
-      .eq('entity_id', entityId)
+      .eq('entity_id', version.entity_id)
       .order('version_number', { ascending: false })
       .limit(1);
       
     if (versionsError) throw versionsError;
     
-    const newVersionNumber = (versions && versions.length > 0) 
+    const newVersionNumber = versions && versions.length > 0 
       ? versions[0].version_number + 1 
       : 1;
     
-    // Mark all versions as not current
+    const now = new Date().toISOString();
+    
+    // Set all versions to not current
     await supabase
       .from('entity_versions')
       .update({ is_current: false })
-      .eq('entity_id', entityId);
+      .eq('entity_id', version.entity_id);
     
     // Create new version based on the activated version
     const { data: newVersion, error: newVersionError } = await supabase
       .from('entity_versions')
       .insert({
-        entity_id: entityId,
+        entity_id: version.entity_id,
         entity_type: entity.entity_type,
         version_number: newVersionNumber,
-        full_content: createFullContent(content.title, content.content),
+        full_content: createFullContent(version.content.title, version.content.content),
         version_type: 'restore',
         is_current: true,
         base_version_id: version.id,
@@ -254,33 +263,117 @@ export class DocumentRepository {
       
     if (newVersionError) throw newVersionError;
     
-    // Update entity title
+    // Update entity title to match version
     await supabase
       .from('entities')
       .update({
-        title: content.title,
+        title: version.content.title,
         updated_at: now
       })
-      .eq('id', entityId);
+      .eq('id', version.entity_id);
     
     // Return updated document
     return mapEntityToDocument(
-      { ...entity, title: content.title, updated_at: now },
+      { ...entity, title: version.content.title, updated_at: now },
       newVersion
     );
   }
   
   // Duplicate a document
   async duplicateDocument(documentId: string): Promise<Document> {
-    // Get original document with current version
-    const originalDoc = await this.getDocumentWithVersions(documentId);
-    if (!originalDoc) throw new Error("Document not found");
+    const original = await this.getDocumentWithVersions(documentId);
+    if (!original) throw new Error('Document not found');
     
-    // Create a new document with the same content but a new title
+    // Create a new document with same content but "(Copy)" in the title
     return this.createDocument(
-      originalDoc.userId,
-      `${originalDoc.title} (Copy)`,
-      originalDoc.content
+      original.user_id,
+      `${original.title} (Copy)`,
+      original.content,
+      original.entityType,
+      original.metadata // Copy the original metadata
     );
+  }
+  
+  // Update a document's type
+  async updateDocumentType(documentId: string, newType: DocumentType): Promise<Document> {
+    const now = new Date().toISOString();
+    
+    // Get the existing entity to preserve metadata
+    const { data: existingEntity, error: getError } = await supabase
+      .from('entities')
+      .select('*')
+      .eq('id', documentId)
+      .single();
+      
+    if (getError) throw getError;
+    
+    // Update the entity type while preserving metadata
+    const { data: entity, error: entityError } = await supabase
+      .from('entities')
+      .update({
+        entity_type: newType,
+        updated_at: now,
+        metadata: existingEntity.metadata // Preserve existing metadata
+      })
+      .eq('id', documentId)
+      .select()
+      .single();
+      
+    if (entityError) throw entityError;
+    if (!entity) throw new Error('Entity not found');
+    
+    // Update the current version's entity type
+    const { data: currentVersion, error: versionError } = await supabase
+      .from('entity_versions')
+      .update({
+        entity_type: newType
+      })
+      .eq('entity_id', documentId)
+      .eq('is_current', true)
+      .select()
+      .single();
+      
+    if (versionError) throw versionError;
+    
+    // Return updated document
+    return mapEntityToDocument(entity, currentVersion);
+  }
+  
+  // Add a method to update document metadata
+  async updateDocumentMetadata(documentId: string, metadata: any): Promise<Document> {
+    // Get the current document
+    const { data: entity, error: entityError } = await supabase
+      .from('entities')
+      .select('*')
+      .eq('id', documentId)
+      .single();
+      
+    if (entityError) throw entityError;
+    
+    // Update the metadata
+    const { data: updatedEntity, error: updateError } = await supabase
+      .from('entities')
+      .update({
+        metadata: metadata,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', documentId)
+      .select()
+      .single();
+      
+    if (updateError) throw updateError;
+    
+    // Get current version to return a complete document
+    const { data: currentVersion, error: versionError } = await supabase
+      .from('entity_versions')
+      .select('*')
+      .eq('entity_id', documentId)
+      .eq('is_current', true)
+      .single();
+      
+    if (versionError) throw versionError;
+    
+    // Return updated document
+    return mapEntityToDocument(updatedEntity, currentVersion);
   }
 } 
