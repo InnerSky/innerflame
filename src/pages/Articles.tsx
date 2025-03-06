@@ -60,20 +60,20 @@ export default function Articles() {
   return (
     <div className="min-h-screen bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-orange-50 via-white to-white dark:from-neutral-950 dark:via-neutral-900 dark:to-neutral-900">
       {/* Hero Section */}
-      <section className="relative py-16 sm:py-24">
+      <section className="relative pt-8 pb-2 sm:py-12">
         <div className="absolute inset-0 -z-10">
           <div className="absolute inset-0 bg-gradient-to-b from-orange-500/5 to-transparent"></div>
         </div>
         <div className="mx-auto max-w-7xl px-4 sm:px-6">
           <AnimatedSection className="text-center">
             <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold">Latest Insights</h1>
-            <p className="mt-4 text-muted-foreground">
+            <p className="mt-3 text-muted-foreground">
               Discover articles that will help you grow as a founder
             </p>
           </AnimatedSection>
 
           {/* Search and Filters */}
-          <AnimatedSection className="mt-8 sm:mt-12" delay={200}>
+          <AnimatedSection className="mt-6 sm:mt-8" delay={200}>
             <div className="flex flex-col sm:flex-row gap-4 items-stretch sm:items-center justify-center">
               <div className="relative flex-1 max-w-md">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -108,7 +108,7 @@ export default function Articles() {
             </div>
 
             {/* Category Filters */}
-            <div className={`mt-4 flex flex-wrap gap-2 justify-center transition-all duration-300 ${showFilters ? 'opacity-100' : 'opacity-0 h-0 overflow-hidden'}`}>
+            <div className={`mt-3 flex flex-wrap gap-2 justify-center transition-all duration-300 ${showFilters ? 'opacity-100' : 'opacity-0 h-0 overflow-hidden'}`}>
               {categories.map((category) => (
                 <Button
                   key={category}
@@ -125,11 +125,11 @@ export default function Articles() {
       </section>
 
       {/* Articles Grid */}
-      <section className="py-12 sm:py-16">
+      <section className="py-1 sm:py-8">
         <div className="mx-auto max-w-7xl px-4 sm:px-6">
           {/* Trending Articles */}
-          <AnimatedSection className="mb-12">
-            <div className="flex items-center gap-2 mb-6">
+          <AnimatedSection className="mb-8">
+            <div className="flex items-center gap-2 mb-4">
               <TrendingUp className="h-5 w-5 text-orange-500" />
               <h2 className="text-xl sm:text-2xl font-semibold">Trending Now</h2>
             </div>
@@ -142,7 +142,7 @@ export default function Articles() {
             </div>
           </AnimatedSection>
 
-          <Separator className="my-12" />
+          <Separator className="my-8" />
 
           {/* All Articles */}
           <AnimatedSection>

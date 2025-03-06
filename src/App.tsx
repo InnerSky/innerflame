@@ -1,5 +1,5 @@
 import { useState, useEffect, lazy, Suspense } from "react";
-import { BrowserRouter, Routes, Route, Link, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Link, useLocation, useNavigate } from "react-router-dom";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { ThemeButtonMobile } from "@/components/ThemeButtonMobile";
@@ -11,11 +11,11 @@ import {
   Users,
   BookOpen,
   LogOut,
-  Settings as SettingsIcon
+  Settings as SettingsIcon,
+  Shield
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { AuthModal } from "@/components/auth/AuthModal";
-import { UserMenu } from "@/components/UserMenu";
 import { OfflineBanner } from "@/components/OfflineBanner";
 import Home from "./pages/Home";
 import Articles from "./pages/Articles";
@@ -28,6 +28,13 @@ import UsagePolicy from "./pages/UsagePolicy";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import UserDocuments from "./pages/UserDocuments";
 import { SignOutDialog } from "@/components/SignOutDialog";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { supabase } from "@/lib/supabase";
 const OfflinePage = lazy(() => import("./pages/OfflinePage"));
 
 function App() {
@@ -40,15 +47,226 @@ function App() {
   );
 }
 
+// New component for unified profile menu
+interface ProfileMenuProps {
+  onOpenChange?: (isOpen: boolean) => void;
+  isMobile?: boolean;
+}
+
+function ProfileMenu({ onOpenChange, isMobile = false }: ProfileMenuProps) {
+  const { user, loading, signOut } = useAuth();
+  const [isAdmin, setIsAdmin] = useState(false);
+  const navigate = useNavigate();
+  
+  // Check admin status when user changes
+  useEffect(() => {
+    const checkAdminStatus = async () => {
+      if (!user) {
+        setIsAdmin(false);
+        return;
+      }
+      
+      try {
+        const { data, error } = await supabase
+          .from('users')
+          .select('is_admin')
+          .eq('id', user.id)
+          .single();
+          
+        if (!error && data && data.is_admin) {
+          setIsAdmin(true);
+        }
+      } catch (err) {
+        console.error('Error checking admin status:', err);
+      }
+    };
+    
+    checkAdminStatus();
+  }, [user]);
+  
+  const handleSignOut = async () => {
+    if (signOut) {
+      await signOut();
+      // Navigate to landing page after signing out
+      navigate('/');
+      // Close mobile menu if applicable
+      onOpenChange && onOpenChange(false);
+    }
+  };
+  
+  if (loading) {
+    return (
+      <Button disabled className={isMobile ? "w-full text-sm sm:text-base" : ""}>
+        <span className="animate-pulse">Loading...</span>
+      </Button>
+    );
+  }
+  
+  if (!user) {
+    return (
+      <AuthModal 
+        trigger={
+          <Button className={isMobile ? "w-full text-sm sm:text-base" : ""}>Sign In</Button>
+        }
+      />
+    );
+  }
+  
+  if (isMobile) {
+    // Direct rendering in mobile menu
+    return (
+      <>
+        <div className="flex items-center space-x-3 mb-3 px-4 py-2 border rounded-md bg-background/50">
+          <Avatar className="h-10 w-10">
+            <AvatarImage src={user?.user_metadata?.avatar_url} alt={user?.email || 'User'} />
+            <AvatarFallback>
+              {user?.email ? user.email.substring(0, 2).toUpperCase() : '?'}
+            </AvatarFallback>
+          </Avatar>
+          <div className="flex flex-col">
+            <p className="text-sm font-medium leading-none">{user?.user_metadata?.name || user?.email}</p>
+            <p className="text-xs mt-1 leading-none text-muted-foreground">
+              {user?.email}
+            </p>
+          </div>
+        </div>
+        
+        <Link to="/settings">
+          <Button 
+            variant="ghost" 
+            className="w-full justify-start text-sm sm:text-base"
+            onClick={() => onOpenChange && onOpenChange(false)}
+          >
+            Settings
+            <SettingsIcon className="ml-auto h-4 w-4" />
+          </Button>
+        </Link>
+        
+        {isAdmin && (
+          <Link to="/admin">
+            <Button 
+              variant="ghost" 
+              className="w-full justify-start text-sm sm:text-base"
+              onClick={() => onOpenChange && onOpenChange(false)}
+            >
+              Admin Dashboard
+              <Shield className="ml-auto h-4 w-4" />
+            </Button>
+          </Link>
+        )}
+        
+        <Separator className="my-3 opacity-50" />
+        
+        <SignOutDialog 
+          onSignOut={handleSignOut}
+        />
+      </>
+    );
+  }
+  
+  // Desktop dropdown
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+          <Avatar className="h-8 w-8">
+            <AvatarImage src={user?.user_metadata?.avatar_url} alt={user?.email || 'User'} />
+            <AvatarFallback>
+              {user?.email ? user.email.substring(0, 2).toUpperCase() : '?'}
+            </AvatarFallback>
+          </Avatar>
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent className="w-56 p-2" align="end">
+        <div className="flex items-center space-x-3 mb-2 px-4 py-2">
+          <Avatar className="h-10 w-10">
+            <AvatarImage src={user?.user_metadata?.avatar_url} alt={user?.email || 'User'} />
+            <AvatarFallback>
+              {user?.email ? user.email.substring(0, 2).toUpperCase() : '?'}
+            </AvatarFallback>
+          </Avatar>
+          <div className="flex flex-col">
+            <p className="text-sm font-medium leading-none">{user?.user_metadata?.name || user?.email}</p>
+            <p className="text-xs mt-1 leading-none text-muted-foreground">
+              {user?.email}
+            </p>
+          </div>
+        </div>
+        
+        <Separator className="my-1" />
+        
+        <div className="py-1">
+          <Link to="/settings" className="w-full block">
+            <Button 
+              variant="ghost" 
+              className="w-full justify-start text-sm"
+            >
+              Settings
+              <SettingsIcon className="ml-auto h-4 w-4" />
+            </Button>
+          </Link>
+          
+          {isAdmin && (
+            <Link to="/admin" className="w-full block">
+              <Button 
+                variant="ghost" 
+                className="w-full justify-start text-sm"
+              >
+                Admin Dashboard
+                <Shield className="ml-auto h-4 w-4" />
+              </Button>
+            </Link>
+          )}
+        </div>
+        
+        <Separator className="my-1" />
+        
+        <div className="py-1">
+          <SignOutDialog 
+            onSignOut={handleSignOut}
+          />
+        </div>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
 function AppContent() {
   const [scrolled, setScrolled] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const location = useLocation();
   const { user, loading, signOut } = useAuth();
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
+  const [isAdmin, setIsAdmin] = useState(false);
   
   // Check if we're on the user documents page
   const isUserDocumentsPage = location.pathname === '/user-documents';
+
+  // Check admin status when user changes
+  useEffect(() => {
+    const checkAdminStatus = async () => {
+      if (!user) {
+        setIsAdmin(false);
+        return;
+      }
+      
+      try {
+        const { data, error } = await supabase
+          .from('users')
+          .select('is_admin')
+          .eq('id', user.id)
+          .single();
+          
+        if (!error && data && data.is_admin) {
+          setIsAdmin(true);
+        }
+      } catch (err) {
+        console.error('Error checking admin status:', err);
+      }
+    };
+    
+    checkAdminStatus();
+  }, [user]);
 
   // Check online status
   useEffect(() => {
@@ -152,15 +370,7 @@ function AppContent() {
               </Link>
               <Separator orientation="vertical" className="h-6" />
               <ThemeToggle />
-              {loading ? (
-                <Button disabled>
-                  <span className="animate-pulse">Loading...</span>
-                </Button>
-              ) : user ? (
-                <UserMenu />
-              ) : (
-                <AuthModal />
-              )}
+              <ProfileMenu />
             </div>
           </div>
 
@@ -183,39 +393,8 @@ function AppContent() {
               </Link>
               <Separator className="my-3" />
               <ThemeButtonMobile />
-              {user && (
-                <Link to="/settings">
-                  <Button 
-                    variant="ghost" 
-                    className="w-full justify-start text-sm sm:text-base"
-                    onClick={() => {
-                      setIsMenuOpen(false);
-                    }}
-                  >
-                    Settings
-                    <SettingsIcon className="ml-auto h-4 w-4" />
-                  </Button>
-                </Link>
-              )}
-              <Separator className="my-3 opacity-50" />
-              {loading ? (
-                <Button disabled className="w-full text-sm sm:text-base">
-                  <span className="animate-pulse">Loading...</span>
-                </Button>
-              ) : user ? (
-                <SignOutDialog 
-                  onSignOut={() => {
-                    setIsMenuOpen(false);
-                    signOut && signOut();
-                  }}
-                />
-              ) : (
-                <AuthModal 
-                  trigger={
-                    <Button className="w-full text-sm sm:text-base">Sign In</Button>
-                  }
-                />
-              )}
+              <Separator className="my-3" />
+              <ProfileMenu isMobile={true} onOpenChange={setIsMenuOpen} />
             </div>
           </div>
         </nav>

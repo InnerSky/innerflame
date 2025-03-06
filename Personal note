@@ -1,4 +1,3 @@
+Command we can use: 
 npm run gen:types
-
-use npx with supabase
 npx supabase db push
