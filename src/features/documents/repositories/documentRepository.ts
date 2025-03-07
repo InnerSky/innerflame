@@ -376,4 +376,158 @@ export class DocumentRepository {
     // Return updated document
     return mapEntityToDocument(updatedEntity, currentVersion);
   }
+  
+  // Fetch all projects for a user
+  async getUserProjectsOnly(userId: string): Promise<Document[]> {
+    // Fetch all entities of type Project
+    const { data: entities, error: entitiesError } = await supabase
+      .from('entities')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('entity_type', DocumentType.Project)
+      .order('updated_at', { ascending: false });
+      
+    if (entitiesError) throw entitiesError;
+    if (!entities) return [];
+    
+    // Fetch current versions
+    const { data: versions, error: versionsError } = await supabase
+      .from('entity_versions')
+      .select('*')
+      .in('entity_id', entities.map(e => e.id))
+      .eq('is_current', true);
+      
+    if (versionsError) throw versionsError;
+    
+    // Map to domain models
+    return entities.map(entity => {
+      const currentVersion = versions?.find(v => v.entity_id === entity.id);
+      return mapEntityToDocument(entity, currentVersion);
+    });
+  }
+  
+  // Fetch documents for a specific project
+  async getDocumentsByProject(userId: string, projectId: string): Promise<Document[]> {
+    // Fetch all entities with metadata.projectId equal to the provided projectId
+    const { data: entities, error: entitiesError } = await supabase
+      .from('entities')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('entity_type', DocumentType.UserDocument)
+      .contains('metadata', { projectId });
+      
+    if (entitiesError) throw entitiesError;
+    if (!entities) return [];
+    
+    // Fetch current versions
+    const { data: versions, error: versionsError } = await supabase
+      .from('entity_versions')
+      .select('*')
+      .in('entity_id', entities.map(e => e.id))
+      .eq('is_current', true);
+      
+    if (versionsError) throw versionsError;
+    
+    // Map to domain models
+    return entities.map(entity => {
+      const currentVersion = versions?.find(v => v.entity_id === entity.id);
+      return mapEntityToDocument(entity, currentVersion);
+    });
+  }
+  
+  // Set the project for a document
+  async setDocumentProject(documentId: string, projectId: string | null): Promise<Document> {
+    // Get the existing entity to preserve metadata
+    const { data: existingEntity, error: getError } = await supabase
+      .from('entities')
+      .select('*')
+      .eq('id', documentId)
+      .single();
+      
+    if (getError) throw getError;
+    
+    // Update metadata with projectId
+    const metadata = existingEntity.metadata as Record<string, any> || {};
+    
+    if (projectId) {
+      metadata.projectId = projectId;
+    } else {
+      // Remove projectId if null is passed
+      if (metadata.projectId) {
+        delete metadata.projectId;
+      }
+    }
+    
+    // Update entity with new metadata
+    const { data: entity, error: updateError } = await supabase
+      .from('entities')
+      .update({
+        metadata,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', documentId)
+      .select()
+      .single();
+      
+    if (updateError) throw updateError;
+    
+    // Get current version to return a complete document
+    const { data: currentVersion, error: versionError } = await supabase
+      .from('entity_versions')
+      .select('*')
+      .eq('entity_id', documentId)
+      .eq('is_current', true)
+      .single();
+      
+    if (versionError) throw versionError;
+    
+    // Return updated document
+    return mapEntityToDocument(entity, currentVersion);
+  }
+  
+  // Create a new project
+  async createProject(userId: string, title: string, content: string = ''): Promise<Document> {
+    return this.createDocument(
+      userId,
+      title,
+      content,
+      DocumentType.Project
+    );
+  }
+  
+  // Get documents without any project assigned
+  async getDocumentsWithNoProject(userId: string): Promise<Document[]> {
+    // First fetch all user documents
+    const { data: entities, error: entitiesError } = await supabase
+      .from('entities')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('entity_type', DocumentType.UserDocument);
+      
+    if (entitiesError) throw entitiesError;
+    if (!entities) return [];
+    
+    // Filter locally to find documents without projectId in metadata
+    const documentsWithNoProject = entities.filter(entity => {
+      const metadata = entity.metadata as Record<string, any> || {};
+      return !metadata || !metadata.projectId;
+    });
+    
+    if (documentsWithNoProject.length === 0) return [];
+    
+    // Fetch current versions for the filtered documents
+    const { data: versions, error: versionsError } = await supabase
+      .from('entity_versions')
+      .select('*')
+      .in('entity_id', documentsWithNoProject.map(e => e.id))
+      .eq('is_current', true);
+      
+    if (versionsError) throw versionsError;
+    
+    // Map to domain models
+    return documentsWithNoProject.map(entity => {
+      const currentVersion = versions?.find(v => v.entity_id === entity.id);
+      return mapEntityToDocument(entity, currentVersion);
+    });
+  }
 } 

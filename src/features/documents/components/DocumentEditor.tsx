@@ -17,6 +17,8 @@ import {
 } from '@/components/ui/dialog';
 import { DocumentTypeSelector } from './DocumentTypeSelector';
 import { ContentFormatSelector } from './ContentFormatSelector';
+import { JSONEditor } from './JSONEditor';
+import { JSONDisplay } from './JSONDisplay';
 
 interface DocumentEditorProps {
   title: string;
@@ -36,6 +38,23 @@ interface DocumentEditorProps {
   onDocumentTypeChange?: (type: DocumentType) => void;
   onContentFormatChange?: (format: ContentFormat) => void;
 }
+
+// Add this helper function to safely parse JSON
+const tryParseJSON = (jsonString: string): Record<string, string> | null => {
+  try {
+    const parsed = JSON.parse(jsonString);
+    // Ensure it's an object and convert all values to strings
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+      return Object.entries(parsed).reduce((acc, [key, value]) => {
+        acc[key] = String(value);
+        return acc;
+      }, {} as Record<string, string>);
+    }
+    return null;
+  } catch (e) {
+    return null;
+  }
+};
 
 export function DocumentEditor({
   title,
@@ -141,11 +160,11 @@ export function DocumentEditor({
   };
 
   return (
-    <div className="flex flex-col h-full overflow-hidden bg-card p-4 rounded-md border">
-      <div className="flex justify-between items-center mb-4">
-        <div className="flex-1 mr-4">
+    <div className="flex flex-col h-full overflow-hidden bg-card sm:p-4 p-2 sm:rounded-md sm:border">
+      <div className="flex justify-between items-center mb-2 sm:mb-4">
+        <div className="flex-1 mr-2 sm:mr-4">
           <Input
-            className="text-xl font-semibold"
+            className="text-lg sm:text-xl font-semibold px-2 py-1 sm:px-3 sm:py-2 h-8 sm:h-10"
             placeholder="Document Title"
             value={title}
             onChange={(e) => onTitleChange(e.target.value)}
@@ -156,46 +175,61 @@ export function DocumentEditor({
           variant="outline"
           size="sm"
           onClick={onTogglePreview}
-          className="flex items-center gap-1 h-9 rounded-md"
+          className="flex items-center gap-1 h-8 sm:h-9 rounded-md ml-1"
           aria-label={isPreviewMode ? "Switch to edit mode" : "Switch to preview mode"}
         >
           {isPreviewMode ? (
             <>
               <FileEdit className="h-4 w-4" />
-              <span>Edit</span>
+              <span className="hidden sm:inline">Edit</span>
             </>
           ) : (
             <>
               <Eye className="h-4 w-4" />
-              <span>Preview</span>
+              <span className="hidden sm:inline">Preview</span>
             </>
           )}
         </Button>
       </div>
       
       {isPreviewMode ? (
-        <div className="flex-grow overflow-auto bg-card p-4 rounded-md border">
-          <MarkdownRenderer content={content} />
+        <div className="flex-grow overflow-auto bg-card rounded-md border p-3 sm:p-4">
+          {contentFormat === ContentFormat.JSON ? (
+            <JSONDisplay jsonData={tryParseJSON(content)} />
+          ) : contentFormat === ContentFormat.HTML ? (
+            <div dangerouslySetInnerHTML={{ __html: content }} />
+          ) : (
+            <MarkdownRenderer content={content} />
+          )}
         </div>
       ) : (
-        <Textarea
-          ref={textareaRef}
-          className="flex-grow min-h-[200px] font-mono resize-none transition-all focus:shadow-md"
-          placeholder="Document content..."
-          value={content}
-          onChange={(e) => onContentChange(e.target.value)}
-        />
+        contentFormat === ContentFormat.JSON ? (
+          <div className="flex-grow flex flex-col">
+            <JSONEditor 
+              jsonData={tryParseJSON(content)} 
+              onChange={(data) => onContentChange(JSON.stringify(data, null, 2))}
+            />
+          </div>
+        ) : (
+          <Textarea
+            ref={textareaRef}
+            className="flex-grow min-h-[200px] font-mono resize-none transition-all focus:shadow-md"
+            placeholder="Document content..."
+            value={content}
+            onChange={(e) => onContentChange(e.target.value)}
+          />
+        )
       )}
       
-      <div className="mt-2 text-xs text-muted-foreground flex flex-wrap gap-2 justify-between items-center">
+      <div className="mt-1 sm:mt-2 text-xs text-muted-foreground flex flex-wrap gap-1 sm:gap-2 justify-between items-center">
         {/* Left side buttons */}
-        <div className="flex flex-wrap gap-2 items-center">
+        <div className="flex flex-wrap gap-1 sm:gap-2 items-center">
           {onDocumentTypeChange && (
             <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
               <DialogTrigger asChild>
-                <Button variant="ghost" size="sm" className="h-8 px-2 text-xs flex items-center">
-                  <FileType className="mr-1 h-3.5 w-3.5" />
-                  <span>{getDocumentTypeLabel(documentType)}</span>
+                <Button variant="ghost" size="sm" className="h-7 sm:h-8 px-1 sm:px-2 text-xs flex items-center">
+                  <FileType className="mr-1 h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                  <span className="truncate max-w-[60px] sm:max-w-none">{getDocumentTypeLabel(documentType)}</span>
                 </Button>
               </DialogTrigger>
               <DialogContent>
@@ -224,9 +258,9 @@ export function DocumentEditor({
           {onContentFormatChange && (
             <Dialog open={formatDialogOpen} onOpenChange={setFormatDialogOpen}>
               <DialogTrigger asChild>
-                <Button variant="ghost" size="sm" className="h-8 px-2 text-xs flex items-center">
-                  <Code className="mr-1 h-3.5 w-3.5" />
-                  <span>{getContentFormatLabel(contentFormat)}</span>
+                <Button variant="ghost" size="sm" className="h-7 sm:h-8 px-1 sm:px-2 text-xs flex items-center">
+                  <Code className="mr-1 h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                  <span className="truncate max-w-[60px] sm:max-w-none">{getContentFormatLabel(contentFormat)}</span>
                 </Button>
               </DialogTrigger>
               <DialogContent>
@@ -253,15 +287,15 @@ export function DocumentEditor({
         </div>
         
         {/* Right side elements */}
-        <div className="flex flex-wrap gap-2 items-center ml-auto">
+        <div className="flex flex-wrap gap-1 sm:gap-2 items-center ml-auto">
           {versionNumber !== undefined && (
             <Button
               variant="ghost"
               size="sm"
-              className="h-8 px-2 text-xs"
+              className="h-7 sm:h-8 px-1 sm:px-2 text-xs"
               onClick={onVersionHistoryClick}
             >
-              <History className="mr-1 h-3.5 w-3.5" />
+              <History className="mr-1 h-3 w-3 sm:h-3.5 sm:w-3.5" />
               <span>v{versionNumber}</span>
             </Button>
           )}
@@ -271,7 +305,7 @@ export function DocumentEditor({
             <Button 
               onClick={onSave}
               size="sm"
-              className="h-8"
+              className="h-7 sm:h-8 px-2 sm:px-3"
               disabled={saveStatus === 'saving'}
             >
               Save

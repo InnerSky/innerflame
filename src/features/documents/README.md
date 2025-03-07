@@ -36,4 +36,58 @@ Or use the barrel exports:
 
 ```tsx
 import { Documents } from '@/features/documents';
-``` 
+```
+
+# Document Management with Project Organization
+
+This document management system supports organizing documents within projects for better content organization.
+
+## Features
+
+### Project Selector
+
+The Project Selector allows users to:
+
+- Create new projects
+- Switch between projects to view project-specific documents
+- View all documents by selecting "All Projects"
+
+### Project-Document Relationships
+
+Documents can be associated with projects in several ways:
+
+1. **Creating a new document** while a project is selected automatically adds the document to that project
+2. **Assigning existing documents** to projects through the document context menu
+3. **Moving documents between projects** or removing them from projects
+
+### Implementation Details
+
+The project-document relationship is implemented through metadata:
+
+- Projects are stored as documents with type `DocumentType.Project`
+- Regular documents have a `projectId` field in their metadata that points to the parent project
+- The relationship is managed through Supabase using JSON field queries
+
+### Data Flow
+
+1. The `DocumentRepository` handles the database interactions:
+   - `getUserProjectsOnly()` - Retrieves all projects for a user
+   - `getDocumentsByProject()` - Retrieves documents for a specific project
+   - `setDocumentProject()` - Updates a document's project association
+
+2. The `useDocuments` hook manages the state and operations:
+   - Tracks the currently selected project
+   - Filters documents based on project selection
+   - Adds newly created documents to the current project
+
+3. UI Components:
+   - `ProjectSelector` - Dropdown to select and create projects
+   - `DocumentList` - Displays documents with project indicators
+   - Project assignment through document context menu
+
+## Future Enhancements
+
+- Project hierarchies (nested projects)
+- Project sharing and collaboration
+- Batch operations for document organization
+- Project statistics and visualization 
