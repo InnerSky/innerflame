@@ -80,6 +80,28 @@ export function DocumentEditor({
   const [formatDialogOpen, setFormatDialogOpen] = useState(false);
   const [newContentFormat, setNewContentFormat] = useState<ContentFormat>(contentFormat);
   
+  // Add keyboard shortcut handler for Ctrl+Enter and Shift+Enter
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Check for Ctrl+Enter or Shift+Enter
+      if ((e.ctrlKey || e.shiftKey) && e.key === 'Enter') {
+        // Only save if the save button is active (has unsaved changes and not currently saving)
+        if (hasUnsavedChanges && saveStatus !== 'saving') {
+          e.preventDefault(); // Prevent default behavior like new line in textarea
+          onSave();
+        }
+      }
+    };
+
+    // Add the event listener to the document
+    document.addEventListener('keydown', handleKeyDown);
+
+    // Cleanup function to remove the event listener
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [hasUnsavedChanges, saveStatus, onSave]);
+
   const renderSaveStatus = () => {
     switch (saveStatus) {
       case 'saving':
@@ -98,7 +120,7 @@ export function DocumentEditor({
       case 'error':
         return <span className="text-red-500">Error saving</span>;
       case 'unsaved':
-        return <span className="text-yellow-500">Unsaved changes</span>;
+        return <span className="text-amber-500">Autosaving soon...</span>;
       default:
         return null;
     }

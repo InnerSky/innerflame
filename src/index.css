@@ -57,6 +57,31 @@
     @apply bg-background text-foreground;
     font-feature-settings: "rlig" 1, "calt" 1;
   }
+  
+  /* Prevent zoom on iOS by ensuring minimum 16px font size on all text inputs */
+  input, 
+  textarea, 
+  select,
+  [contenteditable="true"] {
+    @apply text-base; /* text-base = 16px in Tailwind */
+    font-size: 16px;
+    touch-action: manipulation;
+  }
+}
+
+/* Mobile and PWA specific optimizations */
+@media (max-width: 768px), (display-mode: standalone) {
+  button, 
+  .button, 
+  [role="button"],
+  a[href],
+  input[type="button"],
+  input[type="submit"],
+  input[type="reset"] {
+    min-height: 44px;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
 }
 
 @keyframes blob {

@@ -23,10 +23,10 @@ const buttonVariants = cva(
           'bg-background text-foreground border border-input/40 hover:bg-accent/30 hover:text-accent-foreground hover:border-border shadow-sm rounded-full',
       },
       size: {
-        default: 'h-9 px-4 py-2',
-        sm: 'h-8 rounded-md px-3 text-xs',
-        lg: 'h-10 rounded-md px-8',
-        icon: 'h-9 w-9',
+        default: 'h-11 px-4 py-2 md:h-10',
+        sm: 'h-11 rounded-md px-3 text-sm md:h-9 md:text-xs',
+        lg: 'h-12 rounded-md px-8 md:h-11',
+        icon: 'h-11 w-11 md:h-9 md:w-9',
       },
     },
     defaultVariants: {

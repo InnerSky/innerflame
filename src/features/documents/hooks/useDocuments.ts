@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { Document, DocumentVersion, SaveStatus, SortDirection, DocumentType, ContentFormat } from '../models/document';
 import { DocumentRepository } from '../repositories/documentRepository';
 import { supabase } from '@/lib/supabase';
@@ -37,6 +37,9 @@ export function useDocuments(userId?: string) {
   // New state for project selection
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [projectDocuments, setProjectDocuments] = useState<Document[]>([]);
+  
+  // Reference for autosave timeout
+  const autosaveTimeoutRef = useRef<number | null>(null);
   
   const repository = new DocumentRepository();
   
@@ -97,9 +100,12 @@ export function useDocuments(userId?: string) {
     if (selectedDocument) {
       if (title !== selectedDocument.title || content !== selectedDocument.content) {
         setSaveStatus('unsaved');
+      } else {
+        // If content is identical to the original, reset save status
+        setSaveStatus(lastSaved ? 'saved' : 'idle');
       }
     }
-  }, [title, content, selectedDocument]);
+  }, [title, content, selectedDocument, lastSaved]);
   
   // Fetch documents
   const fetchDocuments = useCallback(async () => {
@@ -322,14 +328,41 @@ export function useDocuments(userId?: string) {
       // Update selected document
       setSelectedDocument(updatedDoc);
       
+      // Update save status
       setLastSaved(new Date());
       setSaveStatus('saved');
-    } catch (err) {
-      console.error('Error saving document:', err);
+    } catch (error) {
+      console.error('Error saving document:', error);
       setSaveStatus('error');
-      setError('Failed to save document');
     }
-  }, [selectedDocument, userId, title, content, repository, selectedProjectId]);
+  }, [selectedDocument, userId, title, content, selectedProjectId, repository]);
+  
+  // Setup autosave when content or title changes
+  useEffect(() => {
+    if (!selectedDocument) return;
+    
+    // Clear any existing timeout
+    if (autosaveTimeoutRef.current) {
+      window.clearTimeout(autosaveTimeoutRef.current);
+      autosaveTimeoutRef.current = null;
+    }
+    
+    if (title !== selectedDocument.title || content !== selectedDocument.content) {
+      // Set a new timeout to autosave after 30 seconds of inactivity
+      autosaveTimeoutRef.current = window.setTimeout(() => {
+        if (saveStatus === 'unsaved') {
+          saveDocument();
+        }
+      }, 30000); // 30 seconds
+    }
+    
+    // Cleanup function
+    return () => {
+      if (autosaveTimeoutRef.current) {
+        window.clearTimeout(autosaveTimeoutRef.current);
+      }
+    };
+  }, [title, content, selectedDocument, saveStatus, saveDocument]);
   
   // Check if there are unsaved changes
   const hasUnsavedChanges = useCallback(() => {
