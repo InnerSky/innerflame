@@ -1,10 +1,11 @@
 // This is the entry point for the shared-types package
 // It exports all types from the various domain files
 
-// Example domain types to be implemented
+// Export all domain types
 export * from './entities';
 export * from './websocket';
 export * from './ai';
+export * from './supabase';
 
 // Placeholder types that will be expanded
 export interface Entity {
@@ -25,6 +26,3 @@ export interface EntityVersion {
   created_at: Date;
   created_by: string;
 }
-
-// Re-export supabase types when available
-// export * from './supabase';

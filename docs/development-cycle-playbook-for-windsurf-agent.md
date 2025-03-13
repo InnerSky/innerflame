@@ -26,6 +26,9 @@ When a developer is ready to start a new feature, Windsurf should:
   - Check where the feature fits in the roadmap
 
 - **Create implementation todo list**
+  - Pick the next key feature from the roadmap
+  - The todo list should have checkpoints to debug the implementation before moving to the next step.
+  - ONLY BUILD WHAT'S NEEDED FOR THE PROJECT, KEEP IT SIMPLE
   - Generate a new `docs/todo/feature-xxx.md` file
   - Structure with clear sections:
     - Background (linking to relevant user stories)

@@ -28,6 +28,7 @@ import UsagePolicy from "./pages/UsagePolicy";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import UserDocuments from "./pages/UserDocuments";
 import Documents from "./features/documents/pages/Documents";
+import AIChatExamplePage from "./pages/AIChatExample";
 import { SignOutDialog } from "@/components/SignOutDialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -377,6 +378,12 @@ function AppContent() {
                   <span className="ml-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">→</span>
                 </Button>
               </Link>
+              <Link to="/ai-chat-example">
+                <Button variant="ghost" className="group">
+                  AI Chat Demo
+                  <span className="ml-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">→</span>
+                </Button>
+              </Link>
               <Separator orientation="vertical" className="h-6" />
               <ThemeToggle />
               <ProfileMenu />
@@ -406,6 +413,12 @@ function AppContent() {
                   <ChevronRight className="ml-auto h-4 w-4" />
                 </Button>
               </Link>
+              <Link to="/ai-chat-example">
+                <Button variant="ghost" className="w-full justify-start text-sm sm:text-base">
+                  AI Chat Demo
+                  <ChevronRight className="ml-auto h-4 w-4" />
+                </Button>
+              </Link>
               <Separator className="my-3" />
               <ThemeButtonMobile />
               <Separator className="my-3" />
@@ -427,6 +440,7 @@ function AppContent() {
           <Route path="/user-documents" element={<UserDocuments />} />
           <Route path="/documents" element={<Documents />} />
           <Route path="/settings" element={<Settings />} />
+          <Route path="/ai-chat-example" element={<AIChatExamplePage />} />
           <Route path="/offline" element={<OfflinePage />} />
           <Route path="/usage-policy" element={<UsagePolicy />} />
           <Route path="/privacy-policy" element={<PrivacyPolicy />} />
@@ -505,11 +519,11 @@ function AppContent() {
             
             <div className="flex flex-col sm:flex-row items-center justify-between gap-5">
               <p className="text-xs sm:text-sm text-muted-foreground text-center sm:text-left">
-                © 2025 InnerFlame. All rights reserved.
+                2025 InnerFlame. All rights reserved.
               </p>
               <div className="flex items-center gap-5 justify-center sm:justify-end">
                 <a href="https://www.youtube.com/@founders_innerflame" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-orange-500 transition-colors duration-200 hover:scale-110 transform">
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 sm:h-5 sm:w-5">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33A2.78 2.78 0 0 0 3.4 19c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.25 29 29 0 0 0-.46-5.33z"></path>
                     <polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02"></polygon>
                   </svg>

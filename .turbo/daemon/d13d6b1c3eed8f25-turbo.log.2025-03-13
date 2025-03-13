@@ -1,0 +1,28 @@
+2025-03-13T00:02:15.572828Z  WARN turborepo_lib::package_changes_watcher: changed_files: {AnchoredSystemPathBuf("docs/development-cycle-playbook-for-windsurf-agent.md")}
+2025-03-13T00:02:15.572879Z  WARN turborepo_lib::package_changes_watcher: changed_packages: Ok(Some({WorkspacePackage { name: Root, path: AnchoredSystemPathBuf("") }}))
+2025-03-13T00:02:15.671358Z  WARN turborepo_lib::package_changes_watcher: changed_files: {AnchoredSystemPathBuf(".turbo/daemon/d13d6b1c3eed8f25-turbo.log.2025-03-12"), AnchoredSystemPathBuf(".turbo/daemon/d13d6b1c3eed8f25-turbo.log.2025-03-13")}
+2025-03-13T00:02:15.671378Z  WARN turborepo_lib::package_changes_watcher: changed_packages: Ok(Some({WorkspacePackage { name: Root, path: AnchoredSystemPathBuf("") }}))
+2025-03-13T00:03:19.672572Z  WARN turborepo_lib::package_changes_watcher: changed_files: {AnchoredSystemPathBuf("docs/todo/feature-websocket-service.md")}
+2025-03-13T00:03:19.672582Z  WARN turborepo_lib::package_changes_watcher: changed_packages: Ok(Some({WorkspacePackage { name: Root, path: AnchoredSystemPathBuf("") }}))
+2025-03-13T00:05:24.270787Z  WARN turborepo_lib::package_changes_watcher: changed_files: {AnchoredSystemPathBuf("apps/ai-service/src/utils/authUtils.ts")}
+2025-03-13T00:05:24.270797Z  WARN turborepo_lib::package_changes_watcher: changed_packages: Ok(Some({WorkspacePackage { name: Other("@innerflame/ai-service"), path: AnchoredSystemPathBuf("apps/ai-service") }}))
+2025-03-13T00:05:44.970571Z  WARN turborepo_lib::package_changes_watcher: changed_files: {AnchoredSystemPathBuf("apps/ai-service/src/utils/sessionManager.ts")}
+2025-03-13T00:05:44.970579Z  WARN turborepo_lib::package_changes_watcher: changed_packages: Ok(Some({WorkspacePackage { name: Other("@innerflame/ai-service"), path: AnchoredSystemPathBuf("apps/ai-service") }}))
+2025-03-13T00:06:30.970927Z  WARN turborepo_lib::package_changes_watcher: changed_files: {AnchoredSystemPathBuf("apps/ai-service/src/websocket/WebSocketServer.ts")}
+2025-03-13T00:06:30.970950Z  WARN turborepo_lib::package_changes_watcher: changed_packages: Ok(Some({WorkspacePackage { name: Other("@innerflame/ai-service"), path: AnchoredSystemPathBuf("apps/ai-service") }}))
+2025-03-13T00:06:57.870685Z  WARN turborepo_lib::package_changes_watcher: changed_files: {AnchoredSystemPathBuf("packages/shared-types/src/websocket.ts")}
+2025-03-13T00:06:57.870698Z  WARN turborepo_lib::package_changes_watcher: changed_packages: Ok(Some({WorkspacePackage { name: Other("@innerflame/shared-types"), path: AnchoredSystemPathBuf("packages/shared-types") }}))
+2025-03-13T00:07:25.871732Z  WARN turborepo_lib::package_changes_watcher: changed_files: {AnchoredSystemPathBuf("apps/ai-service/src/utils/authUtils.ts")}
+2025-03-13T00:07:25.871746Z  WARN turborepo_lib::package_changes_watcher: changed_packages: Ok(Some({WorkspacePackage { name: Other("@innerflame/ai-service"), path: AnchoredSystemPathBuf("apps/ai-service") }}))
+2025-03-13T00:08:18.070596Z  WARN turborepo_lib::package_changes_watcher: changed_files: {AnchoredSystemPathBuf("apps/ai-service/src/websocket/WebSocketServer.ts")}
+2025-03-13T00:08:18.070615Z  WARN turborepo_lib::package_changes_watcher: changed_packages: Ok(Some({WorkspacePackage { name: Other("@innerflame/ai-service"), path: AnchoredSystemPathBuf("apps/ai-service") }}))
+2025-03-13T00:08:28.871198Z  WARN turborepo_lib::package_changes_watcher: changed_files: {AnchoredSystemPathBuf("packages/shared-types/src/index.ts")}
+2025-03-13T00:08:28.871208Z  WARN turborepo_lib::package_changes_watcher: changed_packages: Ok(Some({WorkspacePackage { name: Other("@innerflame/shared-types"), path: AnchoredSystemPathBuf("packages/shared-types") }}))
+2025-03-13T00:09:22.070255Z  WARN turborepo_lib::package_changes_watcher: changed_files: {AnchoredSystemPathBuf("apps/ai-service/src/websocket/WebSocketServer.ts")}
+2025-03-13T00:09:22.070264Z  WARN turborepo_lib::package_changes_watcher: changed_packages: Ok(Some({WorkspacePackage { name: Other("@innerflame/ai-service"), path: AnchoredSystemPathBuf("apps/ai-service") }}))
+2025-03-13T00:09:51.270373Z  WARN turborepo_lib::package_changes_watcher: changed_files: {AnchoredSystemPathBuf("apps/ai-service/src/utils/testClient.ts")}
+2025-03-13T00:09:51.270381Z  WARN turborepo_lib::package_changes_watcher: changed_packages: Ok(Some({WorkspacePackage { name: Other("@innerflame/ai-service"), path: AnchoredSystemPathBuf("apps/ai-service") }}))
+2025-03-13T00:10:11.470481Z  WARN turborepo_lib::package_changes_watcher: changed_files: {AnchoredSystemPathBuf("docs/development-cycle-playbook-for-windsurf-agent.md")}
+2025-03-13T00:10:11.470538Z  WARN turborepo_lib::package_changes_watcher: changed_packages: Ok(Some({WorkspacePackage { name: Root, path: AnchoredSystemPathBuf("") }}))
+2025-03-13T00:10:27.970830Z  WARN turborepo_lib::package_changes_watcher: changed_files: {AnchoredSystemPathBuf("apps/web/src/hooks/useWebSocket.ts")}
+2025-03-13T00:10:27.970902Z  WARN turborepo_lib::package_changes_watcher: changed_packages: Ok(Some({WorkspacePackage { name: Other("@innerflame/web"), path: AnchoredSystemPathBuf("apps/web") }}))

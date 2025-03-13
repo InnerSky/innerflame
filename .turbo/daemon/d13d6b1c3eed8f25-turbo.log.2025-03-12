@@ -19,3 +19,17 @@
 2025-03-12T20:15:44.697619Z  WARN turborepo_lib::package_changes_watcher: changed_files: {AnchoredSystemPathBuf("apps/web/src/features/projects")}
 2025-03-12T20:15:44.697644Z  WARN turborepo_lib::package_changes_watcher: changed_packages: Ok(Some({WorkspacePackage { name: Other("@innerflame/web"), path: AnchoredSystemPathBuf("apps/web") }}))
 2025-03-12T20:15:44.697710Z  WARN turborepo_lib::package_changes_watcher: hashes are the same, no need to rerun
+2025-03-12T23:39:56.197974Z  WARN turborepo_lib::package_changes_watcher: changed_files: {AnchoredSystemPathBuf("research_report/business_model_frameworks"), AnchoredSystemPathBuf("research_report")}
+2025-03-12T23:39:56.198053Z  WARN turborepo_lib::package_changes_watcher: changed_packages: Ok(Some({WorkspacePackage { name: Root, path: AnchoredSystemPathBuf("") }}))
+2025-03-12T23:40:04.597400Z  WARN turborepo_lib::package_changes_watcher: changed_files: {AnchoredSystemPathBuf("research_report/business_model_frameworks/business_model_frameworks_report.md")}
+2025-03-12T23:40:04.597412Z  WARN turborepo_lib::package_changes_watcher: changed_packages: Ok(Some({WorkspacePackage { name: Root, path: AnchoredSystemPathBuf("") }}))
+2025-03-12T23:42:20.897599Z  WARN turborepo_lib::package_changes_watcher: changed_files: {AnchoredSystemPathBuf("research_report/business_model_frameworks/business_model_frameworks_report.md")}
+2025-03-12T23:42:20.897627Z  WARN turborepo_lib::package_changes_watcher: changed_packages: Ok(Some({WorkspacePackage { name: Root, path: AnchoredSystemPathBuf("") }}))
+2025-03-12T23:50:50.775334Z  WARN turborepo_lib::package_changes_watcher: changed_files: {AnchoredSystemPathBuf("docs/roadmap.md")}
+2025-03-12T23:50:50.775379Z  WARN turborepo_lib::package_changes_watcher: changed_packages: Ok(Some({WorkspacePackage { name: Root, path: AnchoredSystemPathBuf("") }}))
+2025-03-12T23:57:19.574376Z  WARN turborepo_lib::package_changes_watcher: changed_files: {AnchoredSystemPathBuf("docs/development-cycle-playbook-for-windsurf-agent.md")}
+2025-03-12T23:57:19.574448Z  WARN turborepo_lib::package_changes_watcher: changed_packages: Ok(Some({WorkspacePackage { name: Root, path: AnchoredSystemPathBuf("") }}))
+2025-03-12T23:58:11.672852Z  WARN turborepo_lib::package_changes_watcher: changed_files: {AnchoredSystemPathBuf("docs/roadmap.md")}
+2025-03-12T23:58:11.672861Z  WARN turborepo_lib::package_changes_watcher: changed_packages: Ok(Some({WorkspacePackage { name: Root, path: AnchoredSystemPathBuf("") }}))
+2025-03-12T23:58:45.673257Z  WARN turborepo_lib::package_changes_watcher: changed_files: {AnchoredSystemPathBuf("docs/todo/feature-websocket-service.md")}
+2025-03-12T23:58:45.673266Z  WARN turborepo_lib::package_changes_watcher: changed_packages: Ok(Some({WorkspacePackage { name: Root, path: AnchoredSystemPathBuf("") }}))
