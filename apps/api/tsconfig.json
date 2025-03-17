@@ -1,0 +1,17 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "target": "ES2020",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "outDir": "dist",
+    "paths": {
+      "@/*": ["./src/*"],
+      "@innerflame/types/*": ["../../packages/types/src/*"],
+      "@innerflame/utils/*": ["../../packages/utils/src/*"],
+      "@innerflame/ai-tools/*": ["../../packages/ai-tools/src/*"]
+    }
+  },
+  "include": ["src"]
+} 

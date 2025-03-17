@@ -66,7 +66,7 @@ export function VersionHistoryModal({
             </Button>
             
             <span className="text-sm">
-              Version {currentVersion.versionNumber} of {totalVersions}
+              Version {currentVersion.version_number} of {totalVersions}
             </span>
           </div>
           

@@ -1,0 +1,16 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "paths": {
+      "@/*": ["./src/*"],
+      "@innerflame/types/*": ["../../packages/types/src/*"],
+      "@innerflame/ui/*": ["../../packages/ui/src/*"],
+      "@innerflame/utils/*": ["../../packages/utils/src/*"],
+      "@innerflame/ai-tools/*": ["../../packages/ai-tools/src/*"]
+    }
+  },
+  "include": ["src"]
+} 

@@ -1,0 +1,20 @@
+{
+  "name": "@innerflame/ai-tools",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "lint": "eslint .",
+    "clean": "rm -rf .turbo && rm -rf node_modules"
+  },
+  "dependencies": {
+    "@innerflame/types": "*",
+    "@innerflame/utils": "*",
+    "@langchain/langgraph": "^0.2.56"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.3"
+  }
+} 

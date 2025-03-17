@@ -1,9 +1,4 @@
 {
-  "files": [],
-  "references": [
-    { "path": "./tsconfig.app.json" },
-    { "path": "./tsconfig.node.json" }
-  ],
   "compilerOptions": {
     "target": "ES2020",
     "useDefineForClassFields": true,
@@ -19,19 +14,28 @@
     "noEmit": true,
     "jsx": "react-jsx",
 
-    /* Linting - less strict */
+    /* Linting */
     "strict": true,
-    "noUnusedLocals": false,
-    "noUnusedParameters": false,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
-    "allowSyntheticDefaultImports": true,
-    "noImplicitAny": false,
 
-    /* Path aliases */
+    /* Path Aliases */
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"]
+      "@innerflame/types/*": ["packages/types/src/*"],
+      "@innerflame/ui/*": ["packages/ui/src/*"],
+      "@innerflame/utils/*": ["packages/utils/src/*"],
+      "@innerflame/ai-tools/*": ["packages/ai-tools/src/*"]
     }
   },
-  "include": ["src"]
+  "include": [],
+  "references": [
+    { "path": "./apps/web/tsconfig.json" },
+    { "path": "./apps/api/tsconfig.json" },
+    { "path": "./packages/types/tsconfig.json" },
+    { "path": "./packages/ui/tsconfig.json" },
+    { "path": "./packages/utils/tsconfig.json" },
+    { "path": "./packages/ai-tools/tsconfig.json" }
+  ]
 }
