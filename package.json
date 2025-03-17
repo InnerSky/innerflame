@@ -10,10 +10,13 @@
   ],
   "scripts": {
     "dev": "turbo run dev",
+    "dev:all": "./scripts/start-dev.sh",
+    "dev:fresh": "./scripts/start-dev.sh --reset",
     "build": "turbo run build",
     "lint": "turbo run lint",
     "format": "prettier --write \"**/*.{js,jsx,ts,tsx,json,css}\"",
     "clean": "turbo run clean && rm -rf node_modules",
+    "reset-dev": "./scripts/clear-dev-servers.sh",
     "prepare": "husky"
   },
   "devDependencies": {
@@ -22,8 +25,8 @@
     "eslint-plugin-react-hooks": "^5.1.0-rc.0",
     "eslint-plugin-react-refresh": "^0.4.12",
     "globals": "^15.9.0",
-    "husky": "^9.0.11",
-    "lint-staged": "^15.2.2",
+    "husky": "^9.1.7",
+    "lint-staged": "^15.5.0",
     "prettier": "^3.2.5",
     "turbo": "^2.2.2",
     "typescript": "^5.5.3",

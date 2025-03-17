@@ -1,4 +1,0 @@
-Command we can use: 
-
-npm run gen:types
-npx supabase db push

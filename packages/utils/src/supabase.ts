@@ -11,6 +11,10 @@ export function createSupabaseClient() {
   const supabaseUrl = process.env.SUPABASE_URL || '';
   const supabaseKey = process.env.SUPABASE_KEY || '';
   
+  // Add debug logs
+  if (!supabaseUrl) console.error('SUPABASE_URL is not defined in environment');
+  if (!supabaseKey) console.error('SUPABASE_KEY is not defined in environment');
+  
   return createClient(supabaseUrl, supabaseKey);
 }
 
