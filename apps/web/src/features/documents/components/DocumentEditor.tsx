@@ -182,8 +182,8 @@ export function DocumentEditor({
   };
 
   return (
-    <div className="flex flex-col h-full overflow-hidden bg-card sm:p-4 p-2 sm:rounded-md sm:border">
-      <div className="flex justify-between items-center mb-2 sm:mb-4">
+    <div className="flex flex-col h-full overflow-hidden bg-card sm:p-4 p-3 sm:rounded-md sm:border">
+      <div className="flex justify-between items-center mb-2 sm:mb-4 p-0.5">
         <div className="flex-1 mr-2 sm:mr-4">
           <Input
             className="text-lg sm:text-xl font-semibold px-2 py-1 sm:px-3 sm:py-2 h-8 sm:h-10"
@@ -226,20 +226,22 @@ export function DocumentEditor({
         </div>
       ) : (
         contentFormat === ContentFormat.JSON ? (
-          <div className="flex-grow flex flex-col">
+          <div className="flex-grow flex flex-col overflow-auto p-0.5 pb-1.5">
             <JSONEditor 
               jsonData={tryParseJSON(content)} 
               onChange={(data) => onContentChange(JSON.stringify(data, null, 2))}
             />
           </div>
         ) : (
-          <Textarea
-            ref={textareaRef}
-            className="flex-grow min-h-[200px] font-mono resize-none transition-all focus:shadow-md"
-            placeholder="Document content..."
-            value={content}
-            onChange={(e) => onContentChange(e.target.value)}
-          />
+          <div className="p-0.5 pb-1.5 flex-grow">
+            <Textarea
+              ref={textareaRef}
+              className="flex-grow min-h-0 font-mono resize-none transition-all focus:shadow-md overflow-auto w-full h-full"
+              placeholder="Document content..."
+              value={content}
+              onChange={(e) => onContentChange(e.target.value)}
+            />
+          </div>
         )
       )}
       

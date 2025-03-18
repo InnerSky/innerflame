@@ -2,6 +2,8 @@ import React from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
+// For line breaks support
+import remarkBreaks from 'remark-breaks';
 // Optionally add these for auto-generated heading anchors:
 // import rehypeSlug from 'rehype-slug';
 // import rehypeAutolinkHeadings from 'rehype-autolink-headings';
@@ -20,7 +22,7 @@ export function MarkdownRenderer({ content, className }: MarkdownProps) {
     <div className={cn("prose prose-stone dark:prose-invert max-w-none", className)}>
       <ReactMarkdown
         // 1) Plugins to process the raw Markdown
-        remarkPlugins={[remarkGfm]}
+        remarkPlugins={[remarkGfm, remarkBreaks]}
         rehypePlugins={[rehypeRaw]}
         // 2) Map various Markdown nodes to custom React components
         components={{

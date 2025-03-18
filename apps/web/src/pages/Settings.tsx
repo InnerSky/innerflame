@@ -10,12 +10,14 @@ import { Separator } from "@/components/ui/separator";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
-import { ChevronRight, CreditCard, Moon, Sun, User, UserCog, Laptop, MonitorSmartphone, Bell } from "lucide-react";
+import { ChevronRight, CreditCard, Moon, Sun, User, UserCog, Laptop, MonitorSmartphone, Bell, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useNavigate } from "react-router-dom";
 
 export default function Settings() {
   const { user } = useAuth();
   const { theme, setTheme } = useTheme();
+  const navigate = useNavigate();
   const [profileForm, setProfileForm] = useState({
     name: user?.user_metadata?.full_name || "",
     email: user?.email || "",
@@ -308,6 +310,22 @@ export default function Settings() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
+              <div className="space-y-4">
+                <h3 className="font-medium">Documents</h3>
+                <div className="rounded-lg border p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium">Manage Documents</p>
+                      <p className="text-sm text-muted-foreground">Access your documents and projects</p>
+                    </div>
+                    <Button onClick={() => navigate('/documents')}>
+                      <FileText className="h-4 w-4 mr-2" />
+                      Documents
+                    </Button>
+                  </div>
+                </div>
+              </div>
+
               <div className="space-y-4">
                 <h3 className="font-medium">Security</h3>
                 

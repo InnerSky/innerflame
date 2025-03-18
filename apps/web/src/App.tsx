@@ -26,7 +26,6 @@ import AdminPage from "./pages/Admin";
 import Settings from "./pages/Settings";
 import UsagePolicy from "./pages/UsagePolicy";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
-import UserDocuments from "./pages/UserDocuments";
 import Documents from "./features/documents/pages/Documents";
 import { SignOutDialog } from "@/components/SignOutDialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -240,10 +239,9 @@ function AppContent() {
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
   const [isAdmin, setIsAdmin] = useState(false);
   
-  // Check if we're on the user documents page or documents page
-  const isUserDocumentsPage = location.pathname === '/user-documents';
+  // Check if we're on the documents page
   const isDocumentsPage = location.pathname === '/documents';
-  const hideNavAndFooter = isUserDocumentsPage || isDocumentsPage;
+  const hideNavAndFooter = isDocumentsPage;
 
   // Check admin status when user changes
   useEffect(() => {
@@ -424,7 +422,6 @@ function AppContent() {
           <Route path="/founders-lab" element={<FoundersLab />} />
           <Route path="/auth/callback" element={<AuthCallback />} />
           <Route path="/admin" element={<AdminPage />} />
-          <Route path="/user-documents" element={<UserDocuments />} />
           <Route path="/documents" element={<Documents />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/offline" element={<OfflinePage />} />

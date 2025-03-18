@@ -6,3 +6,7 @@ npx supabase db push
 
 npm run dev:fresh
 npm run reset-dev
+
+
+npm run build
+npx netlify deploy --prod

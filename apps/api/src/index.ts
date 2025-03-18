@@ -26,15 +26,19 @@ app.use(express.json());
 
 // Initialize services
 try {
-  const supabase = createSupabaseClient();
+  // Initialize Supabase client but store it for later use
+  const supabaseClient = createSupabaseClient();
   console.log('Supabase client initialized successfully');
+  
+  // Export for use in other modules if needed
+  app.locals.supabase = supabaseClient;
 } catch (error) {
   console.error('Failed to initialize Supabase client:', error);
   process.exit(1); // Exit if Supabase initialization fails
 }
 
 // Routes
-app.get('/health', (req, res) => {
+app.get('/health', (_req, res) => {
   res.json({ status: 'ok', version: '0.1.0' });
 });
 

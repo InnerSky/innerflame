@@ -160,7 +160,7 @@ const AdminPage = () => {
               <div className="space-y-4">
                 <div>
                   <h3 className="text-lg font-medium mb-2">Document Management</h3>
-                  <Button onClick={() => navigate('/user-documents')}>
+                  <Button onClick={() => navigate('/documents')}>
                     Manage User Documents
                   </Button>
                 </div>

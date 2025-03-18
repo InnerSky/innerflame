@@ -25,12 +25,14 @@ import {
   MoreHorizontal,
   Folder,
   FolderOpen,
-  FilePlus
+  FilePlus,
+  ChevronRight
 } from "lucide-react";
 import { Document, SortDirection } from "../models/document";
 import { countWords } from "@/utils/textUtils";
 import { useState, useEffect } from "react";
 import { DocumentRepository } from "../repositories/documentRepository";
+import { useDocumentsContext } from "../contexts/DocumentsContext.js";
 
 interface DocumentListProps {
   documents: Document[];
@@ -47,6 +49,8 @@ interface DocumentListProps {
   onAssignToProject?: (documentId: string, projectId: string | null) => void;
   onCreateNew?: () => void;
   currentProjectId?: string | null;
+  getHeaderTitle?: () => string;
+  onDrawerClose?: () => void;
 }
 
 export function DocumentList({
@@ -63,9 +67,12 @@ export function DocumentList({
   userId,
   onAssignToProject,
   onCreateNew,
-  currentProjectId
+  currentProjectId,
+  getHeaderTitle = () => "Documents",
+  onDrawerClose
 }: DocumentListProps) {
   const [projects, setProjects] = useState<Document[]>([]);
+  const { selectProject } = useDocumentsContext();
 
   // Load available projects when component mounts
   useEffect(() => {
@@ -92,8 +99,65 @@ export function DocumentList({
     return project ? project.title : 'Unknown Project';
   };
 
+  // Project context selection handler
+  const handleProjectContextSelect = () => {
+    if (currentProjectId && selectedDocument) {
+      // Reselect the current project - this triggers useDocuments.selectProject
+      // which will clear selectedDocument
+      selectProject(currentProjectId);
+      
+      // Close the mobile drawer if handler is provided
+      if (onDrawerClose) {
+        onDrawerClose();
+      }
+    }
+  };
+
+  // Only show project selection button if we're in a project
+  const isInProject = !!currentProjectId;
+  const isInProjectWithDocument = isInProject && !!selectedDocument;
+
   return (
     <div className="h-full flex flex-col overflow-hidden px-3 sm:px-0 pt-2">
+      {isInProject && (
+        <div className="flex-shrink-0 mb-4">
+          {/* Project header with clickable title */}
+          <button
+            onClick={handleProjectContextSelect}
+            className={`w-full text-left px-4 py-3 rounded-md transition-all duration-200 border-l-2 ${
+              isInProjectWithDocument
+                ? "hover:bg-muted border-transparent hover:border-muted-foreground/30"
+                : "bg-accent text-accent-foreground border-primary"
+            }`}
+            disabled={!isInProject || !isInProjectWithDocument}
+          >
+            <div className="flex justify-between items-center">
+              <div className="flex items-center gap-2.5">
+                {isInProjectWithDocument ? (
+                  <FolderOpen className="h-5 w-5 text-foreground transition-transform duration-200" />
+                ) : (
+                  <Folder className="h-5 w-5 text-accent-foreground transition-transform duration-200" />
+                )}
+                <span className={`text-lg ${!isInProjectWithDocument ? "font-semibold" : "font-medium"}`}>{getHeaderTitle()}</span>
+              </div>
+              {isInProjectWithDocument && (
+                <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-foreground opacity-70" />
+              )}
+            </div>
+            {isInProjectWithDocument && (
+              <div className="text-xs mt-1.5 text-muted-foreground group-hover:text-foreground">
+                Click to view project overview
+              </div>
+            )}
+          </button>
+          {isInProjectWithDocument && (
+            <div className="px-2 my-3">
+              <Separator className="bg-muted-foreground/20" />
+            </div>
+          )}
+        </div>
+      )}
+
       <div className="relative mb-2 flex-shrink-0 p-0.5">
         <Search className="absolute left-2 top-3 h-4 w-4 text-muted-foreground" />
         <Input
@@ -117,7 +181,7 @@ export function DocumentList({
           onClick={onCreateNew} 
           size="sm" 
           variant="outline" 
-          className="w-full mb-4 flex items-center justify-center"
+          className="w-full mb-4 flex items-center justify-center border-l-2 border-transparent hover:border-primary/50 transition-colors"
         >
           <FilePlus className="h-4 w-4 mr-2" />
           New Document
@@ -141,10 +205,10 @@ export function DocumentList({
                 <div
                   key={document.id}
                   className={`
-                    group flex justify-between items-start px-3 py-2 rounded-md
+                    group flex justify-between items-start px-3 py-2 rounded-md transition-all duration-200 border-l-2
                     ${selectedDocument?.id === document.id 
-                      ? 'bg-accent text-accent-foreground' 
-                      : 'hover:bg-muted/50 dark:hover:bg-muted/20'
+                      ? 'bg-accent text-accent-foreground border-primary' 
+                      : 'hover:bg-muted border-transparent hover:border-muted-foreground/30'
                     }
                   `}
                   onClick={() => onSelectDocument(document)}
@@ -169,7 +233,7 @@ export function DocumentList({
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100"
+                        className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
                         onClick={(e) => e.stopPropagation()}
                       >
                         <MoreHorizontal className="h-4 w-4" />

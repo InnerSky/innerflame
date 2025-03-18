@@ -119,10 +119,10 @@ export function useDocuments(userId?: string) {
       setDocuments(docs);
       setFilteredDocuments(docs);
       
-      // Select first document if none selected
-      if (docs.length > 0 && !selectedDocument) {
-        setSelectedDocument(docs[0]);
-      }
+      // No longer auto-selecting the first document on general fetch
+      // if (docs.length > 0 && !selectedDocument) {
+      //   setSelectedDocument(docs[0]);
+      // }
     } catch (err) {
       console.error('Error fetching documents:', err);
       setError('Failed to load documents');
@@ -156,10 +156,10 @@ export function useDocuments(userId?: string) {
           setDocuments(allDocs);
           setFilteredDocuments(allDocs);
           
-          // Select first document if none selected
-          if (allDocs.length > 0 && !selectedDocument) {
-            setSelectedDocument(allDocs[0]);
-          }
+          // No longer auto-selecting the first document
+          // if (allDocs.length > 0 && !selectedDocument) {
+          //   setSelectedDocument(allDocs[0]);
+          // }
           
           return;
         }
@@ -192,12 +192,18 @@ export function useDocuments(userId?: string) {
           setContent('');
         }
       } else {
-        // Select first document if none selected or current selection not in this project
-        if (!selectedDocument || !docs.some(d => d.id === selectedDocument.id)) {
-          setSelectedDocument(docs[0]);
-          setTitle(docs[0].title);
-          setContent(docs[0].content);
+        // Only keep current document if it's in this project, otherwise clear selection
+        if (selectedDocument && !docs.some(d => d.id === selectedDocument.id)) {
+          setSelectedDocument(null);
+          setTitle('');
+          setContent('');
         }
+        // No longer auto-selecting the first document
+        // else if (!selectedDocument) {
+        //   setSelectedDocument(docs[0]);
+        //   setTitle(docs[0].title);
+        //   setContent(docs[0].content);
+        // }
       }
     } catch (err: any) {
       console.error('Error in fetchDocumentsByProject:', err);
@@ -601,12 +607,23 @@ export function useDocuments(userId?: string) {
   
   // Select a project
   const selectProject = useCallback(async (projectId: string | null) => {
-    setSelectedProjectId(projectId);
-    // If clearing project, ensure we clear project-specific documents
-    if (!projectId) {
-      setProjectDocuments([]);
+    // Always clear selected document when switching projects,
+    // even if switching to the same project (to force project-only view)
+    setSelectedDocument(null);
+    setTitle('');
+    setContent('');
+    
+    // Only change the project ID if it's different
+    if (selectedProjectId !== projectId) {
+      // Set the new project ID
+      setSelectedProjectId(projectId);
+      
+      // If clearing project, ensure we clear project-specific documents
+      if (!projectId) {
+        setProjectDocuments([]);
+      }
     }
-  }, []);
+  }, [selectedProjectId]);
   
   // Create a new project
   const createNewProject = useCallback(async (title: string = 'New Project', content: string = '') => {
