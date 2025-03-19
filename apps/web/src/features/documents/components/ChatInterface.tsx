@@ -1,4 +1,4 @@
-import React, { useState, useEffect, KeyboardEvent, useRef } from 'react';
+import React, { useState, useEffect, KeyboardEvent, useRef, useCallback } from 'react';
 import { useDocumentsContext } from '../contexts/DocumentsContext.js';
 import { Button } from '@/components/ui/button.js';
 import { Textarea } from '@/components/ui/textarea.js';
@@ -13,12 +13,36 @@ import {
   MessageContextType,
   determineMessageContext 
 } from '../models/message.js';
-import { useAuth } from '@/hooks/useAuth.js';
+import { useAuth } from '@/hooks/useAuth.ts';
+import { MessageActions } from './MessageActions.js';
+import { MessageEditor } from './MessageEditor.js';
+import { useToast } from '@/hooks/use-toast.ts';
 
 type ChatInterfaceProps = {
   className?: string;
   isStandalone?: boolean;
 };
+
+function useMediaQuery(query: string) {
+  const [matches, setMatches] = useState(false);
+  
+  useEffect(() => {
+    const mediaQuery = window.matchMedia(query);
+    setMatches(mediaQuery.matches);
+    
+    const handler = (event: MediaQueryListEvent) => {
+      setMatches(event.matches);
+    };
+    
+    // Check if addEventListener is available (browser environment)
+    if (typeof window !== 'undefined') {
+      mediaQuery.addEventListener('change', handler);
+      return () => mediaQuery.removeEventListener('change', handler);
+    }
+  }, [query]);
+  
+  return matches;
+}
 
 export const ChatInterface: React.FC<ChatInterfaceProps> = ({ 
   className = '',
@@ -28,12 +52,16 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
   const [chatHistory, setChatHistory] = useState<MessageModel[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
+  const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const contextSwitchRef = useRef(false);
   const prevContextRef = useRef<{contextType?: MessageContextType, contextId?: string | null}>({});
   
   // Get auth data
   const { user } = useAuth();
+  const { toast } = useToast();
   
   // Get document context
   const { 
@@ -50,6 +78,9 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
     selectedProjectId
   );
 
+  // Add media query for mobile detection
+  const isMobileScreen = useMediaQuery('(max-width: 768px)');
+  
   // Detect context changes
   useEffect(() => {
     if (prevContextRef.current.contextType !== contextType ||
@@ -139,13 +170,21 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
         setChatHistory(messages);
       } catch (error) {
         console.error('Error loading messages:', error);
+        toast({
+          title: "Error loading messages",
+          description: "Could not load the conversation history.",
+          variant: "destructive"
+        });
       } finally {
         setIsInitialLoading(false);
       }
     };
     
     loadMessages();
-  }, [selectedDocument, selectedProjectId, user, contextType, contextId]);
+  }, [selectedDocument, selectedProjectId, user, contextType, contextId, toast]);
+  
+  // Track which messages have been edited in this session
+  const [editedMessageIds, setEditedMessageIds] = useState<Set<string>>(new Set());
   
   const sendMessage = async () => {
     if (!message.trim() || isLoading || !user) return;
@@ -172,13 +211,18 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
     
     try {
       // Save the message to the database
-      await MessageService.createMessage({
+      const savedMessage = await MessageService.createMessage({
         content: message,
         userId: user.id,
         senderType: MessageSenderType.User,
         contextType,
         contextId: contextId || undefined
       });
+      
+      // Replace the temporary message with the saved one
+      setChatHistory(prev => 
+        prev.map(msg => msg.id === userMessage.id ? savedMessage : msg)
+      );
       
       // Here you would call your AI service with document context
       // Simulating AI response for now
@@ -221,12 +265,94 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
         });
         
         // Append AI response to the end of history
-        setChatHistory([...newHistory, assistantMessageDB]);
+        setChatHistory(prev => [...prev, assistantMessageDB]);
         setIsLoading(false);
       }, 1000);
     } catch (error) {
       console.error('Error sending message:', error);
+      toast({
+        title: "Error sending message",
+        description: "Your message could not be sent. Please try again.",
+        variant: "destructive"
+      });
       setIsLoading(false);
+    }
+  };
+
+  // Handle editing a message
+  const handleEditMessage = (messageId: string) => {
+    setEditingMessageId(messageId);
+  };
+
+  // Handle saving an edited message
+  const handleSaveEdit = async (messageId: string, newContent: string) => {
+    if (!user) return;
+    
+    setIsEditing(true);
+    
+    try {
+      // Update the message in the database
+      const updatedMessage = await MessageService.updateMessage(
+        messageId,
+        newContent,
+        user.id
+      );
+      
+      // Update the chat history with the updated message
+      setChatHistory(prev => 
+        prev.map(msg => msg.id === messageId ? updatedMessage : msg)
+      );
+      
+      // Track this message as edited in our local state
+      setEditedMessageIds(prev => {
+        const newSet = new Set(prev);
+        newSet.add(messageId);
+        return newSet;
+      });
+      
+      toast({
+        title: "Message updated",
+        description: "Your message has been successfully edited.",
+      });
+    } catch (error) {
+      console.error('Error updating message:', error);
+      toast({
+        title: "Error updating message",
+        description: "Your message could not be updated. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setEditingMessageId(null);
+      setIsEditing(false);
+    }
+  };
+
+  // Handle deleting a message
+  const handleDeleteMessage = async (messageId: string) => {
+    if (!user) return;
+    
+    setIsDeleting(true);
+    
+    try {
+      // Delete the message from the database
+      await MessageService.deleteMessage(messageId, user.id);
+      
+      // Remove the message from the chat history
+      setChatHistory(prev => prev.filter(msg => msg.id !== messageId));
+      
+      toast({
+        title: "Message deleted",
+        description: "Your message has been successfully deleted.",
+      });
+    } catch (error) {
+      console.error('Error deleting message:', error);
+      toast({
+        title: "Error deleting message",
+        description: "Your message could not be deleted. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsDeleting(false);
     }
   };
   
@@ -264,14 +390,64 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
             {chatHistory.map((chat, index) => (
               <div 
                 key={chat.id || index} 
-                className={`p-3 rounded-lg ${
-                  chat.sender_type === MessageSenderType.User ? 'bg-primary/10 ml-8' : 'bg-secondary/20 mr-8'
+                className={`p-3 rounded-lg relative group ${
+                  chat.sender_type === MessageSenderType.User 
+                    ? 'bg-primary/10 ml-8 mr-0 pl-2'
+                    : 'bg-secondary/20 mr-8 ml-0 pr-2'
                 }`}
               >
-                <MarkdownRenderer 
-                  content={chat.content} 
-                  className="text-sm [&>*:first-child]:mt-0 [&>*:last-child]:mb-0" 
-                />
+                {/* User messages with edit capability */}
+                {chat.sender_type === MessageSenderType.User && chat.id !== `temp-${Date.now()}` && (
+                  <>
+                    {editingMessageId === chat.id ? (
+                      /* Edit mode */
+                      <MessageEditor
+                        message={chat}
+                        onSave={handleSaveEdit}
+                        onCancel={() => setEditingMessageId(null)}
+                        isLoading={isEditing}
+                      />
+                    ) : (
+                      /* Display mode with actions */
+                      <>
+                        <MessageActions
+                          message={chat}
+                          onEdit={handleEditMessage}
+                          onDelete={handleDeleteMessage}
+                          isMobile={!isStandalone && isMobileScreen}
+                          position="left"
+                        />
+                        <MarkdownRenderer 
+                          content={chat.content} 
+                          className="text-sm [&>*:first-child]:mt-0 [&>*:last-child]:mb-0" 
+                        />
+                        {(chat.isEdited || editedMessageIds.has(chat.id)) && (
+                          <div className="text-xs text-muted-foreground mt-1">
+                            <span>(edited)</span>
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </>
+                )}
+                
+                {/* Assistant messages (never editable) */}
+                {chat.sender_type === MessageSenderType.Assistant && (
+                  <>
+                    <MessageActions
+                      message={chat}
+                      onEdit={handleEditMessage}
+                      onDelete={handleDeleteMessage}
+                      isMobile={!isStandalone && isMobileScreen}
+                      canEdit={false}
+                      position="right"
+                    />
+                    <MarkdownRenderer 
+                      content={chat.content} 
+                      className="text-sm [&>*:first-child]:mt-0 [&>*:last-child]:mb-0" 
+                    />
+                  </>
+                )}
               </div>
             ))}
             {/* Invisible element to scroll to */}

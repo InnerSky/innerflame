@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext.js';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useDocuments } from '../hooks/useDocuments.js';
 import { DocumentsProvider } from '../contexts/DocumentsContext.js';
 import { DocumentsResponsiveLayout } from '../layouts/DocumentsResponsiveLayout.js';
@@ -10,8 +10,12 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { Button } from '@/components/ui/button';
 import { Edit, MoreHorizontal, Trash2 } from 'lucide-react';
 import { ProjectInfoRefType } from '../components/ProjectInfo.js';
+import { DocumentService } from '../services/documentService.js';
+import { ProjectService } from '../services/projectService.js';
+import { useToast } from '@/hooks/use-toast.js';
 
 const Documents = () => {
+  const { toast } = useToast();
   const { user } = useAuth();
   const navigate = useNavigate();
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -113,7 +117,7 @@ const Documents = () => {
   
   // Project actions
   const handleEditProject = useCallback(async () => {
-    if (!selectedProjectId || selectedProjectId === 'default_project' || !user?.id) return;
+    if (!selectedProjectId || !user?.id) return;
     
     try {
       // First get the project details
@@ -182,7 +186,7 @@ const Documents = () => {
   }, [projectToEdit, user?.id]);
   
   const handleDeleteProject = useCallback(() => {
-    if (!selectedProjectId || selectedProjectId === 'default_project') return;
+    if (!selectedProjectId) return;
     
     setProjectToDelete(selectedProjectId);
     setShowDeleteProjectDialog(true);
@@ -195,16 +199,10 @@ const Documents = () => {
     }
     
     try {
-      const repository = new DocumentRepository();
+      const projectService = ProjectService.getInstance();
       
-      // Delete all documents in this project first
-      const projectDocs = await repository.getDocumentsByProject(user.id, projectToDelete);
-      for (const doc of projectDocs) {
-        await repository.deleteDocument(doc.id);
-      }
-      
-      // Then delete the project itself
-      await repository.deleteDocument(projectToDelete);
+      // Delete the project and all its documents
+      await projectService.deleteProject(projectToDelete, user.id);
       
       // Go back to all documents view
       selectProject(null);
@@ -213,23 +211,29 @@ const Documents = () => {
       fetchDocuments();
       
       // Refresh projects data for the project selector
-      const projects = await repository.getUserProjectsOnly(user.id);
+      const projects = await projectService.getUserProjects(user.id);
       const projectMap = projects.reduce((acc, project) => {
         acc[project.id] = project.title;
         return acc;
       }, {} as Record<string, string>);
+      
       setProjectsData(projectMap);
       
-      // Force ProjectSelector to re-render with updated data
-      setProjectSelectorKey(prev => prev + 1);
-      
-      // Tell the user about successful deletion
-      console.log('Project deleted successfully');
+      // Show success message
+      toast({
+        title: 'Project deleted',
+        description: 'The project and all its documents have been deleted.',
+      });
     } catch (error) {
       console.error('Error deleting project:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to delete project. Please try again.',
+        variant: 'destructive',
+      });
     } finally {
       setShowDeleteProjectDialog(false);
-      setProjectToDelete(null);
+      setProjectToDelete('');
     }
   }, [projectToDelete, user?.id, fetchDocuments, selectProject]);
   
@@ -285,8 +289,8 @@ const Documents = () => {
   
   // Project Actions Menu component
   const ProjectActionMenu = useCallback(() => {
-    // Only show for actual projects (not All Documents or Default Project)
-    if (!selectedProjectId || selectedProjectId === 'default_project') {
+    // Only show for actual projects (not All Documents)
+    if (!selectedProjectId) {
       return null;
     }
     
@@ -325,8 +329,6 @@ const Documents = () => {
   const getHeaderTitle = useCallback(() => {
     if (!selectedProjectId) {
       return "All Documents";
-    } else if (selectedProjectId === 'default_project') {
-      return "Default Project";
     } else {
       // Use the project name from our mapping
       return projectsData[selectedProjectId] || "Loading...";

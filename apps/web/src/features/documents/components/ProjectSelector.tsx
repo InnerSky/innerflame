@@ -32,7 +32,6 @@ export function ProjectSelector({
   
   // Special values for Project options
   const ALL_PROJECTS_VALUE = "all_projects";
-  const DEFAULT_PROJECT_VALUE = "default_project";
   
   useEffect(() => {
     // Load all projects for the user
@@ -67,8 +66,6 @@ export function ProjectSelector({
   const handleValueChange = (value: string) => {
     if (value === ALL_PROJECTS_VALUE) {
       onSelectProject(null);
-    } else if (value === DEFAULT_PROJECT_VALUE) {
-      onSelectProject(DEFAULT_PROJECT_VALUE);
     } else {
       onSelectProject(value);
     }
@@ -97,7 +94,7 @@ export function ProjectSelector({
       <div className="flex items-center gap-2">
         <div className="flex-1">
           {loading ? (
-            <div className="w-[200px] h-10 flex items-center justify-center text-sm text-muted-foreground">
+            <div className="flex h-11 md:h-9 w-[200px] items-center whitespace-nowrap rounded-md border border-input bg-transparent px-3 py-2 text-base md:text-sm shadow-sm text-muted-foreground">
               Loading projects...
             </div>
           ) : (
@@ -111,7 +108,6 @@ export function ProjectSelector({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value={ALL_PROJECTS_VALUE}>All Documents</SelectItem>
-                <SelectItem value={DEFAULT_PROJECT_VALUE}>Default Project</SelectItem>
                 {projects.map((project) => (
                   <SelectItem key={project.id} value={project.id}>
                     {project.title}

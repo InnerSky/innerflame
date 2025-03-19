@@ -236,7 +236,7 @@ export function DocumentEditor({
           <div className="p-0.5 pb-1.5 flex-grow">
             <Textarea
               ref={textareaRef}
-              className="flex-grow min-h-0 font-mono resize-none transition-all focus:shadow-md overflow-auto w-full h-full"
+              className="flex-grow min-h-0 font-mono resize-none transition-shadow duration-200 focus:shadow-md overflow-auto w-full h-full"
               placeholder="Document content..."
               value={content}
               onChange={(e) => onContentChange(e.target.value)}

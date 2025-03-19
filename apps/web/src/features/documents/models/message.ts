@@ -16,11 +16,13 @@ export enum MessageSenderType {
 
 // Core Message model extending Supabase tables type
 export interface Message extends Omit<Tables<"messages">,
-  "created_at" | "content_embedding" | "detected_intent" | "proposed_entity_changes"> {
+  "created_at" | "content_embedding" | "detected_intent" | "proposed_entity_changes" | "is_edited" | "updated_at"> {
   createdAt: Date; // converted from string to Date
   contentEmbedding?: string; // optional embedding
   detectedIntent?: string[]; // optional intent detection
   proposedChanges?: Record<string, any>; // optional changes
+  isEdited?: boolean; // flag to indicate the message has been edited
+  updatedAt?: Date; // when the message was last updated
 }
 
 // Type for creating a new message
@@ -45,11 +47,21 @@ export interface MessageFilter {
 
 // Transform from database row to domain model
 export function mapToMessage(row: Tables<"messages">): Message {
+  // We know the createdAt field exists
+  const createdAt = row.created_at ? new Date(row.created_at) : new Date();
+  
+  // For updatedAt and isEdited, we'll just set default values since
+  // we don't have the updated_at column in the database
+  const updatedAt = undefined;
+  const isEdited = false;
+  
   return {
     ...row,
-    createdAt: row.created_at ? new Date(row.created_at) : new Date(),
+    createdAt,
+    updatedAt,
     contentEmbedding: row.content_embedding || undefined,
     detectedIntent: row.detected_intent || undefined,
+    isEdited,
     proposedChanges: typeof row.proposed_entity_changes === 'object' ? row.proposed_entity_changes as Record<string, any> : undefined
   };
 }

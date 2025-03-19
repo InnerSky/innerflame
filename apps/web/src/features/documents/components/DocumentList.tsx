@@ -26,7 +26,8 @@ import {
   Folder,
   FolderOpen,
   FilePlus,
-  ChevronRight
+  ChevronRight,
+  ChevronDown
 } from "lucide-react";
 import { Document, SortDirection } from "../models/document";
 import { countWords } from "@/utils/textUtils";
@@ -118,78 +119,59 @@ export function DocumentList({
   const isInProjectWithDocument = isInProject && !!selectedDocument;
 
   return (
-    <div className="h-full flex flex-col overflow-hidden px-3 sm:px-0 pt-2">
+    <div className="h-full flex flex-col overflow-hidden px-1.5 sm:px-2 pt-2 sm:pt-3 max-w-full">
       {isInProject && (
-        <div className="flex-shrink-0 mb-4">
+        <div className="flex-shrink-0 mb-3 sm:mb-4 mx-0.5">
           {/* Project header with clickable title */}
           <button
             onClick={handleProjectContextSelect}
-            className={`w-full text-left px-4 py-3 rounded-md transition-all duration-200 border-l-2 ${
+            className={`w-full text-left px-3 sm:px-4 py-2.5 sm:py-3 rounded-r-md rounded-l-none transition-all duration-300 border-l-2 focus:outline-none focus:ring-1 focus:ring-primary/30 group ${
               isInProjectWithDocument
-                ? "hover:bg-muted border-transparent hover:border-muted-foreground/30"
-                : "bg-accent text-accent-foreground border-primary"
+                ? "hover:bg-muted/60 border-transparent hover:border-muted-foreground/30 hover:translate-x-0.5"
+                : "bg-accent/90 text-accent-foreground border-primary shadow-sm hover:bg-accent/95"
             }`}
             disabled={!isInProject || !isInProjectWithDocument}
           >
             <div className="flex justify-between items-center">
-              <div className="flex items-center gap-2.5">
+              <div className="flex items-center gap-2">
                 {isInProjectWithDocument ? (
-                  <FolderOpen className="h-5 w-5 text-foreground transition-transform duration-200" />
+                  <FolderOpen className="h-4 w-4 sm:h-5 sm:w-5 text-foreground transition-all duration-200 group-hover:scale-110" />
                 ) : (
-                  <Folder className="h-5 w-5 text-accent-foreground transition-transform duration-200" />
+                  <Folder className="h-4 w-4 sm:h-5 sm:w-5 text-accent-foreground transition-all duration-200 group-hover:text-accent-foreground/80" />
                 )}
-                <span className={`text-lg ${!isInProjectWithDocument ? "font-semibold" : "font-medium"}`}>{getHeaderTitle()}</span>
+                <span className={`text-base sm:text-lg ${!isInProjectWithDocument ? "font-semibold" : "font-medium"}`}>{getHeaderTitle()}</span>
               </div>
-              {isInProjectWithDocument && (
-                <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-foreground opacity-70" />
+              {isInProjectWithDocument ? (
+                <ChevronDown className="h-4 w-4 text-muted-foreground group-hover:text-foreground opacity-70 transition-all duration-200 group-hover:scale-110" />
+              ) : (
+                <ChevronRight className="h-4 w-4 text-accent-foreground opacity-80 transition-all duration-200 group-hover:opacity-100 group-hover:translate-x-0.5" />
               )}
             </div>
-            {isInProjectWithDocument && (
-              <div className="text-xs mt-1.5 text-muted-foreground group-hover:text-foreground">
-                Click to view project overview
-              </div>
-            )}
           </button>
-          {isInProjectWithDocument && (
-            <div className="px-2 my-3">
-              <Separator className="bg-muted-foreground/20" />
-            </div>
-          )}
         </div>
       )}
 
-      <div className="relative mb-2 flex-shrink-0 p-0.5">
-        <Search className="absolute left-2 top-3 h-4 w-4 text-muted-foreground" />
+      <div className="relative mb-3 flex-shrink-0 mx-0.5">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 sm:h-4 w-3.5 sm:w-4 text-muted-foreground" />
         <Input
           placeholder="Search documents..."
-          className="pl-8 pr-8"
+          className="pl-8 sm:pl-9 pr-8 h-8 sm:h-10 text-sm sm:text-base focus-visible:ring-1 focus-visible:ring-primary/30 border-muted"
           value={searchQuery}
           onChange={(e) => onSearch(e.target.value)}
         />
         {searchQuery && (
           <button 
-            className="absolute right-2 top-2.5"
+            className="absolute right-3 top-1/2 -translate-y-1/2"
             onClick={onClearSearch}
+            aria-label="Clear search"
           >
-            <X className="h-4 w-4 text-muted-foreground hover:text-foreground" />
+            <X className="h-3.5 sm:h-4 w-3.5 sm:w-4 text-muted-foreground hover:text-foreground" />
           </button>
         )}
       </div>
       
-      {onCreateNew && (
-        <Button 
-          onClick={onCreateNew} 
-          size="sm" 
-          variant="outline" 
-          className="w-full mb-4 flex items-center justify-center border-l-2 border-transparent hover:border-primary/50 transition-colors"
-        >
-          <FilePlus className="h-4 w-4 mr-2" />
-          New Document
-        </Button>
-      )}
-      
-      <ScrollArea className="flex-1 pr-3 sm:pr-4 pl-1 overflow-auto h-full">
-        <div className="space-y-1">
+      <ScrollArea className="flex-1 pr-1.5 sm:pr-3 pl-0.5 overflow-auto h-full pb-1 -mx-0.5">
+        <div className="space-y-1.5 sm:space-y-2 mx-0.5">
           {documents.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               <p>No documents found.</p>
@@ -205,22 +187,24 @@ export function DocumentList({
                 <div
                   key={document.id}
                   className={`
-                    group flex justify-between items-start px-3 py-2 rounded-md transition-all duration-200 border-l-2
+                    group flex justify-between items-start px-3 py-2.5 rounded-r-md rounded-l-none transition-all duration-300 border-l-2 focus:outline-none focus-within:ring-1 focus-within:ring-primary/30
                     ${selectedDocument?.id === document.id 
-                      ? 'bg-accent text-accent-foreground border-primary' 
-                      : 'hover:bg-muted border-transparent hover:border-muted-foreground/30'
+                      ? 'bg-accent/90 text-accent-foreground border-primary shadow-sm' 
+                      : 'hover:bg-muted/60 border-transparent hover:border-muted-foreground/30 hover:translate-x-0.5'
                     }
                   `}
                   onClick={() => onSelectDocument(document)}
                 >
-                  <div className="flex-1 min-w-0">
-                    <div className="font-medium truncate">{document.title || 'Untitled Document'}</div>
-                    <div className="text-xs text-muted-foreground truncate">
-                      {new Date(document.updatedAt).toLocaleDateString()} • {countWords(document.content)} words
+                  <div className="flex-1 min-w-0 pr-2">
+                    <div className="font-medium truncate leading-tight">{document.title || 'Untitled Document'}</div>
+                    <div className="text-xs text-muted-foreground truncate mt-0.5 opacity-80 group-hover:opacity-100 transition-opacity">
+                      <span className="inline-block">{new Date(document.updatedAt).toLocaleDateString()}</span>
+                      <span className="mx-1.5">•</span>
+                      <span className="inline-block">{countWords(document.content)} words</span>
                     </div>
                     {projectName && currentProjectId === null && (
-                      <div className="mt-1">
-                        <Badge variant="outline" className="text-xs flex items-center gap-1 truncate max-w-[180px]">
+                      <div className="mt-1.5">
+                        <Badge variant="outline" className="text-xs flex items-center gap-1 truncate max-w-[180px] bg-background/70">
                           <Folder className="h-3 w-3" />
                           <span>{projectName}</span>
                         </Badge>
@@ -233,8 +217,9 @@ export function DocumentList({
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                        className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-background/80 focus:opacity-100"
                         onClick={(e) => e.stopPropagation()}
+                        aria-label="More options"
                       >
                         <MoreHorizontal className="h-4 w-4" />
                       </Button>
@@ -313,6 +298,23 @@ export function DocumentList({
           )}
         </div>
       </ScrollArea>
+      
+      {onCreateNew && (
+        <div className="mt-auto sticky bottom-0 border-t border-border/50 bg-background/95 backdrop-blur-[2px] z-10">
+          <div className="px-1 py-1 sm:py-1.5">
+            <div
+              onClick={onCreateNew}
+              className="group flex items-center px-3 py-2 sm:py-2.5 rounded-r-md rounded-l-none cursor-pointer border-l-2 border-transparent hover:bg-muted/60 hover:border-muted-foreground/30 hover:translate-x-0.5 transition-all duration-300"
+              tabIndex={0}
+              role="button"
+              aria-label="Create new document"
+            >
+              <FilePlus className="h-3.5 sm:h-4 w-3.5 sm:w-4 mr-2 text-muted-foreground" />
+              <span className="font-medium text-sm sm:text-base">New document</span>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 } 

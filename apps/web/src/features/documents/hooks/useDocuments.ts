@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { Document, DocumentVersion, SaveStatus, SortDirection, DocumentType, ContentFormat } from '../models/document';
 import { DocumentRepository } from '../repositories/documentRepository';
 import { supabase } from '@/lib/supabase';
+import { DocumentService } from '../services/documentService';
 
 // Note: 'userId' parameter is used with methods that expect a userId string,
 // while Document objects have a 'user_id' property (from Supabase Tables)
@@ -133,51 +134,43 @@ export function useDocuments(userId?: string) {
   
   // Fetch documents for a specific project
   const fetchDocumentsByProject = useCallback(async () => {
-    if (!userId || !selectedProjectId) return;
+    if (!userId || !selectedProjectId) {
+      // If no project is selected, clear project documents
+      setProjectDocuments([]);
+      return;
+    }
     
     setLoading(true);
     setError(null);
     
     try {
-      // First check if the project still exists (skip for default project)
-      if (selectedProjectId !== 'default_project') {
-        const repository = new DocumentRepository();
-        const projects = await repository.getUserProjectsOnly(userId);
-        const projectExists = projects.some(p => p.id === selectedProjectId);
+      // First check if the project still exists
+      const repository = new DocumentRepository();
+      const projects = await repository.getUserProjectsOnly(userId);
+      const projectExists = projects.some(p => p.id === selectedProjectId);
+      
+      if (!projectExists) {
+        // If project doesn't exist anymore, reset to showing all documents
+        console.log('Project no longer exists, reverting to all documents');
+        setSelectedProjectId(null);
+        setProjectDocuments([]);
         
-        if (!projectExists) {
-          // If project doesn't exist anymore, reset to showing all documents
-          console.log('Project no longer exists, reverting to all documents');
-          setSelectedProjectId(null);
-          setProjectDocuments([]);
-          
-          // Instead of calling fetchDocuments directly, duplicate its functionality here
-          const allDocs = await repository.getUserDocuments(userId);
-          setDocuments(allDocs);
-          setFilteredDocuments(allDocs);
-          
-          // No longer auto-selecting the first document
-          // if (allDocs.length > 0 && !selectedDocument) {
-          //   setSelectedDocument(allDocs[0]);
-          // }
-          
-          return;
-        }
+        // Instead of calling fetchDocuments directly, duplicate its functionality here
+        const allDocs = await repository.getUserDocuments(userId);
+        setDocuments(allDocs);
+        setFilteredDocuments(allDocs);
+        
+        return;
       }
       
-      // Fetch documents based on project selection
+      // Fetch documents for the selected project
       let docs;
       try {
-        if (selectedProjectId === 'default_project') {
-          // Get documents with no project assigned
-          docs = await repository.getDocumentsWithNoProject(userId);
-        } else {
-          // Get documents for the selected project
-          docs = await repository.getDocumentsByProject(userId, selectedProjectId);
-        }
+        // Get documents for the selected project
+        docs = await repository.getDocumentsByProject(userId, selectedProjectId);
       } catch (error: any) {
         console.error('Error fetching project documents:', error);
-        throw new Error(`Failed to load ${selectedProjectId === 'default_project' ? 'default' : 'project'} documents: ${error.message || 'Unknown error'}`);
+        throw new Error(`Failed to load project documents: ${error.message || 'Unknown error'}`);
       }
       
       // Set project documents even if empty
@@ -191,27 +184,19 @@ export function useDocuments(userId?: string) {
           setTitle('');
           setContent('');
         }
-      } else {
-        // Only keep current document if it's in this project, otherwise clear selection
-        if (selectedDocument && !docs.some(d => d.id === selectedDocument.id)) {
-          setSelectedDocument(null);
-          setTitle('');
-          setContent('');
-        }
-        // No longer auto-selecting the first document
-        // else if (!selectedDocument) {
-        //   setSelectedDocument(docs[0]);
-        //   setTitle(docs[0].title);
-        //   setContent(docs[0].content);
-        // }
+      } else if (selectedDocument && !docs.some(d => d.id === selectedDocument.id)) {
+        // If current selection is not in this project, clear selection
+        setSelectedDocument(null);
+        setTitle('');
+        setContent('');
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error in fetchDocumentsByProject:', err);
-      setError(err.message || 'Failed to load project documents');
+      setError('Error loading documents');
     } finally {
       setLoading(false);
     }
-  }, [userId, selectedProjectId, selectedDocument, repository]);
+  }, [userId, selectedProjectId, selectedDocument]);
   
   // Set up real-time subscription to documents
   useEffect(() => {
@@ -404,6 +389,7 @@ export function useDocuments(userId?: string) {
     
     setPendingDocument(null);
     setSaveStatus('idle');
+    setLastSaved(null);
   }, [selectedDocument, hasUnsavedChanges]);
   
   // Handle discarding changes
@@ -423,7 +409,11 @@ export function useDocuments(userId?: string) {
     if (!documentToDelete) return;
     
     try {
-      await repository.deleteDocument(documentToDelete.id);
+      const documentService = DocumentService.getInstance();
+      await documentService.deleteDocument(documentToDelete.id, {
+        userId: userId || undefined,
+        cascadeRelated: true
+      });
       
       // Update all document lists
       const newDocuments = documents.filter(doc => doc.id !== documentToDelete.id);
@@ -454,7 +444,7 @@ export function useDocuments(userId?: string) {
       setShowDeleteDialog(false);
       setDocumentToDelete(null);
     }
-  }, [documentToDelete, selectedDocument, documents, repository, selectedProjectId]);
+  }, [documentToDelete, selectedDocument, documents, userId, selectedProjectId]);
   
   // Confirm delete document
   const confirmDeleteDocument = useCallback((document: Document) => {
@@ -612,6 +602,8 @@ export function useDocuments(userId?: string) {
     setSelectedDocument(null);
     setTitle('');
     setContent('');
+    setSaveStatus('idle');
+    setLastSaved(null);
     
     // Only change the project ID if it's different
     if (selectedProjectId !== projectId) {
