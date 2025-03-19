@@ -62,7 +62,12 @@ export const MessageEditor: React.FC<MessageEditorProps> = ({
         value={editedContent}
         onChange={(e) => setEditedContent(e.target.value)}
         onKeyDown={handleKeyDown}
-        className="min-h-[100px] resize-none font-inherit p-2 text-sm w-full"
+        className="min-h-[100px] max-h-[240px] resize-none font-inherit p-2 text-sm w-full overflow-y-auto"
+        style={{
+          height: 'auto',
+          overflowY: editedContent.split('\n').length > 10 ? 'scroll' : 'hidden'
+        }}
+        rows={Math.min(editedContent.split('\n').length || 1, 10)}
         placeholder="Edit your message..."
         disabled={isLoading}
         aria-label="Edit message"
