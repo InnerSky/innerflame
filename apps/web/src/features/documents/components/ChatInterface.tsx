@@ -17,6 +17,7 @@ import { useAuth } from '@/hooks/useAuth.ts';
 import { MessageActions } from './MessageActions.js';
 import { MessageEditor } from './MessageEditor.js';
 import { useToast } from '@/hooks/use-toast.ts';
+import { createAIStream } from '../services/sseClient.js';
 
 type ChatInterfaceProps = {
   className?: string;
@@ -58,6 +59,12 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const contextSwitchRef = useRef(false);
   const prevContextRef = useRef<{contextType?: MessageContextType, contextId?: string | null}>({});
+  const [isStreaming, setIsStreaming] = useState(false);
+  const [streamingMessage, setStreamingMessage] = useState('');
+  const [currentStreamingId, setCurrentStreamingId] = useState<string | null>(null);
+  const [streamingMessages, setStreamingMessages] = useState<Record<string, boolean>>({});
+  const [streamingContents, setStreamingContents] = useState<Record<string, string>>({});
+  const streamCloseRef = useRef<(() => void) | null>(null);
   
   // Get auth data
   const { user } = useAuth();
@@ -224,50 +231,187 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
         prev.map(msg => msg.id === userMessage.id ? savedMessage : msg)
       );
       
-      // Here you would call your AI service with document context
-      // Simulating AI response for now
-      setTimeout(async () => {
-        // Create a context-aware response that references the document and project
-        let responseContent = '';
-        
-        // Simple pattern matching for demo purposes - would be replaced with actual AI
-        if (isProjectOnlyMode) {
-          // Project-only responses
-          if (message.toLowerCase().includes('help') || message.toLowerCase().includes('assist')) {
-            responseContent = `I can help you with your "${projectName}" project. What specific assistance do you need?`;
-          } else if (message.toLowerCase().includes('summary') || message.toLowerCase().includes('summarize')) {
-            responseContent = `I'll summarize the "${projectName}" project for you.`;
-          } else if (message.toLowerCase().includes('document')) {
-            responseContent = `You can create a new document in the "${projectName}" project to organize your content.`;
-          } else {
-            responseContent = `I'm here to help with your "${projectName}" project. How can I assist you?`;
+      // Create a stable timestamp for the streaming message ID
+      const streamingTimestamp = Date.now();
+      const streamingId = `streaming-${streamingTimestamp}`;
+      
+      // Store the current streaming message ID for reference
+      setCurrentStreamingId(streamingId);
+      // Also mark this message as streaming in our map
+      setStreamingMessages(prev => ({...prev, [streamingId]: true}));
+      
+      // Ensure isStreaming is set to true for every new streaming message
+      setIsStreaming(true);
+      console.log('Setting isStreaming to TRUE for new message:', streamingId);
+      
+      // Create a streaming message placeholder
+      const streamingPlaceholder: MessageModel = {
+        id: streamingId,
+        content: '',
+        user_id: user.id,
+        sender_type: 'assistant',
+        context_type: contextType === MessageContextType.Document 
+          ? 'document' 
+          : contextType === MessageContextType.Project
+            ? 'project'
+            : 'general',
+        context_id: contextId,
+        createdAt: new Date(),
+        has_proposed_changes: false,
+        display_thread_id: null,
+        reply_to_message_id: null
+      };
+      
+      // Add the streaming placeholder to chat history
+      setChatHistory(prev => [...prev, streamingPlaceholder]);
+      
+      // Reset streaming state
+      setStreamingMessage('');
+      
+      // Close any existing stream
+      if (streamCloseRef.current) {
+        streamCloseRef.current();
+        streamCloseRef.current = null;
+      }
+      
+      // Start streaming
+      const { close } = createAIStream({
+        message: savedMessage.content,
+        userId: user.id,
+        contextType: contextType === MessageContextType.Document 
+          ? 'document' 
+          : contextType === MessageContextType.Project
+            ? 'project'
+            : 'general',
+        documentId: contextId && contextType === MessageContextType.Document ? contextId : undefined,
+        documentTitle: selectedDocument?.title,
+        documentContent: content,
+        projectId: selectedProjectId || undefined,
+        projectName: projectName,
+        onConnectionChange: (connected) => {
+          if (!connected) {
+            setIsLoading(false);
+            setIsStreaming(false);
           }
-        } else {
-          // Document-focused responses
-          if (message.toLowerCase().includes('help') || message.toLowerCase().includes('assist')) {
-            responseContent = `I can help you with your document "${documentName}". What specific assistance do you need?`;
-          } else if (message.toLowerCase().includes('summary') || message.toLowerCase().includes('summarize')) {
-            responseContent = `I'll summarize "${documentName}" for you. This document is part of the "${projectName}" project and contains ${content?.length || 0} characters.`;
-          } else if (message.toLowerCase().includes('project')) {
-            responseContent = `You're currently working in the "${projectName}" project. This project contains the document "${documentName}" that you're editing.`;
-          } else {
-            responseContent = `I'm analyzing your document "${documentName}" from project "${projectName}". How can I help you improve this content?`;
+        },
+        onChunk: (chunk) => {
+          console.log('Received chunk:', chunk);
+          // For the global streaming message state (will be deprecated)
+          if (currentStreamingId === streamingId) {
+            setStreamingMessage(prev => {
+              const updated = prev + chunk;
+              console.log('Updated streamingMessage state:', updated);
+              return updated;
+            });
           }
+          
+          // Also update the streaming content for this specific message ID
+          setStreamingContents(prev => {
+            const nextContents = {
+              ...prev,
+              [streamingId]: (prev[streamingId] || '') + chunk
+            };
+            console.log(`Updated streamingContents for ${streamingId}:`, nextContents[streamingId]);
+            return nextContents;
+          });
+        },
+        onError: (error) => {
+          console.error('Streaming error:', error);
+          toast({
+            title: "Error during streaming",
+            description: error,
+            variant: "destructive"
+          });
+          setIsLoading(false);
+          
+          // Only set isStreaming to false if there are no other active streaming messages
+          const hasOtherStreamingMessages = Object.keys(streamingMessages).length > 1 || 
+            (Object.keys(streamingMessages).length === 1 && !(streamingId in streamingMessages));
+          
+          if (!hasOtherStreamingMessages) {
+            setIsStreaming(false);
+            console.log('Setting isStreaming to FALSE, no more active streaming messages');
+          } else {
+            console.log('Keeping isStreaming as TRUE, other active messages exist:', 
+              Object.keys(streamingMessages).filter(id => id !== streamingId));
+          }
+          
+          setCurrentStreamingId(null);
+          setStreamingMessages(prev => {
+            const updated = {...prev};
+            if (streamingId in updated) {
+              delete updated[streamingId];
+            }
+            return updated;
+          });
+          
+          // Clean up the content in streamingContents
+          setStreamingContents(prev => {
+            const updated = {...prev};
+            if (streamingId in updated) {
+              delete updated[streamingId];
+            }
+            return updated;
+          });
+        },
+        onComplete: async (data) => {
+          setIsLoading(false);
+          // Only set isStreaming to false if there are no other active streaming messages
+          const hasOtherStreamingMessages = Object.keys(streamingMessages).length > 1 || 
+            (Object.keys(streamingMessages).length === 1 && !(streamingId in streamingMessages));
+          
+          if (!hasOtherStreamingMessages) {
+            setIsStreaming(false);
+            console.log('Setting isStreaming to FALSE, no more active streaming messages');
+          } else {
+            console.log('Keeping isStreaming as TRUE, other active messages exist:', 
+              Object.keys(streamingMessages).filter(id => id !== streamingId));
+          }
+          
+          setCurrentStreamingId(null);
+          setStreamingMessages(prev => {
+            const updated = {...prev};
+            if (streamingId in updated) {
+              delete updated[streamingId];
+            }
+            console.log('Removing message from streamingMessages:', streamingId);
+            console.log('streamingMessages after removal:', updated);
+            return updated;
+          });
+          
+          // Clean up the content in streamingContents
+          setStreamingContents(prev => {
+            const updated = {...prev};
+            if (streamingId in updated) {
+              delete updated[streamingId];
+            }
+            return updated;
+          });
+          
+          // Save the complete message to the database
+          const assistantMessage = await MessageService.createMessage({
+            content: data.fullResponse || streamingMessage,
+            userId: user.id,
+            senderType: MessageSenderType.Assistant,
+            contextType,
+            contextId: contextId || undefined
+          });
+          
+          // Update chat history with the final message
+          setChatHistory(prev => 
+            prev.map(msg => 
+              msg.id === streamingId ? assistantMessage : msg
+            )
+          );
+        },
+        onTool: (toolName, args) => {
+          console.log(`Tool called: ${toolName}`, args);
+          // Handle tool calls here if needed
         }
-        
-        // Save the assistant response
-        const assistantMessageDB = await MessageService.createMessage({
-          content: responseContent,
-          userId: user.id, // Still using user ID for attribution
-          senderType: MessageSenderType.Assistant,
-          contextType,
-          contextId: contextId || undefined
-        });
-        
-        // Append AI response to the end of history
-        setChatHistory(prev => [...prev, assistantMessageDB]);
-        setIsLoading(false);
-      }, 1000);
+      });
+      
+      // Store the close function
+      streamCloseRef.current = close;
     } catch (error) {
       console.error('Error sending message:', error);
       toast({
@@ -276,6 +420,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
         variant: "destructive"
       });
       setIsLoading(false);
+      setIsStreaming(false);
     }
   };
 
@@ -356,6 +501,46 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
     }
   };
   
+  // Debug effect for streaming message updates
+  useEffect(() => {
+    if (streamingMessage && isStreaming) {
+      console.log('streamingMessage state updated:', streamingMessage.substring(0, 50) + (streamingMessage.length > 50 ? '...' : ''));
+      console.log('Current streaming ID:', currentStreamingId);
+    }
+  }, [streamingMessage, isStreaming]);
+  
+  // Debug effect for streaming contents map
+  useEffect(() => {
+    console.log('streamingContents map updated:', streamingContents);
+  }, [streamingContents]);
+
+  // Debug effect for streaming messages map
+  useEffect(() => {
+    console.log('streamingMessages map updated:', streamingMessages);
+    console.log('isStreaming state:', isStreaming);
+  }, [streamingMessages, isStreaming]);
+  
+  // Debug effect for current streaming ID changes
+  useEffect(() => {
+    console.log('currentStreamingId changed:', currentStreamingId);
+  }, [currentStreamingId]);
+  
+  // Debug effect for chat history changes
+  useEffect(() => {
+    if (chatHistory.length > 0) {
+      const lastMessage = chatHistory[chatHistory.length - 1];
+      console.log('Chat history updated, last message ID:', lastMessage.id);
+      
+      // Check if the last message matches the current streaming ID
+      if (currentStreamingId && lastMessage.id === currentStreamingId) {
+        console.log('✅ Last message matches currentStreamingId');
+      } else if (currentStreamingId) {
+        console.log('❌ Last message does NOT match currentStreamingId');
+        console.log('Last message:', lastMessage);
+      }
+    }
+  }, [chatHistory, currentStreamingId]);
+  
   // Chat content (messages and input)
   const chatContent = (
     <>
@@ -387,69 +572,88 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
           </p>
         ) : (
           <>
-            {chatHistory.map((chat, index) => (
-              <div 
-                key={chat.id || index} 
-                className={`p-3 rounded-lg relative group ${
-                  chat.sender_type === MessageSenderType.User 
-                    ? 'bg-primary/10 ml-8 mr-0 pl-2'
-                    : 'bg-secondary/20 mr-8 ml-0 pr-2'
-                }`}
-              >
-                {/* User messages with edit capability */}
-                {chat.sender_type === MessageSenderType.User && chat.id !== `temp-${Date.now()}` && (
-                  <>
-                    {editingMessageId === chat.id ? (
-                      /* Edit mode */
-                      <MessageEditor
-                        message={chat}
-                        onSave={handleSaveEdit}
-                        onCancel={() => setEditingMessageId(null)}
-                        isLoading={isEditing}
-                      />
-                    ) : (
-                      /* Display mode with actions */
-                      <>
-                        <MessageActions
+            {chatHistory.map((chat) => {
+              return (
+                <div
+                  key={chat.id}
+                  className={`p-3 rounded-lg relative group ${
+                    String(chat.sender_type) === 'user'
+                      ? 'bg-primary/10 ml-8 mr-0 pl-2'
+                      : 'bg-secondary/20 mr-8 ml-0 pr-2'
+                  }`}
+                >
+                  {/* User messages with edit capability */}
+                  {String(chat.sender_type) === 'user' && chat.id !== `temp-${Date.now()}` && (
+                    <>
+                      {editingMessageId === chat.id ? (
+                        /* Edit mode */
+                        <MessageEditor
                           message={chat}
-                          onEdit={handleEditMessage}
-                          onDelete={handleDeleteMessage}
-                          isMobile={!isStandalone && isMobileScreen}
-                          position="left"
+                          onSave={handleSaveEdit}
+                          onCancel={() => setEditingMessageId(null)}
+                          isLoading={isEditing}
                         />
-                        <MarkdownRenderer 
-                          content={chat.content} 
-                          className="text-sm [&>*:first-child]:mt-0 [&>*:last-child]:mb-0" 
-                        />
-                        {(chat.isEdited || editedMessageIds.has(chat.id)) && (
-                          <div className="text-xs text-muted-foreground mt-1">
-                            <span>(edited)</span>
-                          </div>
-                        )}
-                      </>
-                    )}
-                  </>
-                )}
-                
-                {/* Assistant messages (never editable) */}
-                {chat.sender_type === MessageSenderType.Assistant && (
-                  <>
-                    <MessageActions
-                      message={chat}
-                      onEdit={handleEditMessage}
-                      onDelete={handleDeleteMessage}
-                      isMobile={!isStandalone && isMobileScreen}
-                      canEdit={false}
-                      position="right"
-                    />
-                    <MarkdownRenderer 
-                      content={chat.content} 
-                      className="text-sm [&>*:first-child]:mt-0 [&>*:last-child]:mb-0" 
-                    />
-                  </>
-                )}
-              </div>
-            ))}
+                      ) : (
+                        /* Display mode with actions */
+                        <>
+                          <MessageActions
+                            message={chat}
+                            onEdit={handleEditMessage}
+                            onDelete={handleDeleteMessage}
+                            isMobile={!isStandalone && isMobileScreen}
+                            position="left"
+                          />
+                          <MarkdownRenderer 
+                            content={chat.content} 
+                            className="text-sm [&>*:first-child]:mt-0 [&>*:last-child]:mb-0" 
+                          />
+                          {(chat.isEdited || editedMessageIds.has(chat.id)) && (
+                            <div className="text-xs text-muted-foreground mt-1">
+                              <span>(edited)</span>
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </>
+                  )}
+                  
+                  {/* Assistant messages (never editable) */}
+                  {String(chat.sender_type) === 'assistant' && (
+                    <>
+                      <MessageActions
+                        message={chat}
+                        onEdit={handleEditMessage}
+                        onDelete={handleDeleteMessage}
+                        isMobile={!isStandalone && isMobileScreen}
+                        canEdit={false}
+                        position="right"
+                      />
+                      {/* For streaming messages */}
+                      {(() => {
+                        // ONLY check if the message is in streamingMessages map, don't check isStreaming
+                        const shouldShowStreaming = chat.id in streamingMessages;
+                        console.log(`Checking streaming for message ${chat.id}:`, {
+                          isStreaming,
+                          'chat.id in streamingMessages': chat.id in streamingMessages,
+                          'shouldShowStreaming': shouldShowStreaming
+                        });
+                        return shouldShowStreaming ? (
+                          <MarkdownRenderer 
+                            content={streamingContents[chat.id] || "Generating response..."} 
+                            className="text-sm [&>*:first-child]:mt-0 [&>*:last-child]:mb-0" 
+                          />
+                        ) : (
+                          <MarkdownRenderer 
+                            content={chat.content} 
+                            className="text-sm [&>*:first-child]:mt-0 [&>*:last-child]:mb-0" 
+                          />
+                        );
+                      })()}
+                    </>
+                  )}
+                </div>
+              );
+            })}
             {/* Invisible element to scroll to */}
             <div ref={messagesEndRef} />
           </>

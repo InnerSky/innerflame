@@ -5,15 +5,41 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
+import { createExpressMiddleware } from '@trpc/server/adapters/express';
 import { createSupabaseClient } from '@innerflame/utils/supabase.js';
+import { aiRouter, handleStreamRequest } from './routes/ai.js';
+import { initTRPC } from '@trpc/server';
+import { initSSE } from './controllers/sse.js';
 
-// Load environment variables from the API directory
-dotenv.config({ path: path.resolve(process.cwd(), '.env') });
+// Load environment variables from the API directory with debug
+const currentPath = path.resolve(process.cwd(), '.env');
+const rootPath = path.resolve(process.cwd(), '../../.env');
+
+// Try to load from the current directory first
+let result = dotenv.config({ path: currentPath });
+
+// If that fails, try loading from the root directory
+if (result.error) {
+  console.log('Could not find .env in the current directory, trying root directory...');
+  result = dotenv.config({ path: rootPath });
+}
+
+if (result.error) {
+  console.error('Error loading .env file:', result.error);
+  console.log('Looked for .env files at:');
+  console.log('- Current directory:', currentPath);
+  console.log('- Root directory:', rootPath);
+} else {
+  console.log('Successfully loaded .env file');
+}
 
 // Debug environment variables
 console.log('Environment loaded:');
 console.log('- SUPABASE_URL:', process.env.SUPABASE_URL ? '✓ Found' : '✗ Missing');
 console.log('- SUPABASE_KEY:', process.env.SUPABASE_KEY ? '✓ Found' : '✗ Missing');
+console.log('- CLAUDE_API_KEY:', process.env.CLAUDE_API_KEY ? '✓ Found' : '✗ Missing');
+console.log('- CLAUDE_MODEL:', process.env.CLAUDE_MODEL || 'claude-3-haiku-20240307 (default)');
+console.log('- CLAUDE_MAX_TOKENS:', process.env.CLAUDE_MAX_TOKENS || '1024 (default)');
 console.log('- PORT:', process.env.PORT || '3001 (default)');
 
 // Create Express app
@@ -21,7 +47,12 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: ['http://localhost:5173', 'http://localhost:3000'],
+  credentials: true,
+  methods: ['GET', 'POST'],
+  allowedHeaders: ['Content-Type']
+}));
 app.use(express.json());
 
 // Initialize services
@@ -37,9 +68,80 @@ try {
   process.exit(1); // Exit if Supabase initialization fails
 }
 
-// Routes
+// Create an API router
+const t = initTRPC.create();
+const appRouter = t.router({
+  ai: aiRouter
+});
+
+// Export type for client usage
+export type AppRouter = typeof appRouter;
+
+// tRPC API routes
+app.use('/trpc', createExpressMiddleware({
+  router: appRouter,
+  createContext: () => ({})
+}));
+
+// In-memory storage for stream sessions
+const streamSessions = new Map();
+
+// Base route for health check
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok', version: '0.1.0' });
+});
+
+// SSE streaming endpoint - POST to initialize
+app.post('/api/ai/stream', async (req, res) => {
+  const sessionId = req.query.sessionId as string;
+  
+  if (!sessionId) {
+    return res.status(400).json({ error: 'Session ID is required' });
+  }
+  
+  // Store the request data in the session
+  streamSessions.set(sessionId, req.body);
+  
+  // Send a success response
+  res.json({ success: true, message: 'Stream session initialized' });
+});
+
+// SSE streaming endpoint - GET for EventSource connection
+app.get('/api/ai/stream', async (req, res) => {
+  const sessionId = req.query.sessionId as string;
+  
+  if (!sessionId) {
+    return res.status(400).json({ error: 'Session ID is required' });
+  }
+  
+  // Get the session data
+  const sessionData = streamSessions.get(sessionId);
+  
+  if (!sessionData) {
+    return res.status(404).json({ error: 'Session not found' });
+  }
+  
+  // Initialize the SSE connection
+  initSSE(res);
+  
+  // Clean up the session after processing
+  const cleanup = () => {
+    streamSessions.delete(sessionId);
+  };
+  
+  // Handle connection close
+  req.on('close', cleanup);
+  
+  try {
+    // Handle the request with the stored session data
+    await handleStreamRequest({ 
+      body: sessionData
+    } as any, res);
+  } catch (error) {
+    console.error('Error in stream processing:', error);
+  } finally {
+    cleanup();
+  }
 });
 
 // Start server
@@ -47,6 +149,7 @@ try {
   app.listen(PORT, () => {
     console.log(`API server running on port ${PORT}`);
     console.log(`Health check available at: http://localhost:${PORT}/health`);
+    console.log(`tRPC endpoint available at: http://localhost:${PORT}/trpc`);
   });
 } catch (error) {
   console.error('Failed to start server:', error);

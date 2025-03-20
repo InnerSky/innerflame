@@ -12,7 +12,8 @@
   "dependencies": {
     "@innerflame/types": "*",
     "@innerflame/utils": "*",
-    "@langchain/langgraph": "^0.2.56"
+    "@langchain/langgraph": "^0.2.56",
+    "zod": "^3.23.8"
   },
   "devDependencies": {
     "typescript": "^5.5.3"
