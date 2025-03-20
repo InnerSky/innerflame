@@ -6,7 +6,7 @@ import { Check, X } from 'lucide-react';
 
 interface MessageEditorProps {
   message: Message;
-  onSave: (messageId: string, newContent: string) => Promise<void>;
+  onSave: (newContent: string) => Promise<void>;
   onCancel: () => void;
   isLoading?: boolean;
 }
@@ -37,7 +37,7 @@ export const MessageEditor: React.FC<MessageEditorProps> = ({
   
   const handleSave = async () => {
     if (editedContent.trim() === '') return;
-    await onSave(message.id, editedContent);
+    await onSave(editedContent);
   };
   
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
