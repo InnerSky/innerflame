@@ -43,26 +43,84 @@ export const MessageList: React.FC<MessageListProps> = ({
   const [lastMessagePadding, setLastMessagePadding] = useState(0);
   const prevMessagesLengthRef = useRef<number>(0);
   const prevInitialLoadingRef = useRef<boolean>(true);
+  const renderCountRef = useRef<number>(0);
+  const isResizingRef = useRef<boolean>(false);
+  const paddingUpdateTimeoutRef = useRef<number | null>(null);
 
-  // Adjust padding for the last message (keeping this for UI appearance)
+  // Component mount/update logging
   useEffect(() => {
-    if (!isInitialLoading && messages.length > 0 && lastMessageRef.current && containerRef.current) {
-      const viewportHeight = containerRef.current.clientHeight || 0;
-      const lastMessageHeight = lastMessageRef.current.clientHeight || 0;
-      
-      // Only add padding if the message is shorter than the viewport
-      const requiredPadding = Math.max(0, viewportHeight - lastMessageHeight);
-      
-      if (requiredPadding !== lastMessagePadding) {
-        setLastMessagePadding(requiredPadding);
+    renderCountRef.current += 1;
+    
+    return () => {
+      // Clear any pending timeouts
+      if (paddingUpdateTimeoutRef.current) {
+        clearTimeout(paddingUpdateTimeoutRef.current);
       }
+    };
+  });
+
+  // Dynamic padding calculation that won't cause flashing
+  const updateLastMessagePadding = () => {
+    if (!lastMessageRef.current || !containerRef.current || isInitialLoading) return;
+    
+    // Delay padding calculation to avoid frequent layout shifts
+    if (paddingUpdateTimeoutRef.current) {
+      clearTimeout(paddingUpdateTimeoutRef.current);
+    }
+
+    paddingUpdateTimeoutRef.current = window.setTimeout(() => {
+      if (!lastMessageRef.current || !containerRef.current) return;
+      
+      // Use requestAnimationFrame to ensure we calculate after layout
+      requestAnimationFrame(() => {
+        if (!lastMessageRef.current || !containerRef.current) return;
+        
+        const viewportHeight = containerRef.current.clientHeight || 0;
+        const lastMessageHeight = lastMessageRef.current.clientHeight || 0;
+        
+        // Only add padding if the message is shorter than the viewport
+        const requiredPadding = Math.max(0, viewportHeight - lastMessageHeight);
+        
+        if (requiredPadding !== lastMessagePadding) {
+          setLastMessagePadding(requiredPadding);
+        }
+        
+        paddingUpdateTimeoutRef.current = null;
+      });
+    }, 100); // Delay to batch potential multiple updates
+  };
+
+  // Calculate padding on initial load and when messages change
+  useEffect(() => {
+    if (!isInitialLoading && messages.length > 0) {
+      updateLastMessagePadding();
     }
   }, [messages, isInitialLoading, lastMessagePadding]);
+  
+  // Handle window resize events to adjust padding
+  useEffect(() => {
+    const handleResize = () => {
+      isResizingRef.current = true;
+      updateLastMessagePadding();
+      // Reset resizing flag after resize events have settled
+      setTimeout(() => {
+        isResizingRef.current = false;
+      }, 200);
+    };
+    
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Unified scrolling logic for all scenarios
   useEffect(() => {
     // Skip if we're still loading or have no messages
     if (messages.length === 0) return;
+    
+    // Skip scrolling if we're currently resizing the window
+    if (isResizingRef.current) {
+      return;
+    }
     
     // Determine what triggered this effect
     const initialLoadingJustCompleted = prevInitialLoadingRef.current && !isInitialLoading;

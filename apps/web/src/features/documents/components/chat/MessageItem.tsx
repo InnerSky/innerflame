@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Message as MessageModel } from '../../models/message.js';
 import { MarkdownRenderer } from '@/components/markdown-renderer.js';
 import { MessageActions } from '../MessageActions.js';
 import { MessageEditor } from '../MessageEditor.js';
+import { LoadingDots } from '@/components/ui/loading-dots.js';
 
 interface MessageItemProps {
   message: MessageModel;
@@ -39,7 +40,15 @@ export const MessageItem: React.FC<MessageItemProps> = ({
   const handleSaveEdit = async (newContent: string) => {
     await onEdit(message.id, newContent);
   };
-  
+
+  // Add debugging useEffect to track component lifecycle
+  useEffect(() => {
+    // Component mounted
+    return () => {
+      // Component will unmount
+    };
+  }, [message.id]);
+
   return (
     <div
       className={`p-3 rounded-lg relative group ${
@@ -96,10 +105,14 @@ export const MessageItem: React.FC<MessageItemProps> = ({
           />
           {/* For streaming messages */}
           {isStreaming ? (
-            <MarkdownRenderer 
-              content={streamingContent || "Generating response..."} 
-              className="text-sm [&>*:first-child]:mt-0 [&>*:last-child]:mb-0" 
-            />
+            streamingContent ? (
+              <MarkdownRenderer 
+                content={streamingContent} 
+                className="text-sm [&>*:first-child]:mt-0 [&>*:last-child]:mb-0" 
+              />
+            ) : (
+              <LoadingDots />
+            )
           ) : (
             <MarkdownRenderer 
               content={message.content} 

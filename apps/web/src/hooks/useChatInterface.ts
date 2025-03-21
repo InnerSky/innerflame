@@ -57,6 +57,8 @@ export function useChatInterface({
   const streamCloseRef = useRef<(() => void) | null>(null);
   const contextSwitchRef = useRef(false);
   const prevContextRef = useRef<{contextType?: MessageContextType, contextId?: string | null}>({});
+  const hasLoadedMessagesRef = useRef<boolean>(false);
+  const loadingContextRef = useRef<{contextType?: MessageContextType, contextId?: string | null}>({});
   
   // Services
   const { user } = useAuth();
@@ -76,6 +78,7 @@ export function useChatInterface({
         prevContextRef.current.contextId !== contextId) {
       // Context has changed
       contextSwitchRef.current = true;
+      hasLoadedMessagesRef.current = false;
       
       // Update previous context
       prevContextRef.current = { contextType, contextId };
@@ -91,6 +94,18 @@ export function useChatInterface({
   
   // Load messages when context changes
   useEffect(() => {
+    // Prevent redundant loads for the same context
+    const contextSignature = `${contextType}:${contextId || 'none'}`;
+    const currentlyLoadingSignature = `${loadingContextRef.current.contextType}:${loadingContextRef.current.contextId || 'none'}`;
+    
+    // Check if we've already loaded messages for this context
+    if (hasLoadedMessagesRef.current && contextSignature === currentlyLoadingSignature) {
+      return;
+    }
+    
+    // Update the loading context reference
+    loadingContextRef.current = { contextType, contextId };
+    
     const loadMessages = async () => {
       if (!user) return;
       
@@ -115,8 +130,11 @@ export function useChatInterface({
         );
         
         setChatHistory(messages);
+        
+        // Mark this context as having been loaded
+        hasLoadedMessagesRef.current = true;
       } catch (error) {
-        console.error('Error loading messages:', error);
+        console.error('[useChatInterface] Error loading messages:', error);
         toast({
           title: "Error loading messages",
           description: "Could not load the conversation history.",
