@@ -1,7 +1,7 @@
 /**
  * InnerFlame API Service
  */
-import express, { Request } from 'express';
+import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
@@ -48,15 +48,23 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 
 // Middleware
+// Parse comma-separated list of allowed origins with fallback to development defaults
+const allowedOrigins = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(',')
+  : ['http://localhost:5173', 'http://localhost:3000'];
+
+console.log('CORS allowed origins:', allowedOrigins);
+
 app.use(cors({
-  origin: ['http://localhost:5173', 'http://localhost:3000'],
+  origin: allowedOrigins,
   credentials: true,
   methods: ['GET', 'POST'],
-  allowedHeaders: ['Content-Type']
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 app.use(express.json());
 
 // Initialize services
+let supabaseConnectionOk = false;
 try {
   // Initialize Supabase client but store it for later use
   const supabaseClient = createSupabaseClient();
@@ -67,6 +75,9 @@ try {
   
   // Also keep in app.locals for backward compatibility
   app.locals.supabase = supabaseClient;
+  
+  // Mark connection as OK
+  supabaseConnectionOk = true;
 } catch (error) {
   console.error('Failed to initialize Supabase client:', error);
   process.exit(1); // Exit if Supabase initialization fails
@@ -90,9 +101,44 @@ app.use('/trpc', createExpressMiddleware({
 // In-memory storage for stream sessions
 const streamSessions = new Map();
 
-// Base route for health check
-app.get('/health', (_req, res) => {
-  res.json({ status: 'ok', version: '0.1.0' });
+// Enhanced health check endpoint
+app.get('/health', async (_req, res) => {
+  const startTime = process.uptime();
+  const memoryUsage = process.memoryUsage();
+  
+  // Check database connection
+  let dbStatus = "unknown";
+  try {
+    const supabase = SupabaseService.getClient();
+    const { error } = await supabase.from('health_check').select('*').limit(1);
+    
+    if (error) {
+      dbStatus = "error";
+      console.error('Health check - Database error:', error);
+    } else {
+      dbStatus = "ok";
+    }
+  } catch (err) {
+    dbStatus = "error";
+    console.error('Health check - Database check exception:', err);
+  }
+  
+  res.json({
+    status: 'ok',
+    version: '0.1.0',
+    uptime: startTime,
+    timestamp: new Date().toISOString(),
+    memory: {
+      rss: `${Math.round(memoryUsage.rss / 1024 / 1024)}MB`,
+      heapTotal: `${Math.round(memoryUsage.heapTotal / 1024 / 1024)}MB`,
+      heapUsed: `${Math.round(memoryUsage.heapUsed / 1024 / 1024)}MB`
+    },
+    dependencies: {
+      supabase: supabaseConnectionOk ? "ok" : "error",
+      database: dbStatus
+    },
+    environment: process.env.NODE_ENV || 'development'
+  });
 });
 
 // SSE streaming endpoint - POST to initialize

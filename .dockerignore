@@ -1,0 +1,39 @@
+# Dependencies
+node_modules
+**/node_modules
+
+# Build outputs
+dist
+**/dist
+.turbo
+
+# Development files
+.git
+.github
+.husky
+.vscode
+*.log
+logs
+
+# Frontend app (not needed for backend)
+apps/web
+
+# Deployment files
+.netlify
+
+# Documentation and examples
+docs
+*.md
+
+# Test files
+**/*.test.ts
+**/*.spec.ts
+
+# Environment files (will be set in Cloud Run)
+.env
+**/.env
+**/.env.*
+
+# Miscellaneous
+outdated_files
+before_cleanup 

@@ -1,88 +1,97 @@
-# Phase 3 Checklist: Deployment & Production Testing
+# Phase 3 Checklist: One-Command Deployment Setup
 
 ## Objective
-Deploy the backend service to Google Cloud Run, set up proper environment configuration, and conduct comprehensive testing to validate the entire integrated system in a production environment.
+Understand our current development workflow and set up automated deployment of the backend service to Google Cloud Run with a single command, optimizing for simplicity and developer experience.
 
 ## Tasks
 
-### Google Cloud Run Setup
-- [ ] Prepare the backend for deployment
-  - [ ] Create a Dockerfile for the backend service
-  - [ ] Set up environment variables for production
-  - [ ] Configure build process for production deployment
-  - [ ] Implement health check endpoints for monitoring
-- [ ] Configure Google Cloud Run service
-  - [ ] Set up Google Cloud project and permissions
-  - [ ] Configure scaling parameters and instance limits
-  - [ ] Set up CI/CD pipeline for automated deployment
-  - [ ] Configure custom domain if needed
+### Understanding Current Development Process
+- [x] Analyze current development workflow
+  - [x] Examine `npm run dev:fresh` command in root package.json
+  - [x] Understand how frontend and backend are started concurrently
+  - [x] Document build process for backend (apps/api)
+  - [x] Identify dependencies between packages
+  - [x] Note environment variables used in development
 
-### Production Security
-- [ ] Implement security enhancements
-  - [ ] Audit authentication flow for production
-  - [ ] Configure rate limiting for API endpoints
-  - [ ] Set up CORS restrictions for production
-  - [ ] Implement request validation middleware
-- [ ] Secure secrets management
-  - [ ] Set up Google Cloud Secret Manager
-  - [ ] Configure secure environment variable handling
-  - [ ] Remove any hardcoded secrets or credentials
-  - [ ] Document security practices
+### Docker Configuration
+- [x] Prepare Docker configuration for backend
+  - [x] Create Dockerfile in project root following monorepo structure
+  - [x] Create .dockerignore file to exclude unnecessary files
+  - [x] Configure multi-stage build if necessary
+    - Found that a single-stage build works better for our monorepo structure
+  - [x] Ensure TypeScript builds correctly within container
+    - Using tsx to run TypeScript directly rather than compiling to JavaScript
+  - [x] Test Docker build locally: `docker build -t innerflame-api .`
+  - [x] Test Docker run locally: `docker run -p 8080:8080 innerflame-api`
 
-### Performance Optimization
-- [ ] Optimize backend performance
-  - [ ] Configure caching strategies where appropriate
-  - [ ] Implement connection pooling for database
-  - [ ] Set up performance monitoring
-  - [ ] Optimize LangGraph agent for production
-- [ ] Enhance streaming efficiency
-  - [ ] Fine-tune token chunking for optimal performance
-  - [ ] Configure timeouts and keep-alive settings
-  - [ ] Implement graceful degradation for high load
+### GitHub Actions Workflow
+- [x] Set up automated deployment pipeline
+  - [x] Create `.github/workflows/deploy-backend.yml` file
+  - [x] Configure workflow to trigger on pushes to main branch
+  - [x] Add Google Cloud authentication steps
+  - [x] Set up Docker build and push steps
+  - [x] Configure Cloud Run deployment step
 
-### Comprehensive Testing
-- [ ] Perform end-to-end system testing
-  - [ ] Test the complete user flow from UI to backend
-  - [ ] Validate document context awareness
-  - [ ] Test tool execution in production environment
-  - [ ] Verify streaming performance under load
-- [ ] Conduct error scenario testing
-  - [ ] Test error handling for backend service crashes
-  - [ ] Validate recovery from connection interruptions
-  - [ ] Test error responses for invalid requests
-  - [ ] Verify error logging and monitoring
+### Google Cloud Setup
+- [ ] Configure Google Cloud environment
+  - [ ] Create Google Cloud project (if not exists)
+  - [ ] Enable required APIs (Cloud Run, Container Registry)
+  - [ ] Create service account with deployment permissions
+  - [ ] Generate and download service account key
+  - [ ] Add service account key to GitHub Secrets as GCP_SA_KEY
+  - [ ] Add project ID to GitHub Secrets as GCP_PROJECT_ID
 
-### Documentation & Monitoring
-- [ ] Create deployment documentation
-  - [ ] Document deployment process step by step
-  - [ ] Create runbook for common issues
-  - [ ] Document environment variable requirements
-  - [ ] Write API documentation for frontend integration
-- [ ] Set up monitoring and alerts
-  - [ ] Configure logging for production
-  - [ ] Set up error tracking and alerting
-  - [ ] Implement usage metrics collection
-  - [ ] Create dashboard for system health monitoring
+### Environment Configuration
+- [x] Set up production environment variables
+  - [x] List all required environment variables from apps/api
+  - [x] Configure variables in Google Cloud Run service
+  - [ ] Ensure sensitive values use Secret Manager
+  - [x] Document all required environment variables
+
+### Backend Preparation
+- [x] Prepare backend for production
+  - [x] Implement `/health` endpoint for monitoring
+  - [x] Configure proper PORT handling (default: 8080)
+  - [ ] Set up production error handling
+  - [x] Ensure proper CORS configuration
+  - [ ] Verify Supabase connection in production context
+
+### Testing and Verification
+- [ ] Verify deployment process
+  - [ ] Test deployment with `git push` to main branch
+  - [ ] Verify GitHub Actions workflow executes successfully
+  - [ ] Confirm Cloud Run service is updated with new version
+  - [ ] Test backend API endpoints from frontend application
+  - [ ] Verify SSE streaming works in production
+
+### Documentation
+- [x] Document deployment process
+  - [x] Create step-by-step guide for team members
+  - [x] Document how to monitor the deployed service
+  - [x] Explain how to roll back to previous versions if needed
+  - [x] Document troubleshooting steps for common issues
 
 ## Verification Criteria
-1. Backend service successfully deploys to Google Cloud Run
-2. Service can handle multiple concurrent connections
-3. System properly scales under varying load
-4. Authentication works correctly in production environment
-5. SSE streaming functions reliably in production
-6. Tool execution works correctly with real data
-7. Error scenarios are handled gracefully
-8. Monitoring systems provide visibility into service health
+1. Complete understanding of current development workflow
+2. Pushing to main branch automatically deploys backend to Cloud Run
+3. Environment variables are properly configured and secured
+4. Backend API is accessible from frontend application
+5. Health check endpoint responds correctly
+6. SSE streaming functions properly in production
+7. Deployment process is well-documented
 
 ## Dependencies
-- Completed Phase 1 and 2 implementations
-- Google Cloud Platform account and permissions
-- Supabase production setup
-- CI/CD pipeline (GitHub Actions or similar)
+- Google Cloud Platform account
+- GitHub repository with Actions enabled
+- Properly configured monorepo structure
 
 ## Notes
-- Start with a staging deployment before moving to production
-- Document every step of the deployment process
-- Test with gradually increasing load to identify bottlenecks
-- Set up proper logging from the beginning for easier debugging
-- Consider setting up separate development/staging/production environments 
+- Pause after each major step to test functionality
+- Commit changes incrementally to avoid complex debugging
+- Document any issues encountered during setup for future reference
+- ESM modules with TypeScript require special handling in Docker:
+  - Use `.js` extensions in imports even for TypeScript files
+  - Consider using `tsx` for direct TypeScript execution in development-like environments
+- For monorepos, preserving the package structure is crucial for proper imports
+- Include placeholder environment variables in the Docker image with valid formats
+- Remove Husky prepare scripts when building in Docker to prevent errors 
