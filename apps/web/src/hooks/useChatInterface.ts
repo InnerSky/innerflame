@@ -271,37 +271,96 @@ export function useChatInterface({
         onComplete: async (data) => {
           setIsLoading(false);
           
-          // Cleanup streaming state for this message
-          setStreamingState(prev => {
-            const updatedMessages = {...prev.streamingMessages};
-            delete updatedMessages[streamingId];
+          // Handle the server-side saved message
+          if (data.messageId) {
+            try {
+              // Fetch the message from the database to get the full message object
+              const assistantMessage = await MessageService.getMessage(data.messageId);
+              
+              // Update chat history with the final message
+              setChatHistory(prev => 
+                prev.map(msg => 
+                  msg.id === streamingId ? assistantMessage : msg
+                )
+              );
+              
+              // Only clear streaming state AFTER we've updated the chat history
+              // This prevents the flash of empty content during the transition
+              setStreamingState(prev => {
+                const updatedMessages = {...prev.streamingMessages};
+                delete updatedMessages[streamingId];
+                
+                const updatedContents = {...prev.streamingContents};
+                delete updatedContents[streamingId];
+                
+                return {
+                  isStreaming: Object.keys(updatedMessages).length > 0,
+                  streamingMessages: updatedMessages,
+                  streamingContents: updatedContents,
+                  currentStreamingId: Object.keys(updatedMessages).length > 0 ? prev.currentStreamingId : null
+                };
+              });
+            } catch (error) {
+              console.error('Error fetching saved message:', error);
+              
+              // Show error to user but don't attempt to save client-side
+              toast({
+                title: "Error retrieving message",
+                description: "There was an issue retrieving the message from the server.",
+                variant: "destructive"
+              });
+              
+              // Clean up streaming state since we had an error
+              setStreamingState(prev => {
+                const updatedMessages = {...prev.streamingMessages};
+                delete updatedMessages[streamingId];
+                
+                const updatedContents = {...prev.streamingContents};
+                delete updatedContents[streamingId];
+                
+                return {
+                  isStreaming: Object.keys(updatedMessages).length > 0,
+                  streamingMessages: updatedMessages,
+                  streamingContents: updatedContents,
+                  currentStreamingId: Object.keys(updatedMessages).length > 0 ? prev.currentStreamingId : null
+                };
+              });
+              
+              // Remove the streaming placeholder since we couldn't get the real message
+              setChatHistory(prev => prev.filter(msg => msg.id !== streamingId));
+            }
+          } else {
+            // Message was not saved server-side
+            if (data.messageError) {
+              console.error('Server-side message save error:', data.messageError);
+            }
             
-            const updatedContents = {...prev.streamingContents};
-            delete updatedContents[streamingId];
+            // Show error to user
+            toast({
+              title: "Message not saved",
+              description: "Your message could not be saved on the server.",
+              variant: "destructive"
+            });
             
-            return {
-              isStreaming: Object.keys(updatedMessages).length > 0,
-              streamingMessages: updatedMessages,
-              streamingContents: updatedContents,
-              currentStreamingId: Object.keys(updatedMessages).length > 0 ? prev.currentStreamingId : null
-            };
-          });
-          
-          // Save the complete message to the database
-          const assistantMessage = await MessageService.createMessage({
-            content: data.fullResponse || streamingState.streamingContents[streamingId] || '',
-            userId: user.id,
-            senderType: MessageSenderType.Assistant,
-            contextType,
-            contextId: contextId || undefined
-          });
-          
-          // Update chat history with the final message
-          setChatHistory(prev => 
-            prev.map(msg => 
-              msg.id === streamingId ? assistantMessage : msg
-            )
-          );
+            // Clean up streaming state
+            setStreamingState(prev => {
+              const updatedMessages = {...prev.streamingMessages};
+              delete updatedMessages[streamingId];
+              
+              const updatedContents = {...prev.streamingContents};
+              delete updatedContents[streamingId];
+              
+              return {
+                isStreaming: Object.keys(updatedMessages).length > 0,
+                streamingMessages: updatedMessages,
+                streamingContents: updatedContents,
+                currentStreamingId: Object.keys(updatedMessages).length > 0 ? prev.currentStreamingId : null
+              };
+            });
+            
+            // Remove the streaming placeholder since we don't have a real message
+            setChatHistory(prev => prev.filter(msg => msg.id !== streamingId));
+          }
         },
         onTool: (toolName, args) => {
           console.log(`Tool called: ${toolName}`, args);

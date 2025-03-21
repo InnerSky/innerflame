@@ -101,7 +101,7 @@ export async function handleStreamRequest(req: Request, res: Response): Promise<
   
   try {
     // Call the streaming agent (this will handle the SSE connection)
-    await streamingAgent(message, context, res);
+    await streamingAgent(message, context, req, res);
   } catch (error) {
     console.error('Error in stream request:', error);
     

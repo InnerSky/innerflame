@@ -1,7 +1,7 @@
 /**
  * InnerFlame API Service
  */
-import express from 'express';
+import express, { Request } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
@@ -10,6 +10,7 @@ import { createSupabaseClient } from '@innerflame/utils/supabase.js';
 import { aiRouter, handleStreamRequest } from './routes/ai.js';
 import { initTRPC } from '@trpc/server';
 import { initSSE } from './controllers/sse.js';
+import { SupabaseService } from './services/supabase/supabaseService.js';
 
 // Load environment variables from the API directory with debug
 const currentPath = path.resolve(process.cwd(), '.env');
@@ -61,7 +62,10 @@ try {
   const supabaseClient = createSupabaseClient();
   console.log('Supabase client initialized successfully');
   
-  // Export for use in other modules if needed
+  // Store in the shared service for access across the API
+  SupabaseService.setClient(supabaseClient);
+  
+  // Also keep in app.locals for backward compatibility
   app.locals.supabase = supabaseClient;
 } catch (error) {
   console.error('Failed to initialize Supabase client:', error);
@@ -133,10 +137,20 @@ app.get('/api/ai/stream', async (req, res) => {
   req.on('close', cleanup);
   
   try {
-    // Handle the request with the stored session data
-    await handleStreamRequest({ 
-      body: sessionData
-    } as any, res);
+    // Ensure the sessionData contains context information
+    if (sessionData && !sessionData.contextType && sessionData.contextId) {
+      console.warn('Session data missing context information');
+    }
+    
+    // Create a request-like object with the session data as body
+    const requestWithBody = { 
+      body: sessionData,
+      // Add app to avoid app.locals access issues
+      app: req.app 
+    };
+    
+    // Pass it to handleStreamRequest
+    await handleStreamRequest(requestWithBody as any, res);
   } catch (error) {
     console.error('Error in stream processing:', error);
   } finally {

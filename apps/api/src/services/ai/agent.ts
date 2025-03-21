@@ -12,7 +12,7 @@ import {
   ClaudeRole, 
   createClaudeClient 
 } from '@innerflame/ai-tools/src/claude/client.js';
-import { Response } from 'express';
+import { Response, Request } from 'express';
 import { 
   sendTokenChunk, 
   sendToolCall, 
@@ -303,8 +303,18 @@ export function createStreamingAgent(claudeClient: ClaudeClient, tools: AgentToo
   /**
    * Run the agent with the provided input and stream the response
    */
-  return async (input: string, context: AgentContext, res: Response): Promise<void> => {
+  return async (input: string, context: AgentContext, req: Request, res: Response): Promise<void> => {
     try {
+      // Ensure we have the correct context information in the request body for later use
+      if (req.body) {
+        // Make sure contextType and contextId are properly set in the request body
+        req.body.contextType = context.contextType;
+        req.body.contextId = context.documentId || context.projectId;
+        
+        // Log the context information for debugging
+        console.log(`Agent using contextType=${context.contextType}, contextId=${context.documentId || context.projectId}`);
+      }
+      
       // Initialize messages with system prompt and user input
       const messages: AgentMessage[] = [
         createSystemMessage(),
@@ -454,7 +464,7 @@ ${ctx.documentContent ? `- Document content preview: ${ctx.documentContent.subst
                               const result = await tool.handler(args, context);
                               
                               // Send the result as a complete event
-                              sendComplete(res, { 
+                              await sendComplete(req, res, { 
                                 toolName, 
                                 result,
                                 fullResponse 
@@ -483,7 +493,7 @@ ${ctx.documentContent ? `- Document content preview: ${ctx.documentContent.subst
         }
         
         // Send complete event when done
-        sendComplete(res, { fullResponse });
+        await sendComplete(req, res, { fullResponse });
       } catch (error) {
         console.error('Error reading stream:', error);
         sendError(res, error instanceof Error ? error.message : 'Unknown streaming error');

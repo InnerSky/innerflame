@@ -99,6 +99,34 @@ export class MessageService {
   }
   
   /**
+   * Get a message by ID
+   */
+  static async getMessage(messageId: string): Promise<Message> {
+    try {
+      const { data, error } = await supabase
+        .from('messages')
+        .select('*')
+        .eq('id', messageId)
+        .single();
+      
+      if (error) {
+        console.error('Error fetching message:', error);
+        throw error;
+      }
+      
+      if (!data) {
+        throw new Error('Message not found');
+      }
+      
+      // Map DB row to domain model
+      return mapToMessage(data);
+    } catch (error) {
+      console.error(`Error fetching message ${messageId}:`, error);
+      throw new Error(`Failed to fetch message: ${(error as Error).message}`);
+    }
+  }
+  
+  /**
    * Update an existing message
    * 
    * @param messageId - The ID of the message to update

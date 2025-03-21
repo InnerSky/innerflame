@@ -24,6 +24,8 @@ type CompleteEvent = {
   fullResponse?: string;
   toolName?: string;
   result?: any;
+  messageId?: string;
+  messageError?: string;
 };
 
 // Event callback types

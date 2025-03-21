@@ -1,4 +1,5 @@
-import { Response } from 'express';
+import { Response, Request } from 'express';
+import { MessageService } from '../services/message/messageService.js';
 
 /**
  * Server-Sent Events Controller for streaming responses
@@ -56,10 +57,48 @@ export function sendError(res: Response, error: string): void {
 }
 
 /**
- * Send a completion message to the client
+ * Send a completion message to the client after saving the message to the database
  */
-export function sendComplete(res: Response, data: any = {}): void {
-  sendSSEEvent(res, 'complete', { type: 'complete', ...data });
+export async function sendComplete(req: Request, res: Response, data: any = {}): Promise<void> {
+  try {
+    // Extract the necessary context information from the request
+    const { userId, contextType, contextId } = req.body;
+    const fullResponse = data.fullResponse || '';
+    
+    let savedMessage = null;
+    let error = null;
+    
+    // Save message to Supabase if we have a user ID and content
+    if (userId && fullResponse) {
+      try {
+        // Create the assistant message with the exact same context as the user message
+        savedMessage = await MessageService.createMessage({
+          content: fullResponse,
+          userId,
+          senderType: 'assistant',
+          contextType: contextType, // Ensure we use the same context type as the user message
+          contextId: contextId      // Ensure we use the same context ID as the user message
+        });
+        
+        console.log(`Saved assistant message with contextType=${contextType}, contextId=${contextId}`);
+      } catch (err) {
+        error = err instanceof Error ? err.message : 'Error saving message';
+        console.error('Error saving assistant message:', err);
+      }
+    }
+    
+    // Send the complete event with the saved message ID if available
+    sendSSEEvent(res, 'complete', { 
+      type: 'complete', 
+      ...data,
+      messageId: savedMessage?.id,
+      messageError: error
+    });
+  } catch (err) {
+    console.error('Error in sendComplete:', err);
+    // Fallback to just sending the completion without the message ID
+    sendSSEEvent(res, 'complete', { type: 'complete', ...data });
+  }
 }
 
 /**

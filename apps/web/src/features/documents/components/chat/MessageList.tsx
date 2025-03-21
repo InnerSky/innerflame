@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState, MutableRefObject, useLayoutEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { Message as MessageModel } from '../../models/message.js';
 import { MessageItem } from './MessageItem.js';
 import { Spinner } from '@/components/Spinner.js';
@@ -37,188 +37,73 @@ export const MessageList: React.FC<MessageListProps> = ({
   onStartEdit
 }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const lastMessageRef = useRef<HTMLDivElement>(null);
+  const secondLastMessageRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  // Use an object with a mutable current property for storing message element references
-  const messageRefsMap = useRef<Record<string, HTMLDivElement | null>>({});
+  const lastMessageRef = useRef<HTMLDivElement>(null);
   const [lastMessagePadding, setLastMessagePadding] = useState(0);
-  const [lastUserMessageId, setLastUserMessageId] = useState<string | null>(null);
   const prevMessagesLengthRef = useRef<number>(0);
-  const prevStreamingStateRef = useRef<Record<string, boolean>>({});
-  const isFirstRenderRef = useRef<boolean>(true);
-  const isManuallyScrolledRef = useRef<boolean>(false);
-  const scrollPositionRef = useRef<number>(0);
-  
-  // Advanced streaming state tracking
-  const streamingIdsRef = useRef<Set<string>>(new Set());
-  
-  // Track scroll position manually to prevent browser auto-scrolling
-  useEffect(() => {
-    if (!containerRef.current) return;
-    
-    const container = containerRef.current;
-    
-    const handleScroll = () => {
-      // If user has manually scrolled, remember this
-      isManuallyScrolledRef.current = true;
-      // Store current scroll position
-      scrollPositionRef.current = container.scrollTop;
-    };
-    
-    container.addEventListener('scroll', handleScroll);
-    
-    return () => {
-      container.removeEventListener('scroll', handleScroll);
-    };
-  }, []);
-  
-  // Initialize the tracking refs on first render only
-  useLayoutEffect(() => {
-    if (isFirstRenderRef.current) {
-      prevMessagesLengthRef.current = messages.length;
-      prevStreamingStateRef.current = { ...streamingMessages };
-      streamingIdsRef.current = new Set(Object.keys(streamingMessages));
-      isFirstRenderRef.current = false;
-    }
-  }, [messages.length, streamingMessages]);
-  
-  // Track the last user message
-  useEffect(() => {
-    if (messages.length > 0) {
-      // Find the last user message
-      for (let i = messages.length - 1; i >= 0; i--) {
-        if (String(messages[i].sender_type) === 'user') {
-          setLastUserMessageId(messages[i].id);
-          break;
-        }
-      }
-    }
-  }, [messages]);
-  
-  // Detect streaming state changes - specifically track when streaming ENDS
-  useEffect(() => {
-    if (isFirstRenderRef.current) return;
-    
-    // Get current streaming IDs
-    const currentStreamingIds = new Set(Object.keys(streamingMessages));
-    
-    // Check for IDs that were streaming before but aren't now (streaming ended)
-    const streamingEnded = Array.from(streamingIdsRef.current).some(id => !currentStreamingIds.has(id));
-    
-    if (streamingEnded && isManuallyScrolledRef.current && containerRef.current) {
-      // If streaming ended AND user manually scrolled at some point,
-      // preserve the scroll position to prevent unwanted scrolling
-      requestAnimationFrame(() => {
-        if (containerRef.current) {
-          containerRef.current.scrollTop = scrollPositionRef.current;
-        }
-      });
-    }
-    
-    // Update our tracking ref with current streaming IDs
-    streamingIdsRef.current = currentStreamingIds;
-  }, [streamingMessages]);
-  
-  // Adjust padding for the last message to allow it to scroll to the top
-  // Preserve scroll position when recalculating to prevent unwanted scrolling
+  const prevInitialLoadingRef = useRef<boolean>(true);
+
+  // Adjust padding for the last message (keeping this for UI appearance)
   useEffect(() => {
     if (!isInitialLoading && messages.length > 0 && lastMessageRef.current && containerRef.current) {
-      const adjustPadding = () => {
-        // Save current scroll position before adjusting padding
-        const scrollTop = containerRef.current?.scrollTop || 0;
-        
-        const viewportHeight = containerRef.current?.clientHeight || 0;
-        const lastMessageHeight = lastMessageRef.current?.clientHeight || 0;
-        
-        // Calculate required padding (viewport height - message height)
-        // Only add padding if the message is shorter than the viewport
-        const requiredPadding = Math.max(0, viewportHeight - lastMessageHeight);
-        
-        // Only update if padding actually changed, to minimize layout shifts
-        if (requiredPadding !== lastMessagePadding) {
-          setLastMessagePadding(requiredPadding);
-          
-          // Restore scroll position after padding change
-          requestAnimationFrame(() => {
-            if (containerRef.current && isManuallyScrolledRef.current) {
-              containerRef.current.scrollTop = scrollTop;
-            }
-          });
-        }
-      };
+      const viewportHeight = containerRef.current.clientHeight || 0;
+      const lastMessageHeight = lastMessageRef.current.clientHeight || 0;
       
-      // Initial calculation
-      adjustPadding();
+      // Only add padding if the message is shorter than the viewport
+      const requiredPadding = Math.max(0, viewportHeight - lastMessageHeight);
       
-      // Recalculate when window is resized
-      window.addEventListener('resize', adjustPadding);
-      
-      // Cleanup
-      return () => {
-        window.removeEventListener('resize', adjustPadding);
-      };
-    }
-  }, [messages, isInitialLoading, lastMessagePadding]);
-  
-  // Smart scroll handling - ONLY triggers actual scrolling in specific cases
-  useEffect(() => {
-    if (isInitialLoading || messages.length === 0 || isFirstRenderRef.current) return;
-    
-    // Check if new messages were added
-    const messagesAdded = messages.length > prevMessagesLengthRef.current;
-    
-    // Check if streaming just started (new ID appeared in streaming map)
-    let streamingStarted = false;
-    for (const id in streamingMessages) {
-      if (streamingMessages[id] && !prevStreamingStateRef.current[id]) {
-        streamingStarted = true;
-        break;
+      if (requiredPadding !== lastMessagePadding) {
+        setLastMessagePadding(requiredPadding);
       }
     }
+  }, [messages, isInitialLoading, lastMessagePadding]);
+
+  // Unified scrolling logic for all scenarios
+  useEffect(() => {
+    // Skip if we're still loading or have no messages
+    if (messages.length === 0) return;
     
-    // Capture the conditions that will trigger scrolling before we do any updates
-    const shouldScroll = messagesAdded || streamingStarted;
+    // Determine what triggered this effect
+    const initialLoadingJustCompleted = prevInitialLoadingRef.current && !isInitialLoading;
+    const messagesAdded = messages.length > prevMessagesLengthRef.current;
+    
+    // Check if the last message is from the user
+    let isLastAddedMessageFromUser = false;
+    if (messagesAdded && messages.length > 0) {
+      const lastMessage = messages[messages.length - 1];
+      isLastAddedMessageFromUser = String(lastMessage.sender_type) === 'user';
+    }
+    
+    // Scroll only when:
+    // 1. Initial loading just completed (first load)
+    // 2. User adds a new message
+    const shouldScroll = 
+      (initialLoadingJustCompleted && !isInitialLoading && messages.length > 0) || 
+      (messagesAdded && isLastAddedMessageFromUser);
     
     if (shouldScroll) {
-      // When we deliberately scroll, reset the manual scroll flag
-      isManuallyScrolledRef.current = false;
-      
-      // Small delay to ensure DOM is updated before scrolling
-      const scrollTimer = setTimeout(() => {
-        // Check if the last message is streaming and from assistant
-        const lastMessage = messages[messages.length - 1];
-        const isLastMessageStreaming = lastMessage.id in streamingMessages;
-        const isLastMessageFromAssistant = String(lastMessage.sender_type) !== 'user';
-        
-        if (isLastMessageStreaming && isLastMessageFromAssistant && lastUserMessageId) {
-          // If the last message is a streaming assistant message, scroll to position the last user message at the top
-          const userMessageElement = messageRefsMap.current[lastUserMessageId];
-          if (userMessageElement) {
-            userMessageElement.scrollIntoView({ block: 'start', behavior: 'smooth' });
-          } else {
-            // Fallback to default scrolling
-            messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-          }
-        } else if (messagesAdded) {
-          // Only scroll to end for new messages, not for streaming status changes
-          messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      // Use a timeout to ensure DOM is updated
+      const timer = setTimeout(() => {
+        // Scroll to the second last message instead of the bottom
+        if (messages.length > 1 && secondLastMessageRef.current) {
+          secondLastMessageRef.current.scrollIntoView({ behavior: 'smooth' });
+        } else if (messagesEndRef.current) {
+          // Fallback to scrolling to the bottom if there's only one message
+          messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
         }
       }, 100);
       
-      return () => clearTimeout(scrollTimer);
+      return () => clearTimeout(timer);
     }
     
-    // Critical fix: Only update our tracking refs when we should
-    // This ensures we maintain correct "previous state" references for comparison
-    if (shouldScroll || messagesAdded) {
+    // Update refs for next comparison
+    prevInitialLoadingRef.current = isInitialLoading;
+    if (!isInitialLoading) {
       prevMessagesLengthRef.current = messages.length;
     }
-    
-    if (shouldScroll || Object.keys(streamingMessages).length !== Object.keys(prevStreamingStateRef.current).length) {
-      prevStreamingStateRef.current = { ...streamingMessages };
-    }
-  }, [messages, isInitialLoading, streamingMessages, lastUserMessageId]);
-  
+  }, [messages, isInitialLoading]);
+
   if (isInitialLoading) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -226,7 +111,7 @@ export const MessageList: React.FC<MessageListProps> = ({
       </div>
     );
   }
-  
+
   if (messages.length === 0) {
     return (
       <p className="text-muted-foreground text-center p-4">
@@ -234,18 +119,17 @@ export const MessageList: React.FC<MessageListProps> = ({
       </p>
     );
   }
-  
+
   return (
     <div className="h-full overflow-y-auto overflow-x-hidden w-full" ref={containerRef}>
       {messages.map((message, index) => {
         const isLastMessage = index === messages.length - 1;
+        const isSecondLastMessage = index === messages.length - 2;
+        
         return (
           <div 
             key={message.id}
-            ref={el => {
-              // Store message element references
-              messageRefsMap.current[message.id] = el;
-            }}
+            ref={isSecondLastMessage ? secondLastMessageRef : undefined}
             style={isLastMessage ? { marginBottom: `${lastMessagePadding}px` } : {}}
             className="w-full"
           >
