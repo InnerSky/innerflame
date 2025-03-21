@@ -77,96 +77,126 @@ export function createAIStream(config: StreamConfig): { close: () => void } {
   
   // Create a unique session ID for this stream
   const sessionId = Date.now().toString();
+
+  // Always use the /api prefix for consistency across environments
   const streamUrl = `${API_BASE_URL}/api/ai/stream?sessionId=${sessionId}`;
   
-  // First, create the request to start streaming
-  fetch(streamUrl, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      message,
-      userId,
-      contextType,
-      documentId,
-      documentTitle,
-      documentContent,
-      projectId,
-      projectName,
-      sessionId
-    })
-  }).catch(error => {
-    console.error('Failed to initialize stream:', error);
-    onError?.(error.message || 'Failed to connect to stream');
-  });
+  console.log('API base URL:', API_BASE_URL);
+  console.log('Connecting to streaming endpoint:', streamUrl);
   
-  // Now set up the event source to the same URL
-  const eventSource = new EventSource(streamUrl);
+  let eventSource: EventSource | null = null;
   
-  // Set up event listeners
-  eventSource.addEventListener('connected', (event: MessageEvent) => {
-    onConnectionChange?.(true);
-  });
-  
-  eventSource.addEventListener('chunk', (event: MessageEvent) => {
+  // Initialize the stream and set up the event source
+  const initializeStream = async () => {
     try {
-      const data = JSON.parse(event.data) as TokenChunk;
-      onChunk?.(data.content);
+      // Initialize the stream by sending the request data
+      const response = await fetch(streamUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message,
+          userId,
+          contextType,
+          documentId,
+          documentTitle,
+          documentContent,
+          projectId,
+          projectName
+        }),
+      });
+      
+      if (response.ok) {
+        console.log('Stream initialized successfully');
+        
+        // Set up the event source
+        eventSource = new EventSource(streamUrl);
+        setupEventListeners(eventSource);
+        return true;
+      } else {
+        const errorText = await response.text();
+        console.error('Failed to initialize stream:', errorText);
+        onError?.(`Failed to connect to stream: ${errorText}`);
+        return false;
+      }
     } catch (error) {
-      console.error('Error parsing chunk:', error);
+      console.error('Error initializing stream:', error);
+      onError?.(error instanceof Error ? error.message : 'Unknown error initializing stream');
+      return false;
     }
-  });
-  
-  eventSource.addEventListener('tool', (event: MessageEvent) => {
-    try {
-      const data = JSON.parse(event.data) as ToolCall;
-      onTool?.(data.tool, data.args);
-    } catch (error) {
-      console.error('Error parsing tool call:', error);
-    }
-  });
-  
-  eventSource.addEventListener('error', (event: MessageEvent) => {
-    try {
-      const data = JSON.parse(event.data) as ErrorEvent;
-      onError?.(data.error);
-    } catch (error) {
-      console.error('Error parsing error event:', error);
-      onError?.('Unknown error occurred');
-    }
-    
-    // Close the connection
-    eventSource.close();
-    onConnectionChange?.(false);
-  });
-  
-  eventSource.addEventListener('complete', (event: MessageEvent) => {
-    try {
-      const data = JSON.parse(event.data) as CompleteEvent;
-      onComplete?.(data);
-    } catch (error) {
-      console.error('Error parsing complete event:', error);
-    }
-    
-    // Close the connection
-    eventSource.close();
-    onConnectionChange?.(false);
-  });
-  
-  // Handle connection errors
-  eventSource.onerror = () => {
-    console.error('SSE connection error');
-    onError?.('Connection error');
-    onConnectionChange?.(false);
-    eventSource.close();
   };
+  
+  // Set up event listeners for the EventSource
+  const setupEventListeners = (es: EventSource) => {
+    es.addEventListener('connected', (event: MessageEvent) => {
+      onConnectionChange?.(true);
+    });
+    
+    es.addEventListener('chunk', (event: MessageEvent) => {
+      try {
+        const data = JSON.parse(event.data) as TokenChunk;
+        onChunk?.(data.content);
+      } catch (error) {
+        console.error('Error parsing chunk:', error);
+      }
+    });
+    
+    es.addEventListener('tool', (event: MessageEvent) => {
+      try {
+        const data = JSON.parse(event.data) as ToolCall;
+        onTool?.(data.tool, data.args);
+      } catch (error) {
+        console.error('Error parsing tool call:', error);
+      }
+    });
+    
+    es.addEventListener('error', (event: MessageEvent) => {
+      try {
+        const data = JSON.parse(event.data) as ErrorEvent;
+        onError?.(data.error);
+      } catch (error) {
+        console.error('Error parsing error event:', error);
+        onError?.('Unknown error occurred');
+      }
+      
+      // Close the connection
+      es.close();
+      onConnectionChange?.(false);
+    });
+    
+    es.addEventListener('complete', (event: MessageEvent) => {
+      try {
+        const data = JSON.parse(event.data) as CompleteEvent;
+        onComplete?.(data);
+      } catch (error) {
+        console.error('Error parsing complete event:', error);
+      }
+      
+      // Close the connection
+      es.close();
+      onConnectionChange?.(false);
+    });
+    
+    // Handle connection errors
+    es.onerror = () => {
+      console.error('SSE connection error');
+      onError?.('Connection error');
+      onConnectionChange?.(false);
+      es.close();
+    };
+  };
+  
+  // Start the connection process
+  initializeStream();
   
   // Return a function to close the connection
   return {
     close: () => {
-      eventSource.close();
-      onConnectionChange?.(false);
+      if (eventSource) {
+        eventSource.close();
+        onConnectionChange?.(false);
+      }
     }
   };
 } 

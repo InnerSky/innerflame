@@ -142,6 +142,7 @@ Each package in the `packages/` directory has its own:
 - **Database Client**: Supabase.js
 - **Authentication**: Supabase Auth with JWT validation
 - **Tool Calling**: Server-side interception and execution of Claude API tool calls
+- **Path Normalization**: Express middleware for consistent API endpoint routing
 
 ### Infrastructure
 - **Database**: Supabase PostgreSQL
@@ -352,6 +353,7 @@ Built on Radix UI primitives and styled with Tailwind CSS.
 - **createAIStream**: Create an SSE stream for AI responses
 - **parseToolCalls**: Parse and process AI tool calls
 - **updateDocumentFromToolCall**: Apply document changes from AI tool call
+- **streamEndpointPath**: Consistently use `/api/ai/stream` for API endpoints
 
 ## State Management
 
@@ -443,6 +445,13 @@ Built on Radix UI primitives and styled with Tailwind CSS.
 3. Document updates are applied to the database
 4. Success response is sent immediately to continue streaming
 5. UI is updated with the changes
+
+### API Path Normalization
+1. Express middleware normalizes paths by removing the `/api` prefix
+2. Allows frontend to consistently use `/api/*` endpoints across environments
+3. Backend routes are defined once without the prefix but accessible with both patterns
+4. Ensures consistent API URL structure between development and production
+5. Simplifies frontend code by eliminating environment-specific path handling
 
 ## Features
 

@@ -63,6 +63,27 @@ app.use(cors({
 }));
 app.use(express.json());
 
+/**
+ * Path normalization middleware
+ * This middleware normalizes API paths by removing the `/api` prefix if present
+ * This allows clients to use `/api/...` consistently while maintaining backward compatibility
+ */
+app.use((req, res, next) => {
+  if (req.path.startsWith('/api/')) {
+    // Keep the original URL for logging
+    const originalUrl = req.url;
+    
+    // Update the URL by removing the /api prefix
+    req.url = req.url.replace('/api', '');
+    
+    // Log the URL rewrite in development
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`[Path Normalizer] Rewriting ${originalUrl} to ${req.url}`);
+    }
+  }
+  next();
+});
+
 // Initialize services
 let supabaseConnectionOk = false;
 try {
@@ -141,8 +162,11 @@ app.get('/health', async (_req, res) => {
   });
 });
 
+// AI streaming endpoints - defined WITHOUT the /api prefix
+// The path normalization middleware will handle requests with the /api prefix
+
 // SSE streaming endpoint - POST to initialize
-app.post('/api/ai/stream', async (req, res) => {
+app.post('/ai/stream', async (req, res) => {
   const sessionId = req.query.sessionId as string;
   
   if (!sessionId) {
@@ -157,7 +181,7 @@ app.post('/api/ai/stream', async (req, res) => {
 });
 
 // SSE streaming endpoint - GET for EventSource connection
-app.get('/api/ai/stream', async (req, res) => {
+app.get('/ai/stream', async (req, res) => {
   const sessionId = req.query.sessionId as string;
   
   if (!sessionId) {
@@ -171,37 +195,14 @@ app.get('/api/ai/stream', async (req, res) => {
     return res.status(404).json({ error: 'Session not found' });
   }
   
-  // Initialize the SSE connection
+  // Initialize SSE connection
   initSSE(res);
   
-  // Clean up the session after processing
-  const cleanup = () => {
-    streamSessions.delete(sessionId);
-  };
-  
-  // Handle connection close
-  req.on('close', cleanup);
-  
-  try {
-    // Ensure the sessionData contains context information
-    if (sessionData && !sessionData.contextType && sessionData.contextId) {
-      console.warn('Session data missing context information');
-    }
-    
-    // Create a request-like object with the session data as body
-    const requestWithBody = { 
-      body: sessionData,
-      // Add app to avoid app.locals access issues
-      app: req.app 
-    };
-    
-    // Pass it to handleStreamRequest
-    await handleStreamRequest(requestWithBody as any, res);
-  } catch (error) {
-    console.error('Error in stream processing:', error);
-  } finally {
-    cleanup();
-  }
+  // Handle the streaming request with the session data
+  await handleStreamRequest({ 
+    body: sessionData,
+    app: req.app
+  } as any, res);
 });
 
 // Start server
@@ -210,6 +211,8 @@ try {
     console.log(`API server running on port ${PORT}`);
     console.log(`Health check available at: http://localhost:${PORT}/health`);
     console.log(`tRPC endpoint available at: http://localhost:${PORT}/trpc`);
+    console.log(`AI Stream endpoint available at: http://localhost:${PORT}/ai/stream`);
+    console.log(`Path-normalized endpoint (also works): http://localhost:${PORT}/api/ai/stream`);
   });
 } catch (error) {
   console.error('Failed to start server:', error);
