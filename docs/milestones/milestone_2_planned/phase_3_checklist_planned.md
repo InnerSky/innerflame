@@ -33,19 +33,19 @@ Understand our current development workflow and set up automated deployment of t
   - [x] Configure Cloud Run deployment step
 
 ### Google Cloud Setup
-- [ ] Configure Google Cloud environment
-  - [ ] Create Google Cloud project (if not exists)
-  - [ ] Enable required APIs (Cloud Run, Container Registry)
-  - [ ] Create service account with deployment permissions
-  - [ ] Generate and download service account key
-  - [ ] Add service account key to GitHub Secrets as GCP_SA_KEY
-  - [ ] Add project ID to GitHub Secrets as GCP_PROJECT_ID
+- [x] Configure Google Cloud environment
+  - [x] Create Google Cloud project (if not exists)
+  - [x] Enable required APIs (Cloud Run, Container Registry)
+  - [x] Create service account with deployment permissions
+  - [x] Generate and download service account key
+  - [x] Add service account key to GitHub Secrets as GCP_SA_KEY
+  - [x] Add project ID to GitHub Secrets as GCP_PROJECT_ID
 
 ### Environment Configuration
 - [x] Set up production environment variables
   - [x] List all required environment variables from apps/api
   - [x] Configure variables in Google Cloud Run service
-  - [ ] Ensure sensitive values use Secret Manager
+  - [x] Ensure sensitive values use Secret Manager
   - [x] Document all required environment variables
 
 ### Backend Preparation
@@ -94,4 +94,5 @@ Understand our current development workflow and set up automated deployment of t
   - Consider using `tsx` for direct TypeScript execution in development-like environments
 - For monorepos, preserving the package structure is crucial for proper imports
 - Include placeholder environment variables in the Docker image with valid formats
-- Remove Husky prepare scripts when building in Docker to prevent errors 
+- Remove Husky prepare scripts when building in Docker to prevent errors
+- When using Secret Manager with Cloud Run, ensure the Cloud Run service account has the Secret Manager Secret Accessor role 

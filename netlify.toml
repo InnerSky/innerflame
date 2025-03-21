@@ -8,4 +8,9 @@
   status = 200
 
 [build.environment]
-  NODE_VERSION = "18" 
+  NODE_VERSION = "18"
+  
+# Production context: all deploys from the main/master branch
+[context.production.environment]
+  VITE_API_URL = "https://innerflame-617482291113.us-central1.run.app"
+  # Supabase variables should be set in Netlify UI for security 
