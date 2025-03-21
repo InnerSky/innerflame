@@ -55,12 +55,14 @@ const allowedOrigins = process.env.ALLOWED_ORIGINS
 
 console.log('CORS allowed origins:', allowedOrigins);
 
-app.use(cors({
-  origin: allowedOrigins,
-  credentials: true,
-  methods: ['GET', 'POST'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-}));
+app.use(
+  cors({
+    origin: allowedOrigins,
+    credentials: true,
+    methods: ['GET', 'POST'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+  })
+);
 app.use(express.json());
 
 /**
@@ -68,14 +70,14 @@ app.use(express.json());
  * This middleware normalizes API paths by removing the `/api` prefix if present
  * This allows clients to use `/api/...` consistently while maintaining backward compatibility
  */
-app.use((req, res, next) => {
+app.use((req, _, next) => {
   if (req.path.startsWith('/api/')) {
     // Keep the original URL for logging
     const originalUrl = req.url;
-    
+
     // Update the URL by removing the /api prefix
     req.url = req.url.replace('/api', '');
-    
+
     // Log the URL rewrite in development
     if (process.env.NODE_ENV === 'development') {
       console.log(`[Path Normalizer] Rewriting ${originalUrl} to ${req.url}`);
@@ -90,13 +92,13 @@ try {
   // Initialize Supabase client but store it for later use
   const supabaseClient = createSupabaseClient();
   console.log('Supabase client initialized successfully');
-  
+
   // Store in the shared service for access across the API
   SupabaseService.setClient(supabaseClient);
-  
+
   // Also keep in app.locals for backward compatibility
   app.locals.supabase = supabaseClient;
-  
+
   // Mark connection as OK
   supabaseConnectionOk = true;
 } catch (error) {
@@ -107,17 +109,20 @@ try {
 // Create an API router
 const t = initTRPC.create();
 const appRouter = t.router({
-  ai: aiRouter
+  ai: aiRouter,
 });
 
 // Export type for client usage
 export type AppRouter = typeof appRouter;
 
 // tRPC API routes
-app.use('/trpc', createExpressMiddleware({
-  router: appRouter,
-  createContext: () => ({})
-}));
+app.use(
+  '/trpc',
+  createExpressMiddleware({
+    router: appRouter,
+    createContext: () => ({}),
+  })
+);
 
 // In-memory storage for stream sessions
 const streamSessions = new Map();
@@ -126,24 +131,24 @@ const streamSessions = new Map();
 app.get('/health', async (_req, res) => {
   const startTime = process.uptime();
   const memoryUsage = process.memoryUsage();
-  
+
   // Check database connection
-  let dbStatus = "unknown";
+  let dbStatus = 'unknown';
   try {
     const supabase = SupabaseService.getClient();
     const { error } = await supabase.from('health_check').select('*').limit(1);
-    
+
     if (error) {
-      dbStatus = "error";
+      dbStatus = 'error';
       console.error('Health check - Database error:', error);
     } else {
-      dbStatus = "ok";
+      dbStatus = 'ok';
     }
   } catch (err) {
-    dbStatus = "error";
+    dbStatus = 'error';
     console.error('Health check - Database check exception:', err);
   }
-  
+
   res.json({
     status: 'ok',
     version: '0.1.0',
@@ -152,13 +157,13 @@ app.get('/health', async (_req, res) => {
     memory: {
       rss: `${Math.round(memoryUsage.rss / 1024 / 1024)}MB`,
       heapTotal: `${Math.round(memoryUsage.heapTotal / 1024 / 1024)}MB`,
-      heapUsed: `${Math.round(memoryUsage.heapUsed / 1024 / 1024)}MB`
+      heapUsed: `${Math.round(memoryUsage.heapUsed / 1024 / 1024)}MB`,
     },
     dependencies: {
-      supabase: supabaseConnectionOk ? "ok" : "error",
-      database: dbStatus
+      supabase: supabaseConnectionOk ? 'ok' : 'error',
+      database: dbStatus,
     },
-    environment: process.env.NODE_ENV || 'development'
+    environment: process.env.NODE_ENV || 'development',
   });
 });
 
@@ -168,14 +173,14 @@ app.get('/health', async (_req, res) => {
 // SSE streaming endpoint - POST to initialize
 app.post('/ai/stream', async (req, res) => {
   const sessionId = req.query.sessionId as string;
-  
+
   if (!sessionId) {
     return res.status(400).json({ error: 'Session ID is required' });
   }
-  
+
   // Store the request data in the session
   streamSessions.set(sessionId, req.body);
-  
+
   // Send a success response
   res.json({ success: true, message: 'Stream session initialized' });
 });
@@ -183,26 +188,29 @@ app.post('/ai/stream', async (req, res) => {
 // SSE streaming endpoint - GET for EventSource connection
 app.get('/ai/stream', async (req, res) => {
   const sessionId = req.query.sessionId as string;
-  
+
   if (!sessionId) {
     return res.status(400).json({ error: 'Session ID is required' });
   }
-  
+
   // Get the session data
   const sessionData = streamSessions.get(sessionId);
-  
+
   if (!sessionData) {
     return res.status(404).json({ error: 'Session not found' });
   }
-  
+
   // Initialize SSE connection
   initSSE(res);
-  
+
   // Handle the streaming request with the session data
-  await handleStreamRequest({ 
-    body: sessionData,
-    app: req.app
-  } as any, res);
+  await handleStreamRequest(
+    {
+      body: sessionData,
+      app: req.app,
+    } as any,
+    res
+  );
 });
 
 // Start server
@@ -217,4 +225,4 @@ try {
 } catch (error) {
   console.error('Failed to start server:', error);
   process.exit(1);
-} 
+}
