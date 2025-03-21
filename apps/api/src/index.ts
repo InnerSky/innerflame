@@ -57,7 +57,30 @@ console.log('CORS allowed origins:', allowedOrigins);
 
 app.use(
   cors({
-    origin: allowedOrigins,
+    origin: (origin, callback) => {
+      // Allow requests with no origin (like mobile apps, curl requests)
+      if (!origin) {
+        return callback(null, true);
+      }
+
+      // Allow any Netlify subdomain (for previews and production)
+      if (origin.endsWith('.netlify.app') || origin === 'https://innerflame.xyz') {
+        return callback(null, true);
+      }
+
+      // Check against the configured allowed origins
+      if (allowedOrigins.indexOf(origin) !== -1) {
+        return callback(null, true);
+      }
+
+      // Allow local development
+      if (origin.startsWith('http://localhost:')) {
+        return callback(null, true);
+      }
+
+      console.log(`CORS rejected origin: ${origin}`);
+      callback(new Error(`Origin ${origin} not allowed by CORS`));
+    },
     credentials: true,
     methods: ['GET', 'POST'],
     allowedHeaders: ['Content-Type', 'Authorization'],
