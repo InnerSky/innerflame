@@ -148,7 +148,7 @@ export const DocumentsDesktopLayout: React.FC<DocumentsDesktopLayoutProps> = ({
           </Alert>
         </div>
       ) : (
-        <div className="flex flex-1 container max-w-screen-2xl mx-auto">
+        <div className="flex flex-1">
           <div className="w-80 flex-shrink-0 overflow-hidden border-r flex flex-col h-[calc(100vh-140px)]">
             <div className="p-4 flex flex-col h-full">
               <DocumentList

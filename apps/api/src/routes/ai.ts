@@ -80,7 +80,17 @@ export const aiRouter = router({
 
 // Define the streaming endpoint handler (outside of tRPC)
 export async function handleStreamRequest(req: Request, res: Response): Promise<void> {
-  const { message, contextType, userId, documentId, documentTitle, documentContent, projectId, projectName } = req.body;
+  const { 
+    message, 
+    contextType, 
+    userId, 
+    documentId, 
+    documentTitle, 
+    documentContent, 
+    projectId, 
+    projectName,
+    chatHistory
+  } = req.body;
   
   // Validate required fields
   if (!message || !contextType || !userId) {
@@ -96,7 +106,8 @@ export async function handleStreamRequest(req: Request, res: Response): Promise<
     documentTitle,
     documentContent,
     projectId,
-    projectName
+    projectName,
+    chatHistory // Pass chat history to context
   };
   
   try {

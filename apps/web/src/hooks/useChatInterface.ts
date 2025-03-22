@@ -9,6 +9,7 @@ import {
 } from '@/features/documents/models/message.js';
 import { useAuth } from './useAuth.ts';
 import { useToast } from './use-toast.ts';
+import { limitChatHistoryTokens } from '@/utils/textUtils.js';
 
 interface UseChatInterfaceProps {
   contextType: MessageContextType;
@@ -226,6 +227,12 @@ export function useChatInterface({
         streamCloseRef.current = null;
       }
       
+      // Limit chat history to ~2000 tokens (excluding the current message)
+      const filteredHistory = limitChatHistoryTokens(
+        chatHistory.filter(msg => msg.id !== userMessage.id),
+        2000
+      );
+      
       // Start streaming
       const { close } = createAIStream({
         message: savedMessage.content,
@@ -240,6 +247,7 @@ export function useChatInterface({
         documentContent: documentContent,
         projectId: projectId || undefined,
         projectName: projectName,
+        chatHistory: filteredHistory,
         onConnectionChange: (connected) => {
           if (!connected) {
             setIsLoading(false);

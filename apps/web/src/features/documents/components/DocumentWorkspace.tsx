@@ -6,6 +6,7 @@ import { DocumentType } from '../models/document.js';
 import { DocumentTabBar, DocumentTabView } from './DocumentTabBar.js';
 import { motion } from 'framer-motion';
 import { ProjectInfo, ProjectInfoRefType } from './ProjectInfo.js';
+import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable.js';
 
 type DocumentWorkspaceProps = {
   isMobile?: boolean;
@@ -71,7 +72,11 @@ export const DocumentWorkspace: React.FC<DocumentWorkspaceProps> = ({
   };
 
   // Chat component is common in both document and project modes
-  const ChatComponent = <ChatInterface isStandalone={isMobile} className={isMobile ? "h-full" : "mt-0"} />;
+  const ChatComponent = <ChatInterface 
+    isStandalone={isMobile} 
+    className={isMobile ? "h-full" : "mt-0"} 
+    suppressAutoScroll={isMobile && activeTab !== 'chat'}
+  />;
 
   // If no document but project is selected, show project info with chat
   if (!selectedDocument && selectedProjectId) {
@@ -79,17 +84,24 @@ export const DocumentWorkspace: React.FC<DocumentWorkspaceProps> = ({
     if (!isMobile) {
       return (
         <div className={`flex-grow flex ${className}`}>
-          <div className="flex-1 min-w-[350px] pr-4">
-            <ProjectInfo 
-              ref={projectInfoRef}
-              onCreateNew={onCreateNew} 
-              projectActionMenu={projectActionMenu}
-              className="h-full" 
-            />
-          </div>
-          <div className="w-96 flex-shrink-0">
-            {ChatComponent}
-          </div>
+          <ResizablePanelGroup direction="horizontal" className="w-full">
+            <ResizablePanel defaultSize={70} minSize={20} className="min-w-[320px] pr-3">
+              <div className="h-full">
+                <ProjectInfo 
+                  ref={projectInfoRef}
+                  onCreateNew={onCreateNew} 
+                  projectActionMenu={projectActionMenu}
+                  className="h-full" 
+                />
+              </div>
+            </ResizablePanel>
+            <ResizableHandle withHandle className="bg-muted hover:bg-muted-foreground/20 transition-colors [&>div]:h-6 [&>div]:w-4 [&>div]:bg-muted-foreground/30 [&>div]:hover:bg-muted-foreground/60" />
+            <ResizablePanel defaultSize={30} minSize={20} className="min-w-[300px] pl-3">
+              <div className="h-full">
+                {ChatComponent}
+              </div>
+            </ResizablePanel>
+          </ResizablePanelGroup>
         </div>
       );
     }
@@ -174,12 +186,19 @@ export const DocumentWorkspace: React.FC<DocumentWorkspaceProps> = ({
   if (!isMobile) {
     return (
       <div className={`flex-grow flex ${className}`}>
-        <div className="flex-1 min-w-[350px] pr-4">
-          {EditorComponent}
-        </div>
-        <div className="w-96 flex-shrink-0">
-          {ChatComponent}
-        </div>
+        <ResizablePanelGroup direction="horizontal" className="w-full">
+          <ResizablePanel defaultSize={70} minSize={20} className="min-w-[320px] pr-3">
+            <div className="h-full">
+              {EditorComponent}
+            </div>
+          </ResizablePanel>
+          <ResizableHandle withHandle className="bg-muted hover:bg-muted-foreground/20 transition-colors [&>div]:h-6 [&>div]:w-4 [&>div]:bg-muted-foreground/30 [&>div]:hover:bg-muted-foreground/60" />
+          <ResizablePanel defaultSize={30} minSize={20} className="min-w-[300px] pl-3">
+            <div className="h-full">
+              {ChatComponent}
+            </div>
+          </ResizablePanel>
+        </ResizablePanelGroup>
       </div>
     );
   }

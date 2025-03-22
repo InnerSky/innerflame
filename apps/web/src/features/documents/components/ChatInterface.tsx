@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { useDocumentsContext } from '../contexts/DocumentsContext.js';
 import { MessageSquare } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card.js';
@@ -14,6 +14,7 @@ import { ChatInput } from './chat/ChatInput.js';
 type ChatInterfaceProps = {
   className?: string;
   isStandalone?: boolean;
+  suppressAutoScroll?: boolean;
 };
 
 // Media query hook
@@ -40,7 +41,8 @@ function useMediaQuery(query: string) {
 
 export const ChatInterface: React.FC<ChatInterfaceProps> = ({ 
   className = '',
-  isStandalone = false
+  isStandalone = false,
+  suppressAutoScroll = false
 }) => {
   // Get document context
   const { 
@@ -95,6 +97,12 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
     projectName
   });
   
+  // Create a ref for the message list component to access scrollToBottom method
+  const messageListRef = useRef<{ scrollToBottom: () => void }>(null);
+  
+  // Track when to scroll to bottom (only for user messages)
+  const [shouldScrollToBottom, setShouldScrollToBottom] = useState(false);
+  
   // UI event handlers
   const handleStartEdit = (messageId: string) => {
     setEditingMessageId(messageId);
@@ -103,6 +111,26 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
   const handleCancelEdit = () => {
     setEditingMessageId(null);
   };
+  
+  // Custom send message handler that triggers scroll
+  const handleSendMessage = (content: string) => {
+    sendChatMessage(content);
+    // Set flag to scroll to bottom when a user sends a message, but only if not suppressed
+    if (!suppressAutoScroll) {
+      setShouldScrollToBottom(true);
+    }
+  };
+  
+  // Reset the scroll flag after it's been processed
+  useEffect(() => {
+    if (shouldScrollToBottom) {
+      // Reset the flag in the next render cycle
+      const timer = setTimeout(() => {
+        setShouldScrollToBottom(false);
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [shouldScrollToBottom]);
   
   // Chat content (messages and input)
   const chatContent = (
@@ -124,6 +152,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
       {/* Chat messages */}
       <div className="flex-1 min-h-0 overflow-hidden mb-4 w-full">
         <MessageList
+          ref={messageListRef}
           messages={chatHistory}
           streamingContents={streamingContents}
           streamingMessages={streamingMessages}
@@ -138,12 +167,13 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
           onDelete={deleteMessage}
           onCancelEdit={handleCancelEdit}
           onStartEdit={handleStartEdit}
+          shouldScrollToBottom={suppressAutoScroll ? false : shouldScrollToBottom}
         />
       </div>
       
       {/* Input area */}
       <ChatInput
-        onSendMessage={sendChatMessage}
+        onSendMessage={handleSendMessage}
         isLoading={isLoading}
         isDisabled={!user}
         placeholder={isProjectOnlyMode 

@@ -82,7 +82,7 @@ export type DocumentsResponsiveLayoutProps = {
 };
 
 export const DocumentsResponsiveLayout: React.FC<DocumentsResponsiveLayoutProps> = (props) => {
-  const isMobile = useMediaQuery('(max-width: 768px)');
+  const isMobile = useMediaQuery('(max-width: 1300px)');
   
   // Track previous mobile state to detect layout changes
   const [prevIsMobile, setPrevIsMobile] = useState(isMobile);

@@ -45,6 +45,7 @@ interface StreamConfig {
   documentContent?: string;
   projectId?: string;
   projectName?: string;
+  chatHistory?: any[]; // Add previous messages for context
   onChunk?: ChunkCallback;
   onTool?: ToolCallback;
   onError?: ErrorCallback;
@@ -68,6 +69,7 @@ export function createAIStream(config: StreamConfig): { close: () => void } {
     documentContent,
     projectId,
     projectName,
+    chatHistory,
     onChunk,
     onTool,
     onError,
@@ -103,7 +105,8 @@ export function createAIStream(config: StreamConfig): { close: () => void } {
           documentTitle,
           documentContent,
           projectId,
-          projectName
+          projectName,
+          chatHistory
         }),
       });
       

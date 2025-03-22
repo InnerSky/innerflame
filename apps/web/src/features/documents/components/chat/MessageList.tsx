@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState, useImperativeHandle, forwardRef, useCallback } from 'react';
 import { Message as MessageModel } from '../../models/message.js';
 import { MessageItem } from './MessageItem.js';
 import { Spinner } from '@/components/Spinner.js';
@@ -18,9 +18,11 @@ interface MessageListProps {
   onDelete: (messageId: string) => Promise<boolean | undefined>;
   onCancelEdit: () => void;
   onStartEdit: (messageId: string) => void;
+  shouldScrollToBottom?: boolean; // New prop to explicitly control scrolling
 }
 
-export const MessageList: React.FC<MessageListProps> = ({
+// Export MessageList as a forwardRef component
+export const MessageList = forwardRef<{ scrollToBottom: () => void }, MessageListProps>(({
   messages,
   streamingContents,
   streamingMessages,
@@ -34,33 +36,29 @@ export const MessageList: React.FC<MessageListProps> = ({
   onEdit,
   onDelete,
   onCancelEdit,
-  onStartEdit
-}) => {
+  onStartEdit,
+  shouldScrollToBottom = false // Default to false
+}, ref) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const secondLastMessageRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const lastMessageRef = useRef<HTMLDivElement>(null);
   const [lastMessagePadding, setLastMessagePadding] = useState(0);
-  const prevMessagesLengthRef = useRef<number>(0);
-  const prevInitialLoadingRef = useRef<boolean>(true);
-  const renderCountRef = useRef<number>(0);
   const isResizingRef = useRef<boolean>(false);
   const paddingUpdateTimeoutRef = useRef<number | null>(null);
+  const prevInitialLoadingRef = useRef<boolean>(true);
 
   // Component mount/update logging
   useEffect(() => {
-    renderCountRef.current += 1;
-    
     return () => {
       // Clear any pending timeouts
       if (paddingUpdateTimeoutRef.current) {
         clearTimeout(paddingUpdateTimeoutRef.current);
       }
     };
-  });
+  }, []);
 
   // Dynamic padding calculation that won't cause flashing
-  const updateLastMessagePadding = () => {
+  const updateLastMessagePadding = useCallback(() => {
     if (!lastMessageRef.current || !containerRef.current || isInitialLoading) return;
     
     // Delay padding calculation to avoid frequent layout shifts
@@ -88,14 +86,33 @@ export const MessageList: React.FC<MessageListProps> = ({
         paddingUpdateTimeoutRef.current = null;
       });
     }, 100); // Delay to batch potential multiple updates
-  };
+  }, [isInitialLoading, lastMessagePadding]);
+
+  // Expose scrollToBottom function via ref
+  const scrollToBottom = useCallback(() => {
+    // Skip scrolling if we're currently resizing the window
+    if (isResizingRef.current) return;
+    
+    const timer = setTimeout(() => {
+      if (messagesEndRef.current) {
+        messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+      }
+    }, 100);
+    
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Expose methods via ref
+  useImperativeHandle(ref, () => ({
+    scrollToBottom
+  }));
 
   // Calculate padding on initial load and when messages change
   useEffect(() => {
     if (!isInitialLoading && messages.length > 0) {
       updateLastMessagePadding();
     }
-  }, [messages, isInitialLoading, lastMessagePadding]);
+  }, [messages, isInitialLoading, updateLastMessagePadding]);
   
   // Handle window resize events to adjust padding
   useEffect(() => {
@@ -110,57 +127,33 @@ export const MessageList: React.FC<MessageListProps> = ({
     
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
-  }, []);
+  }, [updateLastMessagePadding]);
 
-  // Unified scrolling logic for all scenarios
+  // Handle initial loading completion
   useEffect(() => {
-    // Skip if we're still loading or have no messages
-    if (messages.length === 0) return;
-    
-    // Skip scrolling if we're currently resizing the window
-    if (isResizingRef.current) {
-      return;
-    }
-    
-    // Determine what triggered this effect
+    // Check if initial loading just completed
     const initialLoadingJustCompleted = prevInitialLoadingRef.current && !isInitialLoading;
-    const messagesAdded = messages.length > prevMessagesLengthRef.current;
     
-    // Check if the last message is from the user
-    let isLastAddedMessageFromUser = false;
-    if (messagesAdded && messages.length > 0) {
-      const lastMessage = messages[messages.length - 1];
-      isLastAddedMessageFromUser = String(lastMessage.sender_type) === 'user';
+    // In desktop view, always scroll on initial load
+    // In mobile view, only scroll if explicitly allowed via shouldScrollToBottom
+    if (initialLoadingJustCompleted && messages.length > 0) {
+      if (shouldScrollToBottom === false) {
+        // Don't scroll when explicitly prevented (mobile non-active tab)
+      } else {
+        scrollToBottom();
+      }
     }
     
-    // Scroll only when:
-    // 1. Initial loading just completed (first load)
-    // 2. User adds a new message
-    const shouldScroll = 
-      (initialLoadingJustCompleted && !isInitialLoading && messages.length > 0) || 
-      (messagesAdded && isLastAddedMessageFromUser);
-    
-    if (shouldScroll) {
-      // Use a timeout to ensure DOM is updated
-      const timer = setTimeout(() => {
-        // Scroll to the second last message instead of the bottom
-        if (messages.length > 1 && secondLastMessageRef.current) {
-          secondLastMessageRef.current.scrollIntoView({ behavior: 'smooth' });
-        } else if (messagesEndRef.current) {
-          // Fallback to scrolling to the bottom if there's only one message
-          messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
-        }
-      }, 100);
-      
-      return () => clearTimeout(timer);
-    }
-    
-    // Update refs for next comparison
+    // Update ref for next comparison
     prevInitialLoadingRef.current = isInitialLoading;
-    if (!isInitialLoading) {
-      prevMessagesLengthRef.current = messages.length;
+  }, [isInitialLoading, messages.length, scrollToBottom, shouldScrollToBottom]);
+
+  // Explicitly controlled scrolling
+  useEffect(() => {
+    if (shouldScrollToBottom) {
+      scrollToBottom();
     }
-  }, [messages, isInitialLoading]);
+  }, [shouldScrollToBottom, scrollToBottom]);
 
   if (isInitialLoading) {
     return (
@@ -182,12 +175,10 @@ export const MessageList: React.FC<MessageListProps> = ({
     <div className="h-full overflow-y-auto overflow-x-hidden w-full" ref={containerRef}>
       {messages.map((message, index) => {
         const isLastMessage = index === messages.length - 1;
-        const isSecondLastMessage = index === messages.length - 2;
         
         return (
           <div 
             key={message.id}
-            ref={isSecondLastMessage ? secondLastMessageRef : undefined}
             style={isLastMessage ? { marginBottom: `${lastMessagePadding}px` } : {}}
             className="w-full"
           >
@@ -237,4 +228,4 @@ export const MessageList: React.FC<MessageListProps> = ({
       )}
     </div>
   );
-}; 
+}); 

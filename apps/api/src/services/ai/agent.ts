@@ -107,30 +107,51 @@ export function createAgent(claudeClient: ClaudeClient, tools: AgentTool[] = [])
     let state: AgentState = {
       messages: [
         createSystemMessage(),
-        {
-          role: AgentMessageRole.USER,
-          content: input
-        }
       ],
       context,
       tools,
     };
     
+    // Add chat history if available
+    if (context.chatHistory && context.chatHistory.length > 0) {
+      console.log(`Adding ${context.chatHistory.length} messages from chat history`);
+      
+      // Convert chat history to AgentMessage format
+      const historyMessages = context.chatHistory.map(msg => {
+        const role = msg.sender_type === 'user' 
+          ? AgentMessageRole.USER 
+          : AgentMessageRole.ASSISTANT;
+        
+        return {
+          role,
+          content: msg.content || ''
+        } as AgentMessage;
+      });
+      
+      // Add history messages
+      state.messages.push(...historyMessages);
+    }
+    
+    // Add the current user message
+    state.messages.push({
+      role: AgentMessageRole.USER,
+      content: input
+    });
+    
     // Process the user input
     try {
       // Get the system message and user message
       const systemMessage = state.messages.find(m => m.role === AgentMessageRole.SYSTEM);
-      const userMessage = state.messages.find(m => m.role === AgentMessageRole.USER);
       
-      if (!userMessage) {
-        throw new Error('No user message found');
+      if (!systemMessage) {
+        throw new Error('No system message found');
       }
       
       // Convert messages to Claude format (only user and assistant messages)
       const claudeMessages = convertToClaudeMessages(state.messages);
       
       // Add context information to system prompt if available
-      let systemPrompt = systemMessage?.content || DEFAULT_SYSTEM_PROMPT;
+      let systemPrompt = systemMessage.content || DEFAULT_SYSTEM_PROMPT;
       
       if (state.context) {
         const ctx = state.context;
@@ -318,11 +339,33 @@ export function createStreamingAgent(claudeClient: ClaudeClient, tools: AgentToo
       // Initialize messages with system prompt and user input
       const messages: AgentMessage[] = [
         createSystemMessage(),
-        {
-          role: AgentMessageRole.USER,
-          content: input
-        }
       ];
+      
+      // Add chat history if available
+      if (context.chatHistory && context.chatHistory.length > 0) {
+        console.log(`Adding ${context.chatHistory.length} messages from chat history`);
+        
+        // Convert chat history to AgentMessage format
+        const historyMessages = context.chatHistory.map(msg => {
+          const role = msg.sender_type === 'user' 
+            ? AgentMessageRole.USER 
+            : AgentMessageRole.ASSISTANT;
+          
+          return {
+            role,
+            content: msg.content || ''
+          } as AgentMessage;
+        });
+        
+        // Add history messages before the current user message
+        messages.push(...historyMessages);
+      }
+      
+      // Add the current user message
+      messages.push({
+        role: AgentMessageRole.USER,
+        content: input
+      });
       
       // Convert messages to Claude format (only user and assistant messages)
       const claudeMessages = convertToClaudeMessages(messages);

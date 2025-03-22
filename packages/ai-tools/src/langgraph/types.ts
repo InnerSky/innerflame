@@ -44,6 +44,7 @@ export interface AgentContext {
   projectName?: string;
   userId: string;
   contextType: 'document' | 'project' | 'general';
+  chatHistory?: any[]; // Previous messages for context
 }
 
 // Tool definition for agent
@@ -86,7 +87,8 @@ export const agentContextSchema = z.object({
   projectId: z.string().optional(),
   projectName: z.string().optional(),
   userId: z.string(),
-  contextType: z.enum(['document', 'project', 'general'])
+  contextType: z.enum(['document', 'project', 'general']),
+  chatHistory: z.array(z.any()).optional()
 });
 
 export const agentStateSchema = z.object({

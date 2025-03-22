@@ -10,3 +10,13 @@ npm run reset-dev
 
 npm run build
 npx netlify deploy --prod
+
+---
+
+# PROMPTS
+
+## Understanding codebase interface
+I want to understand how we currently passes variables between our frontend with our backend when we send a message and get a response from agent in @ChatInterface.tsx Please go through the codebase, and report the whole process. I want to learn how the context and message parameters are passed. Report this in details
+
+## Review
+Please make a task checklist before you start working on it. And when you're done, go through the key files to review if the implementation is correct and free of error.
