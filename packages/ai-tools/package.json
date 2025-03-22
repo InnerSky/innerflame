@@ -10,6 +10,7 @@
     "clean": "rm -rf .turbo && rm -rf node_modules"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.39.0",
     "@innerflame/types": "*",
     "@innerflame/utils": "*",
     "@langchain/langgraph": "^0.2.56",
@@ -18,4 +19,4 @@
   "devDependencies": {
     "typescript": "^5.5.3"
   }
-} 
+}

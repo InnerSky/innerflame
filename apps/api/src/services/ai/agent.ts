@@ -7,11 +7,17 @@ import {
   AgentOutput 
 } from '@innerflame/ai-tools/src/langgraph/types.js';
 import { 
+  // Legacy imports
   ClaudeClient, 
   ClaudeMessage, 
   ClaudeRole, 
-  createClaudeClient 
-} from '@innerflame/ai-tools/src/claude/client.js';
+  createClaudeClient,
+  // New imports
+  LLMProvider,
+  LLMAdapter,
+  createLLMAdapter,
+  initializeProviderFromEnv
+} from '@innerflame/ai-tools/src/index.js';
 import { Response, Request } from 'express';
 import { 
   sendTokenChunk, 
@@ -50,7 +56,7 @@ const createSystemMessage = (customPrompt?: string): AgentMessage => ({
   content: customPrompt || DEFAULT_SYSTEM_PROMPT
 });
 
-// Convert agent messages to Claude format
+// Legacy: Convert agent messages to Claude format
 const convertToClaudeMessages = (messages: AgentMessage[]): ClaudeMessage[] => {
   return messages.filter(msg => 
     msg.role === AgentMessageRole.USER || 
@@ -73,7 +79,22 @@ const convertToClaudeMessages = (messages: AgentMessage[]): ClaudeMessage[] => {
 };
 
 /**
- * Initialize the Claude API client using environment variables
+ * Initialize the LLM provider using environment variables
+ */
+export function initializeLLMProvider(): LLMProvider {
+  return initializeProviderFromEnv();
+}
+
+/**
+ * Initialize the LLM adapter using the provided LLM provider
+ */
+export function initializeLLMAdapter(provider: LLMProvider): LLMAdapter {
+  return createLLMAdapter(provider);
+}
+
+/**
+ * Legacy: Initialize the Claude API client using environment variables
+ * @deprecated Use initializeLLMProvider instead
  */
 export function initializeClaudeClient(): ClaudeClient {
   const apiKey = process.env.CLAUDE_API_KEY;
@@ -95,9 +116,9 @@ export function initializeClaudeClient(): ClaudeClient {
 }
 
 /**
- * Create a simplified agent with the provided Claude client and tools
+ * Create a simplified agent with the provided LLM adapter and tools
  */
-export function createAgent(claudeClient: ClaudeClient, tools: AgentTool[] = []) {
+export function createAgent(llmAdapter: LLMAdapter, tools: AgentTool[] = []) {
   
   /**
    * Run the agent with the provided input
@@ -147,9 +168,6 @@ export function createAgent(claudeClient: ClaudeClient, tools: AgentTool[] = [])
         throw new Error('No system message found');
       }
       
-      // Convert messages to Claude format (only user and assistant messages)
-      const claudeMessages = convertToClaudeMessages(state.messages);
-      
       // Add context information to system prompt if available
       let systemPrompt = systemMessage.content || DEFAULT_SYSTEM_PROMPT;
       
@@ -182,8 +200,8 @@ ${ctx.documentContent ? `- Document content preview: ${ctx.documentContent.subst
         systemPrompt += toolsInfo;
       }
       
-      // Generate a response using Claude
-      const response = await claudeClient.sendMessage(claudeMessages, {
+      // Generate a response using the LLM adapter
+      const response = await llmAdapter.sendMessage(state.messages, {
         systemPrompt,
         temperature: 0.7,
       });
@@ -249,7 +267,7 @@ ${ctx.documentContent ? `- Document content preview: ${ctx.documentContent.subst
               state.messages.push(toolResultMessage);
               
               // Generate a follow-up response
-              const followUpClaudeMessages = convertToClaudeMessages([
+              const followUpResponse = await llmAdapter.sendMessage([
                 ...state.messages.filter(msg => 
                   msg.role === AgentMessageRole.USER || 
                   msg.role === AgentMessageRole.ASSISTANT
@@ -258,9 +276,7 @@ ${ctx.documentContent ? `- Document content preview: ${ctx.documentContent.subst
                   role: AgentMessageRole.USER,
                   content: `The tool ${trimmedToolName} was executed with the following result: ${JSON.stringify(result)}`
                 }
-              ]);
-              
-              const followUpResponse = await claudeClient.sendMessage(followUpClaudeMessages, {
+              ], {
                 systemPrompt,
                 temperature: 0.7,
               });
@@ -320,7 +336,7 @@ ${ctx.documentContent ? `- Document content preview: ${ctx.documentContent.subst
 /**
  * Create a streaming version of the agent that sends incremental responses via SSE
  */
-export function createStreamingAgent(claudeClient: ClaudeClient, tools: AgentTool[] = []) {
+export function createStreamingAgent(llmAdapter: LLMAdapter, tools: AgentTool[] = []) {
   /**
    * Run the agent with the provided input and stream the response
    */
@@ -367,9 +383,6 @@ export function createStreamingAgent(claudeClient: ClaudeClient, tools: AgentToo
         content: input
       });
       
-      // Convert messages to Claude format (only user and assistant messages)
-      const claudeMessages = convertToClaudeMessages(messages);
-      
       // Prepare system prompt with context information
       let systemPrompt = DEFAULT_SYSTEM_PROMPT;
       
@@ -404,7 +417,7 @@ ${ctx.documentContent ? `- Document content preview: ${ctx.documentContent.subst
       }
       
       // Create a streaming response
-      const stream = await claudeClient.createStreamingMessage(claudeMessages, {
+      const stream = await llmAdapter.streamMessage(messages, {
         systemPrompt,
         temperature: 0.7,
       });
@@ -429,7 +442,7 @@ ${ctx.documentContent ? `- Document content preview: ${ctx.documentContent.subst
           const chunk = decoder.decode(value, { stream: true });
           
           try {
-            // Process event data from Claude stream
+            // Process event data from LLM stream
             const lines = chunk.split('\n');
             
             for (const line of lines) {
@@ -449,7 +462,7 @@ ${ctx.documentContent ? `- Document content preview: ${ctx.documentContent.subst
               try {
                 const parsedData = JSON.parse(data);
                 
-                // Claude sends content delta events
+                // LLM sends content delta events
                 if (parsedData.type === 'content_block_delta') {
                   const textDelta = parsedData.delta?.text || '';
                   

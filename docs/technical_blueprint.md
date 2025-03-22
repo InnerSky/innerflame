@@ -80,6 +80,13 @@ innerflame/
 │       │   ├── tools/
 │       │   ├── documentUpdate.ts
 │       │   ├── askUserQuestion.ts
+│       │   ├── llm/        # LLM provider abstraction layer
+│       │   │   ├── interfaces/  # Provider interfaces and types
+│       │   │   ├── providers/   # Concrete provider implementations
+│       │   │   │   └── anthropic/ # Anthropic/Claude implementation
+│       │   │   ├── adapter.ts   # Adapts message formats between agent and provider
+│       │   │   ├── factory.ts   # Provider creation and initialization
+│       │   │   └── index.ts     # Public exports
 │       │   └── index.ts
 │       └── package.json
 ├── supabase/               # Supabase configuration and migrations
@@ -138,6 +145,7 @@ Each package in the `packages/` directory has its own:
 - **Language**: TypeScript with ESM
 - **API Framework**: tRPC for type-safe API endpoints
 - **AI Orchestration**: LangGraph.js for agent workflows
+- **LLM Provider Abstraction**: Modular architecture allowing seamless switching between different LLM providers
 - **Streaming Protocol**: Server-Sent Events (SSE) for real-time communication
 - **Database Client**: Supabase.js
 - **Authentication**: Supabase Auth with JWT validation
@@ -399,6 +407,7 @@ Built on Radix UI primitives and styled with Tailwind CSS.
 
 ### Claude API
 - **Purpose**: AI agent for document assistance
+- **Integration**: Implemented via LLM Provider abstraction layer using official Anthropic SDK
 - **Configuration**: API key in environment variables
 - **Features Used**: Tool calling, streaming responses
 
@@ -453,6 +462,13 @@ Built on Radix UI primitives and styled with Tailwind CSS.
 4. Ensures consistent API URL structure between development and production
 5. Simplifies frontend code by eliminating environment-specific path handling
 
+### LLM Provider Abstraction
+1. Interface-based approach abstracting core LLM functionality
+2. Provider factory pattern for selecting and instantiating LLM providers
+3. Message format standardization across different provider implementations
+4. Streaming and tool calling support maintained with provider-specific adapters
+5. Environment-based configuration with fallbacks and validation
+
 ## Features
 
 ### Document Creation and Editing
@@ -484,11 +500,14 @@ Built on Radix UI primitives and styled with Tailwind CSS.
 - AI responses can include special tags for document updates
 - Tool calls are processed server-side to execute actions
 - Intent detection categorizes messages for better assistance
+- LLM Provider abstraction allows flexible integration with different AI models
+- Interface-based architecture supports seamless provider switching without client changes
 
-**Current Status**: Initial implementation planned in Milestone 1
+**Current Status**: Implemented in Milestone 1
 
 **Dependencies**:
 - LangGraph.js for AI orchestration
+- LLM Provider abstraction (supports Anthropic/Claude with expansion capability)
 - SSE for streaming responses
 - Supabase for message storage
 - UI components for chat interface

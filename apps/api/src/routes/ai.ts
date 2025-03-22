@@ -1,7 +1,13 @@
 import { initTRPC } from '@trpc/server';
 import { z } from 'zod';
 import { Request, Response } from 'express';
-import { initializeClaudeClient, createAgent, createStreamingAgent } from '../services/ai/agent.js';
+import { 
+  initializeClaudeClient, 
+  initializeLLMProvider,
+  initializeLLMAdapter,
+  createAgent, 
+  createStreamingAgent 
+} from '../services/ai/agent.js';
 import { createDocumentUpdateTool } from '@innerflame/ai-tools/src/tools/documentUpdate.js';
 import { AgentContext } from '@innerflame/ai-tools/src/langgraph/types.js';
 
@@ -10,17 +16,21 @@ const t = initTRPC.create();
 const router = t.router;
 const publicProcedure = t.procedure;
 
-// Initialize Claude client
-const claudeClient = initializeClaudeClient();
+// Initialize LLM provider and adapter
+const llmProvider = initializeLLMProvider();
+const llmAdapter = initializeLLMAdapter(llmProvider);
+
+// Legacy: Initialize Claude client
+// const claudeClient = initializeClaudeClient();
 
 // Create tools
 const tools = [createDocumentUpdateTool()];
 
 // Create the agent with tools
-const agent = createAgent(claudeClient, tools);
+const agent = createAgent(llmAdapter, tools);
 
 // Create the streaming agent with tools
-const streamingAgent = createStreamingAgent(claudeClient, tools);
+const streamingAgent = createStreamingAgent(llmAdapter, tools);
 
 // AI Router
 export const aiRouter = router({

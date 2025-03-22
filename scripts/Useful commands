@@ -20,3 +20,9 @@ I want to understand how we currently passes variables between our frontend with
 
 ## Review
 Please make a task checklist before you start working on it. And when you're done, go through the key files to review if the implementation is correct and free of error.
+
+## Smart, Clean, Think Hard
+Is this the smartest way? or the cleanest way to implement? Think hard
+
+## Chek -> Do -> Review 
+Double check and read relevant files before you implement this. Review to make sure it is done correctly afterwards
