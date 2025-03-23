@@ -45,3 +45,6 @@ supabase/.env.*
 
 # Local Netlify folder
 .netlify
+
+# Reference code (not for deployment)
+/cline/

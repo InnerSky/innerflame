@@ -61,6 +61,7 @@ export interface AgentOutput {
   nextStep?: string;
   result?: any;
   error?: string;
+  lastToolResult?: any;
 }
 
 // State schemas

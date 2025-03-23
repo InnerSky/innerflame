@@ -82,12 +82,12 @@ _What makes this application different or better than existing solutions?_
 - **State Management**: React's built-in state hooks with server-driven state via tRPC and SSE
 
 ### Backend
-- **Framework**: LangGraph for AI orchestration
+- **Framework**: Custom Agentic Framework
 - **Language**: TypeScript (unified with frontend for improved maintainability)
-- **AI Integration**: LangGraph with TypeScript implementation
-- **API Architecture**: Server-side Orchestration Layer with tRPC + SSE + LangGraph, including:
+- **AI Integration**: Custom agent implementation with TypeScript
+- **API Architecture**: Server-side Orchestration Layer with tRPC + SSE, including:
   - **Data Operations**: tRPC for type-safe CRUD operations on Supabase database tables
-  - **AI Orchestration**: Minimal LangGraph implementation starting with a single document agent that loads the full playbook as system prompt and implements two tools: 1) editDocument and 2) askUserQuestion. For editDocument, tool calls are intercepted by our server, executed, and immediately acknowledged as successful to ensure Claude continues streaming text without interruption. For askUserQuestion, the streaming stops at the question, conversation state is saved in the database, and a new streaming session begins when the user provides an answer
+  - **AI Orchestration**: Custom agent framework that implements two primary tools: 1) editDocument and 2) askUserQuestion. For editDocument, tool calls are intercepted by our server, executed, and immediately acknowledged as successful to ensure Claude continues streaming text without interruption. For askUserQuestion, the streaming stops at the question, conversation state is saved in the database, and a new streaming session begins when the user provides an answer
   - **Streaming Protocol**: Server-Sent Events (SSE) for real-time AI response streaming
   - **Tool Implementation**: Server-side interception and execution of Claude API tool calls
   - **Authentication**: JWT token validation via Supabase Auth middleware

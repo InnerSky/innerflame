@@ -2,12 +2,11 @@ import { initTRPC } from '@trpc/server';
 import { z } from 'zod';
 import { Request, Response } from 'express';
 import { 
-  initializeClaudeClient, 
   initializeLLMProvider,
   initializeLLMAdapter,
   createAgent, 
   createStreamingAgent 
-} from '../services/ai/agent.js';
+} from '../services/ai/index.js';
 import { createDocumentUpdateTool } from '@innerflame/ai-tools/src/tools/documentUpdate.js';
 import { AgentContext } from '@innerflame/ai-tools/src/langgraph/types.js';
 
@@ -19,9 +18,6 @@ const publicProcedure = t.procedure;
 // Initialize LLM provider and adapter
 const llmProvider = initializeLLMProvider();
 const llmAdapter = initializeLLMAdapter(llmProvider);
-
-// Legacy: Initialize Claude client
-// const claudeClient = initializeClaudeClient();
 
 // Create tools
 const tools = [createDocumentUpdateTool()];

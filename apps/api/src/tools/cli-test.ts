@@ -9,16 +9,17 @@
 
 import 'dotenv/config';
 import readline from 'readline';
-import { initializeClaudeClient, createAgent } from '../services/ai/agent.js';
+import { initializeLLMProvider, initializeLLMAdapter, createAgent } from '../services/ai/index.js';
 import { createDocumentUpdateTool } from '@innerflame/ai-tools/src/tools/documentUpdate.js';
 import { AgentContext } from '@innerflame/ai-tools/src/langgraph/types.js';
 
-// Initialize Claude client
-const claudeClient = initializeClaudeClient();
+// Initialize LLM provider and adapter
+const llmProvider = initializeLLMProvider();
+const llmAdapter = initializeLLMAdapter(llmProvider);
 
 // Create an agent with the document update tool
 const tools = [createDocumentUpdateTool()];
-const agent = createAgent(claudeClient, tools);
+const agent = createAgent(llmAdapter, tools);
 
 // Sample document for testing
 const sampleDocument = {

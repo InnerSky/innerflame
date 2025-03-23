@@ -8,9 +8,6 @@ export * from './streaming.js';
 export * from './tools/documentUpdate.js';
 export * from './tools/askUserQuestion.js';
 
-// Export Claude API client (legacy)
-export * from './claude/client.js';
-
 // Export LLM provider abstractions
 export * from './llm/index.js';
 

@@ -52,7 +52,8 @@ innerflame/
 │       │   ├── controllers/
 │       │   ├── routes/
 │       │   ├── services/
-│       │   │   └── ai/     # AI orchestration with LangGraph
+│       │   │   └── ai/     # AI agent implementation
+│       │   │       └── agent.ts  # Custom agentic framework implementation
 │       │   ├── utils/
 │       │   └── index.ts
 │       ├── package.json
@@ -77,13 +78,22 @@ innerflame/
 │   │   └── package.json
 │   └── ai-tools/           # Shared AI tools implementation
 │       ├── src/
-│       │   ├── tools/
-│       │   ├── documentUpdate.ts
-│       │   ├── askUserQuestion.ts
+│       │   ├── tools/      # Tool implementations for AI agents
+│       │   │   ├── documentUpdate.ts  # Document modification tool
+│       │   │   └── askUserQuestion.ts # Interactive question tool
+│       │   ├── langgraph/  # Type definitions for agent interfaces
+│       │   │   └── types.ts # Shared types for agent implementation
+│       │   ├── api/        # Low-level API clients and handlers
+│       │   │   ├── providers/ # Provider implementations
+│       │   │   │   ├── anthropic.ts # AnthropicHandler implementation
+│       │   │   │   └── other providers
+│       │   │   └── retry-fixed.ts # Retry utility with ESM/TS compatibility
 │       │   ├── llm/        # LLM provider abstraction layer
 │       │   │   ├── interfaces/  # Provider interfaces and types
 │       │   │   ├── providers/   # Concrete provider implementations
 │       │   │   │   └── anthropic/ # Anthropic/Claude implementation
+│       │   │   │       ├── AnthropicAdapter.ts # Adapter implementation
+│       │   │   │       └── __tests__/ # Unit and integration tests
 │       │   │   ├── adapter.ts   # Adapts message formats between agent and provider
 │       │   │   ├── factory.ts   # Provider creation and initialization
 │       │   │   └── index.ts     # Public exports
@@ -144,8 +154,12 @@ Each package in the `packages/` directory has its own:
 - **Runtime**: Node.js
 - **Language**: TypeScript with ESM
 - **API Framework**: tRPC for type-safe API endpoints
-- **AI Orchestration**: LangGraph.js for agent workflows
-- **LLM Provider Abstraction**: Modular architecture allowing seamless switching between different LLM providers
+- **AI Orchestration**: Custom agentic framework for agent workflows
+- **LLM Provider Abstraction**: 
+  - Modular architecture allowing seamless switching between different LLM providers
+  - Two-layer design with Adapters (high-level interfaces) and Handlers (low-level API clients)
+  - Support for advanced features like reasoning, caching, and detailed token usage tracking
+  - Modern ESM-compatible implementation with TypeScript
 - **Streaming Protocol**: Server-Sent Events (SSE) for real-time communication
 - **Database Client**: Supabase.js
 - **Authentication**: Supabase Auth with JWT validation
@@ -407,9 +421,17 @@ Built on Radix UI primitives and styled with Tailwind CSS.
 
 ### Claude API
 - **Purpose**: AI agent for document assistance
-- **Integration**: Implemented via LLM Provider abstraction layer using official Anthropic SDK
+- **Integration**: 
+  - Implemented via LLM Provider abstraction layer
+  - Two-layer architecture with AnthropicAdapter and AnthropicHandler
+  - Support for multiple Claude models (3.5, 3.7, etc.)
+  - Enhanced capabilities including reasoning/thinking, caching, and detailed usage metrics
 - **Configuration**: API key in environment variables
-- **Features Used**: Tool calling, streaming responses
+- **Features Used**: 
+  - Tool calling for document operations
+  - Streaming responses with SSE
+  - Reasoning capabilities for enhanced transparency
+  - Caching for improved performance
 
 ### Google Auth
 - **Purpose**: OAuth authentication provider
@@ -468,6 +490,43 @@ Built on Radix UI primitives and styled with Tailwind CSS.
 3. Message format standardization across different provider implementations
 4. Streaming and tool calling support maintained with provider-specific adapters
 5. Environment-based configuration with fallbacks and validation
+6. Two-layer architecture with Adapters and Handlers for cleaner separation of concerns
+7. Advanced features supported through provider-specific extensions:
+   - Extended thinking/reasoning capabilities for enhanced transparency
+   - Prompt caching for improved performance and lower latency
+   - Detailed token usage tracking and optimization
+   - Automatic retry handling for API rate limits and connection issues
+8. Compatibility with multiple Claude model versions (3.5, 3.7, etc.)
+9. ESM-compatible implementation with modern TypeScript practices
+
+### Custom Agentic Framework
+
+1. **Simplified Architecture**:
+   - Single agent implementation in `apps/api/src/services/ai/agent.ts`
+   - Uses typed interfaces from LangGraph for structure but implements custom logic
+   - No reliance on external state graph libraries, reducing complexity and dependencies
+
+2. **Message Management**:
+   - Handles conversation history and context
+   - Maintains message thread structure and relationships
+   - Properly formats messages for consumption by LLMs
+
+3. **Tool Execution**:
+   - Intercepts special formatting in LLM responses for tool calls
+   - Executes tools with proper context and error handling
+   - Returns results back to conversation flow
+
+4. **State Management**:
+   - Manages agent state including messages, context, and tool results
+   - Persists state between interactions in database
+   - Handles resuming conversations from saved state
+
+5. **Streaming Integration**:
+   - Seamlessly integrates with SSE for streaming responses
+   - Handles partial updates and tool calls during streaming
+   - Manages streaming interruption and resumption for interactive tools
+
+This custom approach offers greater flexibility and control over the agent workflow while maintaining a clean, type-safe implementation that integrates well with the rest of the application architecture.
 
 ## Features
 
@@ -501,12 +560,19 @@ Built on Radix UI primitives and styled with Tailwind CSS.
 - Tool calls are processed server-side to execute actions
 - Intent detection categorizes messages for better assistance
 - LLM Provider abstraction allows flexible integration with different AI models
+  - Advanced features enhance the AI experience:
+    - Extended thinking/reasoning for greater explainability
+    - Prompt caching for faster repeat responses
+    - Detailed token usage tracking for optimization
+    - Automatic retry handling for reliability
+  - Support for multiple Claude models (3.5, 3.7) with model-specific optimizations
+- Custom agentic framework handles agent state, message management, and tool execution
 - Interface-based architecture supports seamless provider switching without client changes
 
 **Current Status**: Implemented in Milestone 1
 
 **Dependencies**:
-- LangGraph.js for AI orchestration
+- Custom agentic framework for AI orchestration
 - LLM Provider abstraction (supports Anthropic/Claude with expansion capability)
 - SSE for streaming responses
 - Supabase for message storage

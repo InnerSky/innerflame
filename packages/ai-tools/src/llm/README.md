@@ -7,9 +7,10 @@ This module provides a flexible abstraction layer for LLM providers, allowing th
 The LLM provider abstraction consists of the following components:
 
 1. **Interface**: Defines the contract that all LLM providers must implement
-2. **Providers**: Concrete implementations for specific LLM services (currently Anthropic/Claude)
-3. **Factory**: Functions to create and initialize provider instances
-4. **Adapter**: Connects the provider interface with the agent's message format
+2. **Providers**: Concrete implementations for specific LLM services
+3. **Adapters**: Bridge between our interfaces and underlying provider implementations
+4. **Factory**: Functions to create and initialize provider instances
+5. **Handler**: Low-level API clients that perform the actual API calls
 
 ## Usage
 
@@ -54,20 +55,65 @@ The provider factory uses the following environment variables:
 To add a new LLM provider:
 
 1. Add the provider type to `ProviderType` enum in `factory.ts`
-2. Create a new provider implementation in a subdirectory of `providers/`
-3. Implement the `LLMProvider` interface for the new provider
+2. Create a new provider implementation or adapter in a subdirectory of `providers/`
+3. Implement the `LLMProvider` interface
 4. Update the `createLLMProvider` and `initializeProviderFromEnv` functions in `factory.ts`
 
 ## Providers
 
 ### Anthropic (Claude)
 
-The Anthropic provider uses the official `@anthropic-ai/sdk` to interact with Claude. It supports:
+The Anthropic implementation consists of two layers:
+
+1. **AnthropicAdapter**: Implements the `LLMProvider` interface and provides a high-level API
+2. **AnthropicHandler**: Low-level handler that makes direct API calls to Claude
+
+The Anthropic adapter supports:
 
 - Regular message sending
 - Streaming responses
 - System prompts
-- Error handling
+- Error handling with automatic retries
+- Detailed token usage tracking
+- Extended features:
+  - Claude 3.5 and 3.7 models
+  - Extended thinking/reasoning (Claude 3.7+)
+  - Prompt caching for improved performance (Claude 3.5+)
+
+#### Advanced Usage
+
+To use advanced features like thinking and caching:
+
+```typescript
+import { 
+  createAnthropicAdapter,
+  AnthropicRequestOptions
+} from '@innerflame/ai-tools/src/llm/providers/anthropic/AnthropicAdapter';
+
+// Create adapter with caching enabled
+const adapter = createAnthropicAdapter(apiKey, {
+  defaultModel: 'claude-3-sonnet-20240229',
+  enableCaching: true
+});
+
+// Use extended thinking with Claude 3.7
+const options: AnthropicRequestOptions = {
+  systemPrompt: 'You are a helpful assistant',
+  temperature: 0.7,
+  enableThinking: true,
+  thinkingBudget: 1500 // Allocate 1500 tokens for thinking
+};
+
+const response = await adapter.sendMessage(messages, options);
+
+// Access the reasoning
+if (response.reasoning) {
+  console.log('Reasoning:', response.reasoning);
+}
+
+// Check detailed token usage
+console.log('Token usage:', response.detailedUsage);
+```
 
 ## Adapter
 
@@ -75,4 +121,5 @@ The adapter converts between the agent's message format and the LLM provider's m
 
 - Message format conversion
 - Common interface for agent interactions
-- Stream handling 
+- Stream handling
+- Provider-specific feature access 

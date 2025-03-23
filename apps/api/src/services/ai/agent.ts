@@ -7,11 +7,6 @@ import {
   AgentOutput 
 } from '@innerflame/ai-tools/src/langgraph/types.js';
 import { 
-  // Legacy imports
-  ClaudeClient, 
-  ClaudeMessage, 
-  ClaudeRole, 
-  createClaudeClient,
   // New imports
   LLMProvider,
   LLMAdapter,
@@ -56,28 +51,6 @@ const createSystemMessage = (customPrompt?: string): AgentMessage => ({
   content: customPrompt || DEFAULT_SYSTEM_PROMPT
 });
 
-// Legacy: Convert agent messages to Claude format
-const convertToClaudeMessages = (messages: AgentMessage[]): ClaudeMessage[] => {
-  return messages.filter(msg => 
-    msg.role === AgentMessageRole.USER || 
-    msg.role === AgentMessageRole.ASSISTANT
-  ).map(msg => {
-    // We need to safely convert between enum types
-    let claudeRole: ClaudeRole;
-    
-    if (msg.role === AgentMessageRole.USER) {
-      claudeRole = ClaudeRole.USER;
-    } else {
-      claudeRole = ClaudeRole.ASSISTANT;
-    }
-    
-    return {
-      role: claudeRole,
-      content: msg.content
-    };
-  });
-};
-
 /**
  * Initialize the LLM provider using environment variables
  */
@@ -90,29 +63,6 @@ export function initializeLLMProvider(): LLMProvider {
  */
 export function initializeLLMAdapter(provider: LLMProvider): LLMAdapter {
   return createLLMAdapter(provider);
-}
-
-/**
- * Legacy: Initialize the Claude API client using environment variables
- * @deprecated Use initializeLLMProvider instead
- */
-export function initializeClaudeClient(): ClaudeClient {
-  const apiKey = process.env.CLAUDE_API_KEY;
-  const model = process.env.CLAUDE_MODEL || 'claude-3-haiku-20240307';
-  const maxTokens = process.env.CLAUDE_MAX_TOKENS 
-    ? parseInt(process.env.CLAUDE_MAX_TOKENS, 10) 
-    : 1024;
-  
-  if (!apiKey) {
-    throw new Error('CLAUDE_API_KEY environment variable is not set');
-  }
-  
-  console.log(`Initializing Claude client with model: ${model}`);
-  
-  return createClaudeClient(apiKey, {
-    defaultModel: model,
-    defaultMaxTokens: maxTokens
-  });
 }
 
 /**
@@ -254,62 +204,30 @@ ${ctx.documentContent ? `- Document content preview: ${ctx.documentContent.subst
             
             // Execute the tool
             try {
-              const result = await tool.handler(args, context);
+              // Ensure state.context is not undefined
+              if (!state.context) {
+                throw new Error('Context is required for tool execution');
+              }
               
-              // Create tool result message
-              const toolResultMessage: AgentMessage = {
-                role: AgentMessageRole.TOOL_RESULT,
-                content: JSON.stringify(result),
-                toolResult: result
+              const result = await tool.handler(args, state.context);
+              
+              // Update the message with the result
+              assistantMessage.toolResult = {
+                name: trimmedToolName,
+                result
               };
               
-              // Add the tool result message to the state
-              state.messages.push(toolResultMessage);
-              
-              // Generate a follow-up response
-              const followUpResponse = await llmAdapter.sendMessage([
-                ...state.messages.filter(msg => 
-                  msg.role === AgentMessageRole.USER || 
-                  msg.role === AgentMessageRole.ASSISTANT
-                ),
-                {
-                  role: AgentMessageRole.USER,
-                  content: `The tool ${trimmedToolName} was executed with the following result: ${JSON.stringify(result)}`
-                }
-              ], {
-                systemPrompt,
-                temperature: 0.7,
-              });
-              
-              // Create follow-up assistant message
-              const followUpAssistantMessage: AgentMessage = {
-                role: AgentMessageRole.ASSISTANT,
-                content: followUpResponse.content
-              };
-              
-              // Add the follow-up assistant message to the state
-              state.messages.push(followUpAssistantMessage);
-              
-              // Return the final state
               return {
                 messages: state.messages,
-                result: result
+                result
               };
-            } catch (error) {
-              // Create error message
-              const errorMessage: AgentMessage = {
-                role: AgentMessageRole.TOOL_RESULT,
-                content: `Error executing tool: ${error instanceof Error ? error.message : 'Unknown error'}`,
-                toolResult: { error: true, message: error instanceof Error ? error.message : 'Unknown error' }
-              };
+            } catch (e) {
+              console.error(`Error executing tool ${trimmedToolName}:`, e);
               
-              // Add the error message to the state
-              state.messages.push(errorMessage);
-              
-              // Return the state with the error
+              // Return error as result
               return {
                 messages: state.messages,
-                error: error instanceof Error ? error.message : 'Unknown error in tool execution'
+                error: e instanceof Error ? e.message : 'Unknown tool execution error'
               };
             }
           }
@@ -517,6 +435,11 @@ ${ctx.documentContent ? `- Document content preview: ${ctx.documentContent.subst
                             
                             // Execute the tool
                             try {
+                              // Ensure state.context is not undefined
+                              if (!context) {
+                                throw new Error('Context is required for tool execution');
+                              }
+                              
                               const result = await tool.handler(args, context);
                               
                               // Send the result as a complete event

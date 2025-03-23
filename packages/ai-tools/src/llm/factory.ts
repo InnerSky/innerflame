@@ -1,5 +1,5 @@
 import { LLMProvider } from './interfaces/LLMProvider.js';
-import { AnthropicProvider, createAnthropicProvider } from './providers/anthropic/AnthropicProvider.js';
+import { createAnthropicAdapter } from './providers/anthropic/AnthropicAdapter.js';
 
 // Provider types
 export enum ProviderType {
@@ -21,7 +21,7 @@ export interface ProviderConfig {
 export function createLLMProvider(config: ProviderConfig): LLMProvider {
   switch (config.type) {
     case ProviderType.ANTHROPIC:
-      return createAnthropicProvider(config.apiKey, {
+      return createAnthropicAdapter(config.apiKey, {
         defaultModel: config.defaultModel,
         defaultMaxTokens: config.defaultMaxTokens
       });
