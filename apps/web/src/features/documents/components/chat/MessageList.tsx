@@ -2,11 +2,13 @@ import React, { useRef, useEffect, useState, useImperativeHandle, forwardRef, us
 import { Message as MessageModel } from '../../models/message.js';
 import { MessageItem } from './MessageItem.js';
 import { Spinner } from '@/components/Spinner.js';
+import { DocumentEditTagState } from '../../utils/documentEditUtils.js';
 
 interface MessageListProps {
   messages: MessageModel[];
   streamingContents: Record<string, string>;
   streamingMessages: Record<string, boolean>;
+  documentEditStates?: Record<string, DocumentEditTagState>;
   editingMessageId: string | null;
   isEditing: boolean;
   editedMessageIds: Set<string>;
@@ -26,6 +28,7 @@ export const MessageList = forwardRef<{ scrollToBottom: () => void }, MessageLis
   messages,
   streamingContents,
   streamingMessages,
+  documentEditStates = {}, // Default to empty object
   editingMessageId,
   isEditing,
   editedMessageIds,
@@ -188,6 +191,7 @@ export const MessageList = forwardRef<{ scrollToBottom: () => void }, MessageLis
                   message={message}
                   isStreaming={message.id in streamingMessages}
                   streamingContent={streamingContents[message.id]}
+                  documentEditState={documentEditStates[message.id]}
                   isEditing={editingMessageId === message.id}
                   isEditingLoading={isEditing}
                   isEdited={message.isEdited || editedMessageIds.has(message.id)}
@@ -204,6 +208,7 @@ export const MessageList = forwardRef<{ scrollToBottom: () => void }, MessageLis
                 message={message}
                 isStreaming={message.id in streamingMessages}
                 streamingContent={streamingContents[message.id]}
+                documentEditState={documentEditStates[message.id]}
                 isEditing={editingMessageId === message.id}
                 isEditingLoading={isEditing}
                 isEdited={message.isEdited || editedMessageIds.has(message.id)}

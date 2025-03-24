@@ -365,12 +365,35 @@ export function useDocuments(userId?: string) {
   
   // Select a document
   const selectDocument = useCallback((document: Document) => {
-    // If it's the same document, do nothing
-    if (selectedDocument?.id === document.id) {
+    // Check if it's the same document with the same version
+    if (selectedDocument?.id === document.id && 
+        selectedDocument?.versionNumber === document.versionNumber) {
+      // If same document and same version, do nothing
       return;
     }
     
-    // Check if there are unsaved changes
+    // If same document but different version, update without checking for unsaved changes
+    if (selectedDocument?.id === document.id && 
+        selectedDocument?.versionNumber !== document.versionNumber) {
+      console.log(`Refreshing document ${document.id} from version ${selectedDocument?.versionNumber} to ${document.versionNumber}`);
+      
+      // Switch to the new version
+      setSelectedDocument(document);
+      setTitle(document.title);
+      setContent(document.content);
+      setDocumentType(document.entityType);
+      
+      // Set content format from metadata if it exists, or default to Markdown
+      const format = document.metadata?.contentFormat || ContentFormat.Markdown;
+      setContentFormat(format);
+      
+      setPendingDocument(null);
+      setSaveStatus('idle');
+      setLastSaved(null);
+      return;
+    }
+    
+    // Different document, check if there are unsaved changes
     if (hasUnsavedChanges()) {
       setPendingDocument(document);
       setShowDiscardDialog(true);

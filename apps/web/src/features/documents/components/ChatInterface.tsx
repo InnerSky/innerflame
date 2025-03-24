@@ -85,6 +85,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
     editedMessageIds,
     streamingContents,
     streamingMessages,
+    documentEditStates,
     sendMessage: sendChatMessage,
     editMessage,
     deleteMessage
@@ -156,6 +157,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
           messages={chatHistory}
           streamingContents={streamingContents}
           streamingMessages={streamingMessages}
+          documentEditStates={documentEditStates}
           editingMessageId={editingMessageId}
           isEditing={isEditing}
           editedMessageIds={editedMessageIds}

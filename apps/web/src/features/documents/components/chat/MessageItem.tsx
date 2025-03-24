@@ -1,14 +1,25 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { Message as MessageModel } from '../../models/message.js';
 import { MarkdownRenderer } from '@/components/markdown-renderer.js';
 import { MessageActions } from '../MessageActions.js';
 import { MessageEditor } from '../MessageEditor.js';
 import { LoadingDots } from '@/components/ui/loading-dots.js';
+import { DocumentEditBubble } from './DocumentEditBubble.js';
+import { 
+  containsDocumentEditTags, 
+  parseDocumentEdit, 
+  DocumentEditTagState,
+  createSafeDisplayText,
+  parseMessageSegments,
+  parseStreamingSegments,
+  SegmentType
+} from '../../utils/documentEditUtils.js';
 
 interface MessageItemProps {
   message: MessageModel;
   isStreaming: boolean;
   streamingContent?: string;
+  documentEditState?: DocumentEditTagState;
   isEditing: boolean;
   isEditingLoading: boolean;
   isEdited: boolean;
@@ -24,6 +35,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
   message,
   isStreaming,
   streamingContent,
+  documentEditState: propDocumentEditState,
   isEditing,
   isEditingLoading,
   isEdited,
@@ -35,6 +47,61 @@ export const MessageItem: React.FC<MessageItemProps> = ({
   onStartEdit
 }) => {
   const isUserMessage = String(message.sender_type) === 'user';
+  
+  // Parse message into segments
+  const messageSegments = useMemo(() => {
+    // For user messages, don't segment
+    if (isUserMessage) {
+      return [{
+        type: SegmentType.TEXT,
+        content: message.content
+      }];
+    }
+    
+    // For streaming assistant messages
+    if (isStreaming && streamingContent) {
+      return parseStreamingSegments(streamingContent);
+    }
+    
+    // For completed assistant messages
+    if (message.content) {
+      return parseMessageSegments(message.content);
+    }
+    
+    return [];
+  }, [isUserMessage, isStreaming, streamingContent, message.content]);
+  
+  // Helper to render a segment based on its type
+  const renderSegment = (segment: any, index: number) => {
+    if (segment.type === SegmentType.TEXT) {
+      return (
+        <div key={`segment-${index}`} className="mb-3 last:mb-0">
+          <MarkdownRenderer 
+            content={segment.content} 
+            className="text-sm [&>*:first-child]:mt-0 [&>*:last-child]:mb-0" 
+          />
+        </div>
+      );
+    } else if (segment.type === SegmentType.DOCUMENT_EDIT) {
+      // Use state from prop if available, otherwise use the segment's state
+      const editState = propDocumentEditState !== undefined 
+        ? propDocumentEditState 
+        : segment.editState || DocumentEditTagState.NONE;
+      
+      // Log when document edit is rendered with its state
+      console.log(`Rendering document edit segment. State: ${editState}, Content length: ${segment.content?.length || 0}`);
+        
+      return (
+        <div key={`segment-${index}`} className="mb-3 last:mb-0">
+          <DocumentEditBubble 
+            content={segment.content} 
+            state={editState} 
+          />
+        </div>
+      );
+    }
+    return null;
+  };
   
   // Handle save edit
   const handleSaveEdit = async (newContent: string) => {
@@ -103,21 +170,29 @@ export const MessageItem: React.FC<MessageItemProps> = ({
             canEdit={false}
             position="right"
           />
-          {/* For streaming messages */}
-          {isStreaming ? (
-            streamingContent ? (
+          
+          {/* Display segmented content */}
+          {messageSegments.length > 0 ? (
+            <div className="assistant-message-segments">
+              {messageSegments.map(renderSegment)}
+            </div>
+          ) : (
+            /* Fallback for when we have no segments */
+            isStreaming ? (
+              streamingContent ? (
+                <MarkdownRenderer 
+                  content={createSafeDisplayText(streamingContent)} 
+                  className="text-sm [&>*:first-child]:mt-0 [&>*:last-child]:mb-0" 
+                />
+              ) : (
+                <LoadingDots />
+              )
+            ) : (
               <MarkdownRenderer 
-                content={streamingContent} 
+                content={message.content} 
                 className="text-sm [&>*:first-child]:mt-0 [&>*:last-child]:mb-0" 
               />
-            ) : (
-              <LoadingDots />
             )
-          ) : (
-            <MarkdownRenderer 
-              content={message.content} 
-              className="text-sm [&>*:first-child]:mt-0 [&>*:last-child]:mb-0" 
-            />
           )}
         </>
       )}

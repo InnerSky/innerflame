@@ -26,6 +26,12 @@ type CompleteEvent = {
   result?: any;
   messageId?: string;
   messageError?: string;
+  documentEdit?: {
+    processed: boolean;
+    updated: boolean;
+    versionNumber?: number;
+    error?: string;
+  };
 };
 
 // Event callback types

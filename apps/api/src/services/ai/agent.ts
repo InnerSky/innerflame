@@ -20,6 +20,8 @@ import {
   sendComplete, 
   sendError 
 } from '../../controllers/sse.js';
+// Import document system prompt
+import { DOCUMENT_SYSTEM_PROMPT, createDocumentSystemPrompt } from '../documents/documentSystemPrompt.js';
 
 /**
  * LangGraph agent implementation for InnerFlame API service
@@ -50,6 +52,34 @@ const createSystemMessage = (customPrompt?: string): AgentMessage => ({
   role: AgentMessageRole.SYSTEM,
   content: customPrompt || DEFAULT_SYSTEM_PROMPT
 });
+
+/**
+ * Get the appropriate system prompt based on context
+ * 
+ * If the context is a document, use the document-specific system prompt
+ * Otherwise, use the default system prompt
+ */
+function getSystemPromptForContext(context: AgentContext, customPrompt?: string): string {
+  // If a custom prompt is provided, use it directly
+  if (customPrompt) {
+    return customPrompt;
+  }
+  
+  // If context is for a document, use the document system prompt
+  if (context.contextType === 'document' && context.documentId) {
+    return createDocumentSystemPrompt({
+      documentId: context.documentId,
+      documentTitle: context.documentTitle,
+      documentContent: context.documentContent,
+      // Determine if enhanced capabilities should be used based on document metadata
+      // For now, this is always false, but could be configured in the future
+      enhancedCapabilities: false
+    });
+  }
+  
+  // Otherwise use the default system prompt
+  return DEFAULT_SYSTEM_PROMPT;
+}
 
 /**
  * Initialize the LLM provider using environment variables
@@ -118,26 +148,8 @@ export function createAgent(llmAdapter: LLMAdapter, tools: AgentTool[] = []) {
         throw new Error('No system message found');
       }
       
-      // Add context information to system prompt if available
-      let systemPrompt = systemMessage.content || DEFAULT_SYSTEM_PROMPT;
-      
-      if (state.context) {
-        const ctx = state.context;
-        let contextInfo = '';
-        
-        if (ctx.contextType === 'document' && ctx.documentId) {
-          contextInfo = `\nCurrent document context:
-- Document ID: ${ctx.documentId}
-- Document title: ${ctx.documentTitle || 'Untitled'}
-${ctx.documentContent ? `- Document content preview: ${ctx.documentContent.substring(0, 200)}...` : ''}`;
-        } else if (ctx.contextType === 'project' && ctx.projectId) {
-          contextInfo = `\nCurrent project context:
-- Project ID: ${ctx.projectId}
-- Project name: ${ctx.projectName || 'Unnamed Project'}`;
-        }
-        
-        systemPrompt += contextInfo;
-      }
+      // Get the appropriate system prompt for this context
+      let systemPrompt = getSystemPromptForContext(context);
       
       // Add tool descriptions if available
       if (state.tools && state.tools.length > 0) {
@@ -301,27 +313,8 @@ export function createStreamingAgent(llmAdapter: LLMAdapter, tools: AgentTool[] 
         content: input
       });
       
-      // Prepare system prompt with context information
-      let systemPrompt = DEFAULT_SYSTEM_PROMPT;
-      
-      // Add context information if available
-      if (context) {
-        const ctx = context;
-        let contextInfo = '';
-        
-        if (ctx.contextType === 'document' && ctx.documentId) {
-          contextInfo = `\nCurrent document context:
-- Document ID: ${ctx.documentId}
-- Document title: ${ctx.documentTitle || 'Untitled'}
-${ctx.documentContent ? `- Document content preview: ${ctx.documentContent.substring(0, 200)}...` : ''}`;
-        } else if (ctx.contextType === 'project' && ctx.projectId) {
-          contextInfo = `\nCurrent project context:
-- Project ID: ${ctx.projectId}
-- Project name: ${ctx.projectName || 'Unnamed Project'}`;
-        }
-        
-        systemPrompt += contextInfo;
-      }
+      // Get the appropriate system prompt for this context
+      let systemPrompt = getSystemPromptForContext(context);
       
       // Add tool descriptions if available
       if (tools && tools.length > 0) {
@@ -333,6 +326,9 @@ ${ctx.documentContent ? `- Document content preview: ${ctx.documentContent.subst
         
         systemPrompt += toolsInfo;
       }
+      
+      // Debug log to track which prompt is being used
+      console.log(`Using system prompt for ${context.contextType} context`);
       
       // Create a streaming response
       const stream = await llmAdapter.streamMessage(messages, {

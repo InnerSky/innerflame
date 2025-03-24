@@ -10,6 +10,14 @@ import {
 import { useAuth } from './useAuth.ts';
 import { useToast } from './use-toast.ts';
 import { limitChatHistoryTokens } from '@/utils/textUtils.js';
+import {
+  containsDocumentEditTags,
+  parseDocumentEdit,
+  DocumentEditTagState,
+  parseStreamingSegments,
+  SegmentType
+} from '@/features/documents/utils/documentEditUtils.js';
+import { useDocumentsContext } from '@/features/documents/contexts/DocumentsContext.js';
 
 interface UseChatInterfaceProps {
   contextType: MessageContextType;
@@ -25,6 +33,7 @@ interface StreamingState {
   streamingContents: Record<string, string>;
   streamingMessages: Record<string, boolean>;
   currentStreamingId: string | null;
+  documentEditStates: Record<string, DocumentEditTagState>;
 }
 
 export function useChatInterface({
@@ -51,7 +60,8 @@ export function useChatInterface({
     isStreaming: false,
     streamingContents: {},
     streamingMessages: {},
-    currentStreamingId: null
+    currentStreamingId: null,
+    documentEditStates: {}
   });
   
   // Refs
@@ -60,10 +70,17 @@ export function useChatInterface({
   const prevContextRef = useRef<{contextType?: MessageContextType, contextId?: string | null}>({});
   const hasLoadedMessagesRef = useRef<boolean>(false);
   const loadingContextRef = useRef<{contextType?: MessageContextType, contextId?: string | null}>({});
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
   
   // Services
   const { user } = useAuth();
   const { toast } = useToast();
+  
+  // Get documents context for document refresh
+  const documentsContext = useDocumentsContext();
+  
+  // Store the latest streaming content for state management
+  const latestStreamingContentRef = useRef<Record<string, string>>({});
   
   // Helper function to update streaming state
   const updateStreamingState = useCallback((updates: Partial<StreamingState>) => {
@@ -130,7 +147,24 @@ export function useChatInterface({
           new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
         );
         
+        // Process loaded messages for document edits
+        const documentEditStates: Record<string, DocumentEditTagState> = {};
+        
+        messages.forEach(message => {
+          if (message.sender_type === 'assistant' && message.content) {
+            if (containsDocumentEditTags(message.content)) {
+              const editData = parseDocumentEdit(message.content);
+              documentEditStates[message.id] = editData.state;
+            }
+          }
+        });
+        
         setChatHistory(messages);
+        
+        // Update document edit states if any were found
+        if (Object.keys(documentEditStates).length > 0) {
+          updateStreamingState({ documentEditStates });
+        }
         
         // Mark this context as having been loaded
         hasLoadedMessagesRef.current = true;
@@ -147,7 +181,51 @@ export function useChatInterface({
     };
     
     loadMessages();
-  }, [contextType, contextId, user, toast]);
+  }, [contextType, contextId, user, toast, updateStreamingState]);
+  
+  // Process streaming content for document edits
+  const processDocumentEditTags = useCallback((messageId: string, content: string) => {
+    // Clear any pending debounce timer
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+    
+    // Set a debounced timer to prevent too many state updates
+    debounceTimerRef.current = setTimeout(() => {
+      // Check for document edit tags first
+      if (containsDocumentEditTags(content)) {
+        // If found, use the original approach which has the correct types
+        const editData = parseDocumentEdit(content);
+        
+        // Only update if the state has changed
+        setStreamingState(prev => {
+          const currentState = prev.documentEditStates[messageId];
+          
+          // Log state transitions for debugging
+          if (currentState !== editData.state) {
+            console.log(`Document edit state transition: ${currentState} -> ${editData.state}`, { 
+              hasContentTag: content.includes('<content>'),
+              contentLength: editData.content?.length
+            });
+          }
+          
+          if (currentState === editData.state) {
+            return prev;
+          }
+          
+          return {
+            ...prev,
+            documentEditStates: {
+              ...prev.documentEditStates,
+              [messageId]: editData.state
+            }
+          };
+        });
+      }
+      
+      debounceTimerRef.current = null;
+    }, 50); // Reduce debounce to 50ms to be more responsive to state changes
+  }, []);
   
   // Send a message and start streaming the response
   const sendMessage = async (messageContent: string) => {
@@ -197,6 +275,10 @@ export function useChatInterface({
         streamingMessages: {
           ...streamingState.streamingMessages,
           [streamingId]: true
+        },
+        documentEditStates: {
+          ...streamingState.documentEditStates,
+          [streamingId]: DocumentEditTagState.NONE
         }
       });
       
@@ -257,16 +339,46 @@ export function useChatInterface({
         onChunk: (chunk) => {
           // Update streaming content for this specific message ID
           setStreamingState(prev => {
-            const updatedContents = {
-              ...prev.streamingContents,
-              [streamingId]: (prev.streamingContents[streamingId] || '') + chunk
-            };
+            // Add the new chunk to existing content
+            const updatedContent = (prev.streamingContents[streamingId] || '') + chunk;
             
+            // Check for document edit tags and parse immediately
+            let updatedDocumentEditStates = {...prev.documentEditStates};
+            if (containsDocumentEditTags(updatedContent)) {
+              const editData = parseDocumentEdit(updatedContent);
+              const currentState = prev.documentEditStates[streamingId];
+              
+              // Log state transitions for debugging
+              if (currentState !== editData.state) {
+                console.log(`Document edit state transition: ${currentState} -> ${editData.state}`, { 
+                  hasContentTag: updatedContent.includes('<content>'),
+                  contentLength: editData.content?.length
+                });
+              }
+              
+              // Update state
+              updatedDocumentEditStates = {
+                ...updatedDocumentEditStates,
+                [streamingId]: editData.state
+              };
+            }
+            
+            // Update streaming state - both content and document edit state
             return {
               ...prev,
-              streamingContents: updatedContents
+              streamingContents: {
+                ...prev.streamingContents,
+                [streamingId]: updatedContent
+              },
+              documentEditStates: updatedDocumentEditStates
             };
           });
+          
+          // Remove debounced tag processing - we now do it directly
+          // processDocumentEditTags(
+          //   streamingId, 
+          //   (streamingState.streamingContents[streamingId] || '') + chunk
+          // );
         },
         onError: (error) => {
           console.error('Streaming error:', error);
@@ -286,16 +398,75 @@ export function useChatInterface({
             const updatedContents = {...prev.streamingContents};
             delete updatedContents[streamingId];
             
+            const updatedDocumentEditStates = {...prev.documentEditStates};
+            delete updatedDocumentEditStates[streamingId];
+            
             return {
               isStreaming: Object.keys(updatedMessages).length > 0,
               streamingMessages: updatedMessages,
               streamingContents: updatedContents,
+              documentEditStates: updatedDocumentEditStates,
               currentStreamingId: Object.keys(updatedMessages).length > 0 ? prev.currentStreamingId : null
             };
           });
         },
         onComplete: async (data) => {
           setIsLoading(false);
+          
+          // If there is a document edit that was successfully processed
+          if (data.documentEdit?.updated) {
+            console.log('Document edit detected and processed with new version:', data.documentEdit.versionNumber);
+            
+            // If this is a document context, we can refresh the document
+            if (contextType === MessageContextType.Document && contextId) {
+              // If we have a selected document that matches, refresh it
+              if (documentsContext.selectedDocument?.id === contextId) {
+                // Fetch document versions to update UI
+                documentsContext.fetchDocumentVersions(contextId);
+                
+                // Properly refresh the document selection instead of directly manipulating editor content
+                try {
+                  const repository = new (await import('@/features/documents/repositories/documentRepository.js')).DocumentRepository();
+                  const updatedDoc = await repository.getDocumentWithVersions(contextId);
+                  
+                  if (updatedDoc) {
+                    if (documentsContext.hasUnsavedChanges) {
+                      // Show a notification about the version update but don't override current edits
+                      toast({
+                        title: "Document Updated in Background",
+                        description: `AI edit applied as version ${data.documentEdit.versionNumber}. Refresh document to view changes.`,
+                        variant: "default"
+                      });
+                      
+                      // Still update version list
+                      documentsContext.fetchDocumentVersions(contextId);
+                    } else {
+                      // No unsaved changes, safe to switch to the new version
+                      documentsContext.selectDocument(updatedDoc);
+                      
+                      toast({
+                        title: "Document Updated",
+                        description: `AI edit applied as version ${data.documentEdit.versionNumber}`,
+                        variant: "default"
+                      });
+                    }
+                  }
+                } catch (error) {
+                  console.error('Error refreshing document:', error);
+                }
+              }
+            }
+          } else if (data.documentEdit?.processed && data.documentEdit?.error) {
+            // If there was an error processing the document edit
+            console.error('Error processing document edit:', data.documentEdit.error);
+            
+            // Show a toast notification
+            toast({
+              title: "Document Update Failed",
+              description: data.documentEdit.error,
+              variant: "destructive"
+            });
+          }
           
           // Handle the server-side saved message
           if (data.messageId) {
@@ -319,10 +490,14 @@ export function useChatInterface({
                 const updatedContents = {...prev.streamingContents};
                 delete updatedContents[streamingId];
                 
+                const updatedDocumentEditStates = {...prev.documentEditStates};
+                delete updatedDocumentEditStates[streamingId];
+                
                 return {
                   isStreaming: Object.keys(updatedMessages).length > 0,
                   streamingMessages: updatedMessages,
                   streamingContents: updatedContents,
+                  documentEditStates: updatedDocumentEditStates,
                   currentStreamingId: Object.keys(updatedMessages).length > 0 ? prev.currentStreamingId : null
                 };
               });
@@ -344,10 +519,14 @@ export function useChatInterface({
                 const updatedContents = {...prev.streamingContents};
                 delete updatedContents[streamingId];
                 
+                const updatedDocumentEditStates = {...prev.documentEditStates};
+                delete updatedDocumentEditStates[streamingId];
+                
                 return {
                   isStreaming: Object.keys(updatedMessages).length > 0,
                   streamingMessages: updatedMessages,
                   streamingContents: updatedContents,
+                  documentEditStates: updatedDocumentEditStates,
                   currentStreamingId: Object.keys(updatedMessages).length > 0 ? prev.currentStreamingId : null
                 };
               });
@@ -376,10 +555,14 @@ export function useChatInterface({
               const updatedContents = {...prev.streamingContents};
               delete updatedContents[streamingId];
               
+              const updatedDocumentEditStates = {...prev.documentEditStates};
+              delete updatedDocumentEditStates[streamingId];
+              
               return {
                 isStreaming: Object.keys(updatedMessages).length > 0,
                 streamingMessages: updatedMessages,
                 streamingContents: updatedContents,
+                documentEditStates: updatedDocumentEditStates,
                 currentStreamingId: Object.keys(updatedMessages).length > 0 ? prev.currentStreamingId : null
               };
             });
@@ -486,6 +669,55 @@ export function useChatInterface({
     }
   };
   
+  // React to streaming state changes and ensure we consistently check for document edits
+  useEffect(() => {
+    // Update the latestStreamingContentRef with the current streamingContents
+    latestStreamingContentRef.current = streamingState.streamingContents;
+    
+    // If we have active streaming messages, set up a refresh interval
+    if (streamingState.isStreaming && Object.keys(streamingState.streamingMessages).length > 0) {
+      // Refresh document edit states every 200ms to ensure we catch all state changes
+      const refreshInterval = setInterval(() => {
+        const updatedStates: Record<string, DocumentEditTagState> = {};
+        let hasChanges = false;
+        
+        // Check each streaming message for document edit state changes
+        Object.keys(streamingState.streamingMessages).forEach(msgId => {
+          const content = latestStreamingContentRef.current[msgId];
+          if (content && containsDocumentEditTags(content)) {
+            const editData = parseDocumentEdit(content);
+            const currentState = streamingState.documentEditStates[msgId];
+            
+            // Only update if the state has changed
+            if (currentState !== editData.state) {
+              updatedStates[msgId] = editData.state;
+              hasChanges = true;
+              
+              console.log(`Refresh interval - State update: ${currentState} -> ${editData.state}`, {
+                messageId: msgId,
+                hasContentTag: content.includes('<content>'),
+                contentLength: editData.content?.length
+              });
+            }
+          }
+        });
+        
+        // Update the streaming state if we have changes
+        if (hasChanges) {
+          setStreamingState(prev => ({
+            ...prev,
+            documentEditStates: {
+              ...prev.documentEditStates,
+              ...updatedStates
+            }
+          }));
+        }
+      }, 200);
+      
+      return () => clearInterval(refreshInterval);
+    }
+  }, [streamingState.isStreaming, streamingState.streamingMessages]);
+  
   return {
     // Message state
     chatHistory,
@@ -504,6 +736,7 @@ export function useChatInterface({
     streamingContents: streamingState.streamingContents,
     streamingMessages: streamingState.streamingMessages,
     currentStreamingId: streamingState.currentStreamingId,
+    documentEditStates: streamingState.documentEditStates,
     
     // Methods
     sendMessage,

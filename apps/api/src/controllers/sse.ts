@@ -1,5 +1,6 @@
 import { Response, Request } from 'express';
 import { MessageService } from '../services/message/messageService.js';
+import { processDocumentEdit } from '../handlers/documentEditHandler.js';
 
 /**
  * Server-Sent Events Controller for streaming responses
@@ -68,6 +69,12 @@ export async function sendComplete(req: Request, res: Response, data: any = {}):
     let savedMessage = null;
     let error = null;
     
+    // Process document edit if present
+    let documentEditResult = null;
+    if (contextType === 'document' && fullResponse) {
+      documentEditResult = await processDocumentEdit(req, fullResponse);
+    }
+    
     // Save message to Supabase if we have a user ID and content
     if (userId && fullResponse) {
       try {
@@ -92,7 +99,13 @@ export async function sendComplete(req: Request, res: Response, data: any = {}):
       type: 'complete', 
       ...data,
       messageId: savedMessage?.id,
-      messageError: error
+      messageError: error,
+      documentEdit: documentEditResult ? {
+        processed: documentEditResult.processed,
+        updated: documentEditResult.documentUpdated,
+        versionNumber: documentEditResult.versionNumber,
+        error: documentEditResult.error
+      } : null
     });
   } catch (err) {
     console.error('Error in sendComplete:', err);
