@@ -35,7 +35,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { supabase } from "@/lib/supabase";
-const OfflinePage = lazy(() => import("./pages/OfflinePage"));
+const OfflinePage = lazy(() => import("./pages/OfflinePage.js"));
+const LeanCanvas = lazy(() => import("./pages/LeanCanvas.js"));
 
 function App() {
   return (
@@ -239,9 +240,10 @@ function AppContent() {
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
   const [isAdmin, setIsAdmin] = useState(false);
   
-  // Check if we're on the documents page
+  // Check if we're on the documents page or lean-canvas page
   const isDocumentsPage = location.pathname === '/documents';
-  const hideNavAndFooter = isDocumentsPage;
+  const isLeanCanvasPage = location.pathname === '/lean-canvas';
+  const hideNavAndFooter = isDocumentsPage || isLeanCanvasPage;
 
   // Check admin status when user changes
   useEffect(() => {
@@ -369,9 +371,9 @@ function AppContent() {
                   <span className="ml-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">→</span>
                 </Button>
               </Link>
-              <Link to="/documents">
+              <Link to="/lean-canvas">
                 <Button variant="ghost" className="group">
-                  Documents
+                  Lean Canvas
                   <span className="ml-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">→</span>
                 </Button>
               </Link>
@@ -398,9 +400,9 @@ function AppContent() {
                   <ChevronRight className="ml-auto h-4 w-4" />
                 </Button>
               </Link>
-              <Link to="/documents">
+              <Link to="/lean-canvas">
                 <Button variant="ghost" className="w-full justify-start text-sm sm:text-base">
-                  Documents
+                  Lean Canvas
                   <ChevronRight className="ml-auto h-4 w-4" />
                 </Button>
               </Link>
@@ -423,6 +425,7 @@ function AppContent() {
           <Route path="/auth/callback" element={<AuthCallback />} />
           <Route path="/admin" element={<AdminPage />} />
           <Route path="/documents" element={<Documents />} />
+          <Route path="/lean-canvas" element={<LeanCanvas />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/offline" element={<OfflinePage />} />
           <Route path="/usage-policy" element={<UsagePolicy />} />

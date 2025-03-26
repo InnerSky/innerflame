@@ -8,6 +8,14 @@ export default {
   ],
   theme: {
     extend: {
+      fontSize: {
+        // Custom font sizes with line heights
+        xs: ['0.875rem', { lineHeight: '1.25rem' }],  // 14px
+        sm: ['1rem', { lineHeight: '1.5rem' }],       // 16px
+        base: ['1.125rem', { lineHeight: '1.75rem' }], // 18px
+        lg: ['1.25rem', { lineHeight: '1.875rem' }],   // 20px
+        xl: ['1.375rem', { lineHeight: '2rem' }],      // 22px
+      },
       borderRadius: {
         lg: 'var(--radius)',
         md: 'calc(var(--radius) - 2px)',

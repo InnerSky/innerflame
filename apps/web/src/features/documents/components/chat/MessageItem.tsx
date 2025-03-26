@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useCallback } from 'react';
 import { Message as MessageModel } from '../../models/message.js';
 import { MarkdownRenderer } from '@/components/markdown-renderer.js';
 import { MessageActions } from '../MessageActions.js';
@@ -71,8 +71,8 @@ export const MessageItem: React.FC<MessageItemProps> = ({
     return [];
   }, [isUserMessage, isStreaming, streamingContent, message.content]);
   
-  // Helper to render a segment based on its type
-  const renderSegment = (segment: any, index: number) => {
+  // Memoize the renderSegment function to prevent recreating it on each render
+  const renderSegment = useCallback((segment: any, index: number) => {
     if (segment.type === SegmentType.TEXT) {
       return (
         <div key={`segment-${index}`} className="mb-3 last:mb-0">
@@ -88,9 +88,6 @@ export const MessageItem: React.FC<MessageItemProps> = ({
         ? propDocumentEditState 
         : segment.editState || DocumentEditTagState.NONE;
       
-      // Log when document edit is rendered with its state
-      console.log(`Rendering document edit segment. State: ${editState}, Content length: ${segment.content?.length || 0}`);
-        
       return (
         <div key={`segment-${index}`} className="mb-3 last:mb-0">
           <DocumentEditBubble 
@@ -101,7 +98,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
       );
     }
     return null;
-  };
+  }, [propDocumentEditState]); // Only recreate when propDocumentEditState changes
   
   // Handle save edit
   const handleSaveEdit = async (newContent: string) => {

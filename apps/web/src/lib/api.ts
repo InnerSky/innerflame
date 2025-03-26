@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import type { Database } from '@/types/supabase';
+import type { Database } from '@innerflame/types';
 
 export type Article = Database['public']['Tables']['articles']['Row'];
 

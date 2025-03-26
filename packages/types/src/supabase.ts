@@ -11,6 +11,7 @@ export type Database = {
     Tables: {
       articles: {
         Row: {
+          archived: boolean
           author_id: string | null
           content: string
           created_at: string
@@ -20,11 +21,13 @@ export type Database = {
           image_url: string | null
           published: boolean | null
           slug: string | null
+          source_urls: string | null
           title: string
           updated_at: string
           x_min_read: number | null
         }
         Insert: {
+          archived?: boolean
           author_id?: string | null
           content: string
           created_at?: string
@@ -34,11 +37,13 @@ export type Database = {
           image_url?: string | null
           published?: boolean | null
           slug?: string | null
+          source_urls?: string | null
           title: string
           updated_at?: string
           x_min_read?: number | null
         }
         Update: {
+          archived?: boolean
           author_id?: string | null
           content?: string
           created_at?: string
@@ -48,6 +53,7 @@ export type Database = {
           image_url?: string | null
           published?: boolean | null
           slug?: string | null
+          source_urls?: string | null
           title?: string
           updated_at?: string
           x_min_read?: number | null
@@ -62,7 +68,7 @@ export type Database = {
           },
         ]
       }
-      Categories_of_experience: {
+      categories: {
         Row: {
           aka: string | null
           created_at: string
@@ -83,27 +89,6 @@ export type Database = {
         }
         Relationships: []
       }
-      documents: {
-        Row: {
-          content: string | null
-          embedding: string | null
-          id: string | null
-          metadata: Json | null
-        }
-        Insert: {
-          content?: string | null
-          embedding?: string | null
-          id?: string | null
-          metadata?: Json | null
-        }
-        Update: {
-          content?: string | null
-          embedding?: string | null
-          id?: string | null
-          metadata?: Json | null
-        }
-        Relationships: []
-      }
       entities: {
         Row: {
           content: string | null
@@ -114,6 +99,7 @@ export type Database = {
           title: string
           updated_at: string | null
           user_id: string
+          active_version_id: string | null
         }
         Insert: {
           content?: string | null
@@ -124,6 +110,7 @@ export type Database = {
           title: string
           updated_at?: string | null
           user_id: string
+          active_version_id?: string | null
         }
         Update: {
           content?: string | null
@@ -134,6 +121,7 @@ export type Database = {
           title?: string
           updated_at?: string | null
           user_id?: string
+          active_version_id?: string | null
         }
         Relationships: [
           {
@@ -143,6 +131,13 @@ export type Database = {
             referencedRelation: "users"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "entities_active_version_id_fkey"
+            columns: ["active_version_id"]
+            isOneToOne: false
+            referencedRelation: "entity_versions"
+            referencedColumns: ["id"]
+          }
         ]
       }
       entity_versions: {
@@ -207,30 +202,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
-      }
-      insights: {
-        Row: {
-          content: string | null
-          created_at: string
-          from_id_paragrphs_of_insights: number | null
-          id: string | null
-          title: string | null
-        }
-        Insert: {
-          content?: string | null
-          created_at?: string
-          from_id_paragrphs_of_insights?: number | null
-          id?: string | null
-          title?: string | null
-        }
-        Update: {
-          content?: string | null
-          created_at?: string
-          from_id_paragrphs_of_insights?: number | null
-          id?: string | null
-          title?: string | null
-        }
-        Relationships: []
       }
       message_references: {
         Row: {
@@ -361,45 +332,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
-      }
-      n8n_chat_histories: {
-        Row: {
-          id: number
-          message: Json
-          session_id: string
-        }
-        Insert: {
-          id?: number
-          message: Json
-          session_id: string
-        }
-        Update: {
-          id?: number
-          message?: Json
-          session_id?: string
-        }
-        Relationships: []
-      }
-      paragraphs_of_insights: {
-        Row: {
-          created_at: string
-          id: number
-          processed: boolean
-          text: string | null
-        }
-        Insert: {
-          created_at?: string
-          id?: number
-          processed?: boolean
-          text?: string | null
-        }
-        Update: {
-          created_at?: string
-          id?: number
-          processed?: boolean
-          text?: string | null
-        }
-        Relationships: []
       }
       resource: {
         Row: {

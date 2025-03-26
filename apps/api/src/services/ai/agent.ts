@@ -20,8 +20,8 @@ import {
   sendComplete, 
   sendError 
 } from '../../controllers/sse.js';
-// Import document system prompt
-import { DOCUMENT_SYSTEM_PROMPT, createDocumentSystemPrompt } from '../documents/documentSystemPrompt.js';
+// Import the new prompt system
+import { createSystemPrompt, ContextType, PlaybookType } from '../prompts/index.js';
 
 /**
  * LangGraph agent implementation for InnerFlame API service
@@ -29,56 +29,55 @@ import { DOCUMENT_SYSTEM_PROMPT, createDocumentSystemPrompt } from '../documents
  * This implements a minimal agent for document interactions.
  */
 
-// Default system prompt
-const DEFAULT_SYSTEM_PROMPT = `You are a helpful AI assistant for a document editing application called InnerFlame.
-Your primary responsibility is to help users with their documents and projects.
-
-When helping users:
-- Provide concise, relevant information
-- If you need to reference a document, use the tools provided
-- Only use the tools when necessary
-- Respond in a friendly, professional tone
-
-IMPORTANT: To use a tool, format your response with the tool name and arguments in double curly braces like this:
-{{toolName: {"arg1": "value1", "arg2": "value2"}}}
-
-For example, to update a document:
-{{updateDocument: {"documentId": "doc-123", "content": "New content", "reason": "User requested update"}}}
-
-Only use tools when explicitly asked, and make sure to provide the required arguments.`;
-
-// Create system message
-const createSystemMessage = (customPrompt?: string): AgentMessage => ({
+/**
+ * Create system message using our prompt system
+ */
+const createSystemMessage = (customPrompt?: string, context: AgentContext = { userId: 'default', contextType: 'general' }): AgentMessage => ({
   role: AgentMessageRole.SYSTEM,
-  content: customPrompt || DEFAULT_SYSTEM_PROMPT
+  content: customPrompt || getSystemPromptForContext(context)
 });
 
 /**
  * Get the appropriate system prompt based on context
  * 
- * If the context is a document, use the document-specific system prompt
- * Otherwise, use the default system prompt
+ * Uses our configuration-based prompt system
  */
-function getSystemPromptForContext(context: AgentContext, customPrompt?: string): string {
+function getSystemPromptForContext(context: AgentContext, customPrompt?: string, shouldLog: boolean = false): string {
   // If a custom prompt is provided, use it directly
   if (customPrompt) {
     return customPrompt;
   }
   
-  // If context is for a document, use the document system prompt
-  if (context.contextType === 'document' && context.documentId) {
-    return createDocumentSystemPrompt({
-      documentId: context.documentId,
-      documentTitle: context.documentTitle,
-      documentContent: context.documentContent,
-      // Determine if enhanced capabilities should be used based on document metadata
-      // For now, this is always false, but could be configured in the future
-      enhancedCapabilities: false
-    });
+  // Create a configuration object based on the context
+  const promptConfig = {
+    // Pass the context type
+    contextType: context.contextType,
+    
+    // Document capabilities
+    enableDocumentEditing: context.contextType === 'document',
+    documentId: context.documentId,
+    documentTitle: context.documentTitle,
+    documentContent: context.documentContent,
+    
+    // Enable playbook capability with LEAN_CANVAS_CHAPTER1
+    enablePlaybook: true,
+    playbookType: PlaybookType.LEAN_CANVAS_CHAPTER1
+  };
+  
+  // Log what playbook is being used
+  console.log(`Using playbook: ${promptConfig.playbookType}`);
+  
+  // Use our new configuration-based system prompt
+  const fullPrompt = createSystemPrompt(promptConfig);
+  
+  // Log the full prompt for debugging, but only if requested
+  if (shouldLog) {
+    console.log('=== FULL SYSTEM PROMPT ===');
+    console.log(fullPrompt);
+    console.log('=========================');
   }
   
-  // Otherwise use the default system prompt
-  return DEFAULT_SYSTEM_PROMPT;
+  return fullPrompt;
 }
 
 /**
@@ -107,7 +106,7 @@ export function createAgent(llmAdapter: LLMAdapter, tools: AgentTool[] = []) {
     // Initialize state
     let state: AgentState = {
       messages: [
-        createSystemMessage(),
+        createSystemMessage(undefined, context),
       ],
       context,
       tools,
@@ -149,7 +148,7 @@ export function createAgent(llmAdapter: LLMAdapter, tools: AgentTool[] = []) {
       }
       
       // Get the appropriate system prompt for this context
-      let systemPrompt = getSystemPromptForContext(context);
+      let systemPrompt = getSystemPromptForContext(context, undefined, false);
       
       // Add tool descriptions if available
       if (state.tools && state.tools.length > 0) {
@@ -284,7 +283,7 @@ export function createStreamingAgent(llmAdapter: LLMAdapter, tools: AgentTool[] 
       
       // Initialize messages with system prompt and user input
       const messages: AgentMessage[] = [
-        createSystemMessage(),
+        createSystemMessage(undefined, context),
       ];
       
       // Add chat history if available
@@ -314,7 +313,7 @@ export function createStreamingAgent(llmAdapter: LLMAdapter, tools: AgentTool[] 
       });
       
       // Get the appropriate system prompt for this context
-      let systemPrompt = getSystemPromptForContext(context);
+      let systemPrompt = getSystemPromptForContext(context, undefined, true);
       
       // Add tool descriptions if available
       if (tools && tools.length > 0) {
@@ -327,8 +326,13 @@ export function createStreamingAgent(llmAdapter: LLMAdapter, tools: AgentTool[] 
         systemPrompt += toolsInfo;
       }
       
+      // Force direct logging of the full prompt
+      console.log('=== FULL SYSTEM PROMPT (DIRECT LOG) ===');
+      console.log(systemPrompt);
+      console.log('=====================================');
+      
       // Debug log to track which prompt is being used
-      console.log(`Using system prompt for ${context.contextType} context`);
+      console.log(`Using system prompt for ${context.contextType} context with playbook: ${PlaybookType.LEAN_CANVAS_CHAPTER1}`);
       
       // Create a streaming response
       const stream = await llmAdapter.streamMessage(messages, {

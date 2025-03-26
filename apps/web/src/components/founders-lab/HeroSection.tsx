@@ -6,6 +6,9 @@ import { AnimatedSection } from "@/components/animated-section";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useState } from "react";
+import { useAuth } from "@/contexts/AuthContext.js";
+import { useNavigate } from "react-router-dom";
+import leanCanvasService from "@/features/documents/services/leanCanvasService.js";
 
 interface HeroSectionProps {
   scrollToCheckout: () => void;
@@ -13,13 +16,32 @@ interface HeroSectionProps {
 
 export function HeroSection({ scrollToCheckout }: HeroSectionProps) {
   const [startupIdea, setStartupIdea] = useState("");
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const [isCreating, setIsCreating] = useState(false);
 
-  const handleGenerateCanvas = () => {
-    // Here you would implement the logic to generate the Lean Canvas
-    // For now, we'll just alert the idea, but this would connect to your backend/API
-    if (startupIdea.trim()) {
-      alert(`Generating Lean Canvas for: ${startupIdea}`);
-      // This is where you would trigger the canvas generation
+  const handleGenerateCanvas = async () => {
+    if (!startupIdea.trim()) return;
+    
+    if (!user?.id) {
+      // If user is not logged in, we could redirect to auth or handle appropriately
+      alert("Please sign in to generate a Lean Canvas");
+      return;
+    }
+    
+    try {
+      setIsCreating(true);
+      
+      // Use the service to create the lean canvas
+      await leanCanvasService.createLeanCanvas(user.id);
+      
+      // Navigate to the lean canvas page
+      navigate("/lean-canvas");
+    } catch (error) {
+      console.error("Error creating lean canvas:", error);
+      alert("Failed to create lean canvas. Please try again.");
+    } finally {
+      setIsCreating(false);
     }
   };
 
@@ -129,9 +151,10 @@ export function HeroSection({ scrollToCheckout }: HeroSectionProps) {
                   onClick={handleGenerateCanvas}
                   size="lg"
                   className="w-full bg-primary hover:bg-primary/90 text-white"
+                  disabled={isCreating}
                 >
                   <Zap className="mr-2 h-5 w-5" />
-                  Generate Lean Canvas Now
+                  {isCreating ? "Creating Canvas..." : "Generate Lean Canvas Now"}
                 </Button>
               </div>
               

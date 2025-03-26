@@ -25,8 +25,12 @@ export function DocumentTypeSelector({ value, onChange }: DocumentTypeSelectorPr
         return "Project";
       case DocumentType.JournalEntry:
         return "Journal Entry";
-      case DocumentType.FuturePressConference:
-        return "Future Press Conference";
+      case DocumentType.FuturePressRelease:
+        return "Future Press Release";
+      case DocumentType.LeanCanvas:
+        return "Lean Canvas";
+      case DocumentType.SalesPage:
+        return "Sales Page";
       default:
         return type.replace(/([A-Z])/g, ' $1').trim();
     }

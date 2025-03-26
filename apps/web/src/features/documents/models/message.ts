@@ -1,4 +1,4 @@
-import { Tables } from "@/types/supabase";
+import { Tables } from "@innerflame/types";
 
 // Message context types
 export enum MessageContextType {

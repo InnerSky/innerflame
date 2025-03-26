@@ -5,15 +5,94 @@ import { createFullContent } from '../../utils/documentUtils.js';
  * Extract document content from XML tags
  */
 export function extractDocumentContent(text: string): string | null {
-  const match = text.match(/<document_edit>\s*<content>([\s\S]*?)<\/content>\s*<\/document_edit>/i);
-  return match ? match[1].trim() : null;
+  // Check for new write_to_file format first
+  const writeToFileMatch = text.match(/<write_to_file>\s*<content>([\s\S]*?)<\/content>\s*<\/write_to_file>/i);
+  if (writeToFileMatch) {
+    return writeToFileMatch[1].trim();
+  }
+  
+  // Check for replace_in_file format
+  const replaceInFileMatch = text.match(/<replace_in_file>\s*<diff>([\s\S]*?)<\/diff>\s*<\/replace_in_file>/i);
+  if (replaceInFileMatch) {
+    return replaceInFileMatch[1].trim();
+  }
+  
+  // Fallback to old document_edit format for backward compatibility
+  const documentEditMatch = text.match(/<document_edit>\s*<content>([\s\S]*?)<\/content>\s*<\/document_edit>/i);
+  return documentEditMatch ? documentEditMatch[1].trim() : null;
+}
+
+/**
+ * Extract all diff blocks from replace_in_file tags
+ */
+export function extractDiffBlocks(text: string): string[] {
+  const diffBlocks: string[] = [];
+  const regex = /<replace_in_file>\s*<diff>([\s\S]*?)<\/diff>\s*<\/replace_in_file>/gi;
+  
+  let match;
+  while ((match = regex.exec(text)) !== null) {
+    diffBlocks.push(match[1].trim());
+  }
+  
+  return diffBlocks;
+}
+
+/**
+ * Process a single search/replace diff block
+ * Returns the new content after applying the replacement
+ */
+export function processSearchReplace(content: string, diffBlock: string): string {
+  // Parse the diff block to extract search and replace sections
+  const searchMatch = diffBlock.match(/<<<<<<< SEARCH\s*([\s\S]*?)=======\s*/);
+  const replaceMatch = diffBlock.match(/=======\s*([\s\S]*?)>>>>>>> REPLACE/);
+  
+  if (!searchMatch || !replaceMatch) {
+    console.warn('Invalid diff block format:', diffBlock);
+    return content;
+  }
+  
+  const searchText = searchMatch[1];
+  const replaceText = replaceMatch[1];
+  
+  // Perform the replacement
+  // Using a simple string replacement approach
+  if (content.includes(searchText)) {
+    return content.replace(searchText, replaceText);
+  } else {
+    console.warn('Search text not found in content:', searchText);
+    return content; // Return unchanged if search text not found
+  }
+}
+
+/**
+ * Applies all search/replace operations from replace_in_file tags
+ */
+export function applyDiffBlocks(originalContent: string, fullResponse: string): string {
+  // Check if the response contains replace_in_file tags
+  if (!fullResponse.includes('<replace_in_file>')) {
+    return originalContent;
+  }
+  
+  // Extract all diff blocks from the response
+  const diffBlocks = extractDiffBlocks(fullResponse);
+  
+  // Apply each diff block in sequence
+  let updatedContent = originalContent;
+  for (const diffBlock of diffBlocks) {
+    updatedContent = processSearchReplace(updatedContent, diffBlock);
+  }
+  
+  return updatedContent;
 }
 
 /**
  * Detect if a string contains document edit tags
  */
 export function containsDocumentEditTags(text: string): boolean {
-  return /<document_edit>/i.test(text);
+  // Check for any of the tag formats
+  return /<write_to_file>/i.test(text) || 
+         /<document_edit>/i.test(text) || 
+         /<replace_in_file>/i.test(text);
 }
 
 /**
@@ -22,7 +101,8 @@ export function containsDocumentEditTags(text: string): boolean {
 export async function createAIEditVersion(
   documentId: string,
   newContent: string,
-  userId: string
+  userId: string,
+  fullResponse?: string
 ): Promise<{ success: boolean; versionNumber?: number; error?: string }> {
   const supabase = createSupabaseClient();
   const now = new Date().toISOString();
@@ -58,6 +138,8 @@ export async function createAIEditVersion(
     // Extract title from the document content
     // Most document content is stored as JSON with a title field
     let title = existingEntity.title;
+    let currentContent = '';
+    
     try {
       if (currentVersion?.full_content) {
         // Check if full_content is already an object or a string
@@ -71,10 +153,21 @@ export async function createAIEditVersion(
         if (contentObj && contentObj.title) {
           title = contentObj.title; // Use the existing title
         }
+        
+        if (contentObj && contentObj.content) {
+          currentContent = contentObj.content; // Extract current content for diff processing
+        }
       }
     } catch (e) {
       console.error('Error parsing current content:', e);
       // Continue with existing title if parsing fails
+    }
+    
+    // Process diff blocks if fullResponse is provided and contains replace_in_file tags
+    let finalContent = newContent;
+    if (fullResponse && fullResponse.includes('<replace_in_file>') && currentContent) {
+      // For replace_in_file tags, we need to apply the diffs to the current content
+      finalContent = applyDiffBlocks(currentContent, fullResponse);
     }
     
     // Begin transaction
@@ -95,7 +188,7 @@ export async function createAIEditVersion(
         entity_id: documentId,
         entity_type: existingEntity.entity_type,
         version_number: newVersionNumber,
-        full_content: createFullContent(title, newContent),
+        full_content: createFullContent(title, finalContent),
         version_type: 'ai_edit',
         is_current: true,
         base_version_id: currentVersion?.id,

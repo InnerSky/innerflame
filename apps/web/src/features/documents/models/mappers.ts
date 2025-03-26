@@ -1,4 +1,4 @@
-import { Json, Tables } from "@/types/supabase";
+import { Json, Tables } from "@innerflame/types";
 import { Document, DocumentVersion, DocumentContent, DocumentMetadata, DocumentType } from "./document";
 
 // Extract content from JSON

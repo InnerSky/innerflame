@@ -1,4 +1,4 @@
-import { Json, Tables } from "@/types/supabase";
+import { Json, Tables } from "@innerflame/types";
 
 // Available document types
 export enum DocumentType {
@@ -6,7 +6,9 @@ export enum DocumentType {
   Canvas = 'canvas',
   Project = 'project',
   JournalEntry = 'journal_entry',
-  FuturePressConference = 'future_press_conference'
+  FuturePressRelease = 'future_press_release',
+  LeanCanvas = 'lean_canvas',
+  SalesPage = 'sales_page'
 }
 
 // Content format types

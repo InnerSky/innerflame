@@ -3,7 +3,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, ArrowUp, ArrowDown } from 'lucide-react';
 
 interface JSONEditorProps {
   jsonData: Record<string, string> | null;
@@ -41,6 +41,26 @@ export function JSONEditor({ jsonData, onChange }: JSONEditorProps) {
     setFields(newFields);
   };
 
+  // Move a field up in the order
+  const moveUp = (index: number) => {
+    if (index === 0) return; // Can't move up if already at the top
+    const newFields = [...fields];
+    const temp = newFields[index];
+    newFields[index] = newFields[index - 1];
+    newFields[index - 1] = temp;
+    setFields(newFields);
+  };
+
+  // Move a field down in the order
+  const moveDown = (index: number) => {
+    if (index === fields.length - 1) return; // Can't move down if already at the bottom
+    const newFields = [...fields];
+    const temp = newFields[index];
+    newFields[index] = newFields[index + 1];
+    newFields[index + 1] = temp;
+    setFields(newFields);
+  };
+
   // Update a field
   const updateField = (index: number, field: 'key' | 'value', newValue: string) => {
     const newFields = [...fields];
@@ -61,14 +81,37 @@ export function JSONEditor({ jsonData, onChange }: JSONEditorProps) {
                   onChange={(e) => updateField(index, 'key', e.target.value)}
                   className="flex-1"
                 />
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  onClick={() => removeField(index)}
-                  aria-label="Remove field"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+                <div className="flex space-x-1">
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    onClick={() => moveUp(index)}
+                    aria-label="Move up"
+                    disabled={index === 0}
+                    className="h-8 w-8"
+                  >
+                    <ArrowUp className="h-4 w-4" />
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    onClick={() => moveDown(index)}
+                    aria-label="Move down"
+                    disabled={index === fields.length - 1}
+                    className="h-8 w-8"
+                  >
+                    <ArrowDown className="h-4 w-4" />
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    onClick={() => removeField(index)}
+                    aria-label="Remove field"
+                    className="h-8 w-8"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
               <Textarea 
                 placeholder="Value" 

@@ -39,7 +39,7 @@ RUN echo "NODE_ENV=production" > .env \
     && echo "SUPABASE_URL=https://example.supabase.co" >> .env \
     && echo "SUPABASE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.example" >> .env \
     && echo "CLAUDE_API_KEY=sk-ant-api00-examplekey" >> .env \
-    && echo "CLAUDE_MODEL=claude-3-haiku-20240307" >> .env \
+    && echo "CLAUDE_MODEL=claude-3-7-sonnet-20250219" >> .env \
     && echo "CLAUDE_MAX_TOKENS=1024" >> .env
 
 # Expose the port

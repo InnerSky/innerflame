@@ -49,7 +49,8 @@ export async function processDocumentEdit(
     }
     
     // Create a new document version with the extracted content
-    const result = await createAIEditVersion(documentId, documentContent, userId);
+    // Pass the full response to handle replace_in_file tags
+    const result = await createAIEditVersion(documentId, documentContent, userId, fullResponse);
     
     // Return the result
     return {

@@ -39,7 +39,7 @@ console.log('Environment loaded:');
 console.log('- SUPABASE_URL:', process.env.SUPABASE_URL ? '✓ Found' : '✗ Missing');
 console.log('- SUPABASE_KEY:', process.env.SUPABASE_KEY ? '✓ Found' : '✗ Missing');
 console.log('- CLAUDE_API_KEY:', process.env.CLAUDE_API_KEY ? '✓ Found' : '✗ Missing');
-console.log('- CLAUDE_MODEL:', process.env.CLAUDE_MODEL || 'claude-3-haiku-20240307 (default)');
+console.log('- CLAUDE_MODEL:', process.env.CLAUDE_MODEL || 'claude-3-7-sonnet-20250219 (default)');
 console.log('- CLAUDE_MAX_TOKENS:', process.env.CLAUDE_MAX_TOKENS || '1024 (default)');
 console.log('- PORT:', process.env.PORT || '3001 (default)');
 

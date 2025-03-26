@@ -6,6 +6,14 @@ import {
   createFullContent
 } from "../models/mappers";
 
+// Define document types that should be treated as documents in listings
+export const DOCUMENT_TYPES = [
+  DocumentType.UserDocument,
+  DocumentType.LeanCanvas,
+  DocumentType.FuturePressRelease,
+  DocumentType.SalesPage
+];
+
 export class DocumentRepository {
   // Fetch all documents for a user
   async getUserDocuments(userId: string): Promise<Document[]> {
@@ -14,7 +22,7 @@ export class DocumentRepository {
       .from('entities')
       .select('*')
       .eq('user_id', userId)
-      .eq('entity_type', DocumentType.UserDocument)
+      .in('entity_type', DOCUMENT_TYPES)
       .order('updated_at', { ascending: false });
       
     if (entitiesError) throw entitiesError;
@@ -109,11 +117,68 @@ export class DocumentRepository {
       .single();
       
     if (versionError) throw versionError;
+
+    // Update entity with active_version_id
+    const { error: updateError } = await supabase
+      .from('entities')
+      .update({ active_version_id: version.id })
+      .eq('id', entity.id);
+
+    if (updateError) throw updateError;
     
     // Return document domain model
-    return mapEntityToDocument(entity, version);
+    return mapEntityToDocument({ ...entity, active_version_id: version.id }, version);
   }
   
+  private async cleanupOldVersions(documentId: string, maxVersions: number = 20): Promise<void> {
+    // Get all versions ordered by version number
+    const { data: versions, error: versionsError } = await supabase
+      .from('entity_versions')
+      .select('*')
+      .eq('entity_id', documentId)
+      .order('version_number', { ascending: true });
+      
+    if (versionsError) throw versionsError;
+    if (!versions || versions.length <= maxVersions) return;
+
+    // Find versions to delete (oldest ones that are not current)
+    const versionsToDelete = versions
+      .filter(v => !v.is_current) // Never delete current version
+      .slice(0, versions.length - maxVersions); // Keep only the most recent versions
+
+    if (versionsToDelete.length === 0) return;
+
+    // Get IDs of versions to delete
+    const idsToDelete = versionsToDelete.map(v => v.id);
+
+    // Update base_version_id references for remaining versions
+    // Find the oldest version we're keeping
+    const oldestKeptVersion = versions.find(v => !idsToDelete.includes(v.id));
+    if (oldestKeptVersion) {
+      // Update any versions that referenced the deleted versions
+      await supabase
+        .from('entity_versions')
+        .update({ base_version_id: oldestKeptVersion.id })
+        .in('base_version_id', idsToDelete)
+        .eq('entity_id', documentId);
+    }
+
+    // Delete the old versions
+    const { error: deleteError } = await supabase
+      .from('entity_versions')
+      .delete()
+      .in('id', idsToDelete)
+      .eq('entity_id', documentId); // Extra safety check
+
+    if (deleteError) {
+      console.error('Error cleaning up old versions:', deleteError);
+      throw deleteError;
+    }
+
+    // Log the cleanup for auditing
+    console.log(`Cleaned up ${versionsToDelete.length} old versions for document ${documentId}`);
+  }
+
   // Save document changes
   async saveDocument(documentId: string, title: string, content: string): Promise<Document> {
     const now = new Date().toISOString();
@@ -127,20 +192,6 @@ export class DocumentRepository {
       
     if (getError) throw getError;
     
-    // Update entity preserving metadata
-    const { data: entity, error: entityError } = await supabase
-      .from('entities')
-      .update({
-        title,
-        updated_at: now,
-        metadata: existingEntity.metadata // Preserve existing metadata
-      })
-      .eq('id', documentId)
-      .select()
-      .single();
-      
-    if (entityError) throw entityError;
-    
     // Get current version
     const { data: currentVersions, error: currentVersionError } = await supabase
       .from('entity_versions')
@@ -153,34 +204,58 @@ export class DocumentRepository {
     const currentVersion = currentVersions?.[0];
     const newVersionNumber = currentVersion ? currentVersion.version_number + 1 : 1;
     
-    // Mark previous version as not current
-    if (currentVersion) {
-      await supabase
-        .from('entity_versions')
-        .update({ is_current: false })
-        .eq('id', currentVersion.id);
-    }
-    
-    // Create new version
-    const { data: newVersion, error: newVersionError } = await supabase
-      .from('entity_versions')
-      .insert({
-        entity_id: documentId,
-        entity_type: 'user_document',
-        version_number: newVersionNumber,
-        full_content: createFullContent(title, content),
-        version_type: 'update',
-        is_current: true,
-        base_version_id: currentVersion?.id,
-        created_at: now
-      })
-      .select()
-      .single();
+    // Start a transaction for version management
+    try {
+      // Mark previous version as not current
+      if (currentVersion) {
+        await supabase
+          .from('entity_versions')
+          .update({ is_current: false })
+          .eq('id', currentVersion.id);
+      }
       
-    if (newVersionError) throw newVersionError;
-    
-    // Return updated document
-    return mapEntityToDocument(entity, newVersion);
+      // Create new version
+      const { data: newVersion, error: newVersionError } = await supabase
+        .from('entity_versions')
+        .insert({
+          entity_id: documentId,
+          entity_type: existingEntity.entity_type, // Use correct entity type
+          version_number: newVersionNumber,
+          full_content: createFullContent(title, content),
+          version_type: 'update',
+          is_current: true,
+          base_version_id: currentVersion?.id,
+          created_at: now
+        })
+        .select()
+        .single();
+        
+      if (newVersionError) throw newVersionError;
+      
+      // Update entity with new title and active version
+      const { data: entity, error: entityError } = await supabase
+        .from('entities')
+        .update({
+          title,
+          updated_at: now,
+          metadata: existingEntity.metadata,
+          active_version_id: newVersion.id
+        })
+        .eq('id', documentId)
+        .select()
+        .single();
+        
+      if (entityError) throw entityError;
+
+      // Clean up old versions after successful save
+      await this.cleanupOldVersions(documentId);
+      
+      // Return updated document
+      return mapEntityToDocument(entity, newVersion);
+    } catch (error) {
+      console.error('Error during version management:', error);
+      throw new Error(`Failed to save document: ${(error as Error).message}`);
+    }
   }
   
   // Delete document
@@ -212,7 +287,7 @@ export class DocumentRepository {
     return versions.map(mapEntityVersionToDocumentVersion);
   }
   
-  // Activate a specific version (create new version based on old one)
+  // Activate a specific version
   async activateVersion(version: DocumentVersion): Promise<Document> {
     const { data: entity, error: entityError } = await supabase
       .from('entities')
@@ -263,20 +338,22 @@ export class DocumentRepository {
       
     if (newVersionError) throw newVersionError;
     
-    // Update entity title to match version
-    await supabase
+    // Update entity title and active version
+    const { data: updatedEntity, error: updateError } = await supabase
       .from('entities')
       .update({
         title: version.content.title,
-        updated_at: now
+        updated_at: now,
+        active_version_id: newVersion.id
       })
-      .eq('id', version.entity_id);
+      .eq('id', version.entity_id)
+      .select()
+      .single();
+    
+    if (updateError) throw updateError;
     
     // Return updated document
-    return mapEntityToDocument(
-      { ...entity, title: version.content.title, updated_at: now },
-      newVersion
-    );
+    return mapEntityToDocument(updatedEntity, newVersion);
   }
   
   // Duplicate a document
@@ -413,7 +490,7 @@ export class DocumentRepository {
       .from('entities')
       .select('*')
       .eq('user_id', userId)
-      .eq('entity_type', DocumentType.UserDocument)
+      .in('entity_type', DOCUMENT_TYPES)
       .contains('metadata', { projectId });
       
     if (entitiesError) throw entitiesError;

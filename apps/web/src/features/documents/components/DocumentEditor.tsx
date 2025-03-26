@@ -3,7 +3,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { MarkdownRenderer } from '@/components/markdown-renderer';
-import { Save, Eye, FileEdit, History, FileType, Code } from 'lucide-react';
+import { Save, Eye, FileEdit, History, FileType, Code, Copy, Check } from 'lucide-react';
 import { SaveStatus, DocumentType, ContentFormat } from '../models/document';
 import { countWords } from '@/utils/textUtils';
 import { Badge } from '@/components/ui/badge';
@@ -19,6 +19,7 @@ import { DocumentTypeSelector } from './DocumentTypeSelector';
 import { ContentFormatSelector } from './ContentFormatSelector';
 import { JSONEditor } from './JSONEditor';
 import { JSONDisplay } from './JSONDisplay';
+import { LeanCanvasDisplay } from './lean-canvas';
 
 interface DocumentEditorProps {
   title: string;
@@ -79,6 +80,7 @@ export function DocumentEditor({
   const [newDocumentType, setNewDocumentType] = useState<DocumentType>(documentType);
   const [formatDialogOpen, setFormatDialogOpen] = useState(false);
   const [newContentFormat, setNewContentFormat] = useState<ContentFormat>(contentFormat);
+  const [copySuccess, setCopySuccess] = useState(false);
   
   // Add keyboard shortcut handler for Ctrl+Enter and Shift+Enter
   useEffect(() => {
@@ -101,6 +103,28 @@ export function DocumentEditor({
       document.removeEventListener('keydown', handleKeyDown);
     };
   }, [hasUnsavedChanges, saveStatus, onSave]);
+
+  // Add copy functionality
+  const handleCopyContent = async () => {
+    try {
+      await navigator.clipboard.writeText(content);
+      setCopySuccess(true);
+      
+      // Reset the copy success state after 2 seconds
+      setTimeout(() => {
+        setCopySuccess(false);
+      }, 2000);
+    } catch (err) {
+      console.error('Failed to copy content: ', err);
+    }
+  };
+
+  // Handle JSON data changes from the JSONDisplay component
+  const handleJSONDataChange = (updatedData: Record<string, string>) => {
+    // Convert the updated data back to a JSON string
+    const updatedContent = JSON.stringify(updatedData, null, 2);
+    onContentChange(updatedContent);
+  };
 
   const renderSaveStatus = () => {
     switch (saveStatus) {
@@ -137,8 +161,12 @@ export function DocumentEditor({
         return "Project";
       case DocumentType.JournalEntry:
         return "Journal Entry";
-      case DocumentType.FuturePressConference:
-        return "Future Press Conference";
+      case DocumentType.FuturePressRelease:
+        return "Future Press Release";
+      case DocumentType.LeanCanvas:
+        return "Lean Canvas";
+      case DocumentType.SalesPage:
+        return "Sales Page";
       default:
         return String(type).replace(/([A-Z])/g, ' $1').trim();
     }
@@ -217,7 +245,17 @@ export function DocumentEditor({
       {isPreviewMode ? (
         <div className="flex-grow overflow-auto bg-card rounded-md border p-3 sm:p-4">
           {contentFormat === ContentFormat.JSON ? (
-            <JSONDisplay jsonData={tryParseJSON(content)} />
+            documentType === DocumentType.LeanCanvas ? (
+              <LeanCanvasDisplay 
+                jsonData={tryParseJSON(content)} 
+                onDataChange={handleJSONDataChange}
+              />
+            ) : (
+              <JSONDisplay 
+                jsonData={tryParseJSON(content)} 
+                onDataChange={handleJSONDataChange}
+              />
+            )
           ) : contentFormat === ContentFormat.HTML ? (
             <div dangerouslySetInnerHTML={{ __html: content }} />
           ) : (
@@ -312,6 +350,22 @@ export function DocumentEditor({
         
         {/* Right side elements */}
         <div className="flex flex-wrap gap-1 sm:gap-2 items-center ml-auto">
+          {/* Copy button */}
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 sm:h-8 px-1 sm:px-2 text-xs"
+            onClick={handleCopyContent}
+            title="Copy document content"
+          >
+            {copySuccess ? (
+              <Check className="mr-1 h-3 w-3 sm:h-3.5 sm:w-3.5 text-green-500" />
+            ) : (
+              <Copy className="mr-1 h-3 w-3 sm:h-3.5 sm:w-3.5" />
+            )}
+            <span className="hidden sm:inline">Copy</span>
+          </Button>
+          
           {versionNumber !== undefined && (
             <Button
               variant="ghost"

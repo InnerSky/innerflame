@@ -92,6 +92,31 @@ _What makes this application different or better than existing solutions?_
   - **Tool Implementation**: Server-side interception and execution of Claude API tool calls
   - **Authentication**: JWT token validation via Supabase Auth middleware
 
+#### Agentic Framework
+The InnerFlame agentic framework implements a modular, multi-agent architecture with a clean delegation pattern:
+
+- **Orchestrator Agent**: Central router that operates exclusively in the backend using non-streaming `createAgent` pattern. It receives all user input, analyzes intent, and delegates to specialized agents using a custom `<call_agent>agent_name</call_agent>` syntax. Uses its own playbook for routing decisions but never communicates directly with the client.
+
+- **Specialized Agents**:
+  - **Generator Agent**: Creates the initial complete Lean Canvas from a user's business idea
+  - **Mentor Agent**: Provides ongoing guidance, feedback, and helps edit/refine the canvas
+  - **Web Search Agent**: Supports research capabilities (initially implemented with mock functionality)
+
+- **Execution Flow**:
+  1. User input is received by backend API
+  2. Orchestrator (non-streaming) analyzes and selects the appropriate specialized agent
+  3. Selected specialized agent receives the context and streams responses directly to the client
+
+- **Playbook Methodology**: All agents use context-specific playbooks that define their behavior, capabilities, and response patterns. Playbooks are loaded as system prompts that can be configured without code changes.
+
+- **Context Management**: Rich context objects are passed from orchestrator to specialized agents, maintaining conversation history, document state, and user preferences throughout the delegation chain.
+
+- **Streaming Implementation**: Only specialized agents use SSE streaming to communicate with the client. The orchestrator's decision-making happens entirely in the backend without streaming.
+
+- **Tool-Based Architecture**: Agents can perform document operations, ask questions, and access specialized capabilities through a unified tool system, with the orchestrator maintaining overall interaction coherence.
+
+This architecture balances simplicity with power, enabling specialized expertise while maintaining a cohesive user experience. The framework is designed for extensibility, allowing additional specialized agents to be added with minimal changes to the core system.
+
 ### Infrastructure
 - **Authentication**: Supabase Auth with Google Auth integration
 - **Database**: Supabase

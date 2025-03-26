@@ -39,7 +39,7 @@ async function sendMessage(messages: AnthropicMessage[]) {
       'anthropic-version': '2023-06-01'
     },
     body: JSON.stringify({
-      model: 'claude-3-haiku-20240307',
+      model: 'claude-3-7-sonnet-20250219',
       max_tokens: 500,
       messages: messages
     })
@@ -64,7 +64,7 @@ async function streamMessage(messages: AnthropicMessage[]) {
       'anthropic-version': '2023-06-01'
     },
     body: JSON.stringify({
-      model: 'claude-3-haiku-20240307',
+      model: 'claude-3-7-sonnet-20250219',
       max_tokens: 500,
       messages: messages,
       stream: true

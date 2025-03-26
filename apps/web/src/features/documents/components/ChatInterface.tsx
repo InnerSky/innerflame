@@ -114,11 +114,47 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
   };
   
   // Custom send message handler that triggers scroll
-  const handleSendMessage = (content: string) => {
-    sendChatMessage(content);
-    // Set flag to scroll to bottom when a user sends a message, but only if not suppressed
-    if (!suppressAutoScroll) {
-      setShouldScrollToBottom(true);
+  const handleSendMessage = async (content: string) => {
+    try {
+      // First call the orchestrator agent to determine which agent should handle this message
+      const response = await fetch('/api/ai/orchestrator', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: content,
+          contextType,
+          contextId,
+          documentTitle: documentName,
+          documentContent: content,
+          projectId: selectedProjectId
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Orchestrator call failed');
+      }
+
+      const orchestratorResult = await response.text();
+      
+      // Log orchestrator's decision for debugging
+      console.log('Orchestrator decided:', orchestratorResult);
+      
+      // Continue with normal message flow
+      sendChatMessage(content);
+      
+      // Set flag to scroll to bottom when a user sends a message, but only if not suppressed
+      if (!suppressAutoScroll) {
+        setShouldScrollToBottom(true);
+      }
+    } catch (error) {
+      console.error('Error calling orchestrator:', error);
+      // If orchestrator fails, still send the message through normal flow
+      sendChatMessage(content);
+      if (!suppressAutoScroll) {
+        setShouldScrollToBottom(true);
+      }
     }
   };
   
@@ -178,10 +214,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
         onSendMessage={handleSendMessage}
         isLoading={isLoading}
         isDisabled={!user}
-        placeholder={isProjectOnlyMode 
-          ? "Ask about your project... (Ctrl+Enter or Shift+Enter to send)" 
-          : "Ask about your document... (Ctrl+Enter or Shift+Enter to send)"
-        }
+        placeholder="How can InnerFlame help you today?"
       />
     </>
   );
@@ -210,7 +243,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
   
   // In desktop sidebar, use card container
   return (
-    <Card className={`h-full flex flex-col ${className}`}>
+    <Card className={`h-full flex flex-col border-0 shadow-none ${className}`}>
       <CardHeader className="pb-3 flex-shrink-0">
         <CardTitle className="text-lg flex items-center gap-2">
           <MessageSquare className="h-5 w-5" />

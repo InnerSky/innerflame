@@ -41,7 +41,7 @@ export function initializeProviderFromEnv(): LLMProvider {
   switch (providerType) {
     case ProviderType.ANTHROPIC:
       const apiKey = process.env.CLAUDE_API_KEY;
-      const model = process.env.CLAUDE_MODEL || 'claude-3-haiku-20240307';
+      const model = process.env.CLAUDE_MODEL || 'claude-3-7-sonnet-20250219';
       const maxTokens = process.env.CLAUDE_MAX_TOKENS 
         ? parseInt(process.env.CLAUDE_MAX_TOKENS, 10) 
         : 1024;

@@ -42,8 +42,8 @@ export interface MessageSegment {
 /**
  * Regular expressions for detecting document edit tags
  */
-const DOCUMENT_EDIT_START_REGEX = /<document_edit>/i;
-const DOCUMENT_EDIT_END_REGEX = /<\/document_edit>/i;
+const DOCUMENT_EDIT_START_REGEX = /<(document_edit|write_to_file|replace_in_file)>/i;
+const DOCUMENT_EDIT_END_REGEX = /<\/(document_edit|write_to_file|replace_in_file)>/i;
 const CONTENT_START_REGEX = /<content>/i;
 const CONTENT_END_REGEX = /<\/content>/i;
 
@@ -58,8 +58,17 @@ export function containsDocumentEditTags(text: string): boolean {
  * Extracts document content from between <content> tags
  */
 export function extractDocumentContent(text: string): string | null {
-  const contentMatch = text.match(/<content>([\s\S]*?)<\/content>/i);
-  return contentMatch ? contentMatch[1] : null;
+  // Check all tag formats in priority order
+  if (text.includes('<write_to_file>')) {
+    const contentMatch = text.match(/<write_to_file>[\s\S]*?<content>([\s\S]*?)<\/content>[\s\S]*?<\/write_to_file>/i);
+    return contentMatch ? contentMatch[1] : null;
+  } else if (text.includes('<replace_in_file>')) {
+    const contentMatch = text.match(/<replace_in_file>[\s\S]*?<content>([\s\S]*?)<\/content>[\s\S]*?<\/replace_in_file>/i);
+    return contentMatch ? contentMatch[1] : null;
+  } else {
+    const contentMatch = text.match(/<document_edit>[\s\S]*?<content>([\s\S]*?)<\/content>[\s\S]*?<\/document_edit>/i);
+    return contentMatch ? contentMatch[1] : null;
+  }
 }
 
 /**
@@ -181,6 +190,35 @@ export function extractDocumentEditBlock(text: string, startFrom = 0): {
   start: number; 
   end: number 
 } | null {
+  // First check for write_to_file tags
+  const writeToFileStartIndex = text.indexOf('<write_to_file>', startFrom);
+  if (writeToFileStartIndex !== -1) {
+    const writeToFileEndIndex = text.indexOf('</write_to_file>', writeToFileStartIndex);
+    if (writeToFileEndIndex !== -1) {
+      const endPosition = writeToFileEndIndex + '</write_to_file>'.length;
+      return {
+        match: text.substring(writeToFileStartIndex, endPosition),
+        start: writeToFileStartIndex,
+        end: endPosition
+      };
+    }
+  }
+  
+  // Then check for replace_in_file tags
+  const replaceInFileStartIndex = text.indexOf('<replace_in_file>', startFrom);
+  if (replaceInFileStartIndex !== -1) {
+    const replaceInFileEndIndex = text.indexOf('</replace_in_file>', replaceInFileStartIndex);
+    if (replaceInFileEndIndex !== -1) {
+      const endPosition = replaceInFileEndIndex + '</replace_in_file>'.length;
+      return {
+        match: text.substring(replaceInFileStartIndex, endPosition),
+        start: replaceInFileStartIndex,
+        end: endPosition
+      };
+    }
+  }
+  
+  // Fall back to document_edit tags
   const startTagIndex = text.indexOf('<document_edit>', startFrom);
   if (startTagIndex === -1) return null;
   
@@ -267,7 +305,7 @@ export function parseStreamingSegments(text: string): MessageSegment[] {
   if (!text) return [];
   
   // If there are no opening document edit tags, return as a single text segment
-  if (!text.includes('<document_edit>')) {
+  if (!containsDocumentEditTags(text)) {
     return [{
       type: SegmentType.TEXT,
       content: text
@@ -285,7 +323,21 @@ export function parseStreamingSegments(text: string): MessageSegment[] {
     // If no more complete edit blocks found
     if (!editBlock) {
       // Look for an incomplete block (has opening tag but no closing tag)
-      const lastOpeningTagIndex = text.lastIndexOf('<document_edit>', text.length);
+      // Check for all tag formats
+      const lastDocEditIndex = text.lastIndexOf('<document_edit>', text.length);
+      const lastWriteToFileIndex = text.lastIndexOf('<write_to_file>', text.length);
+      const lastReplaceInFileIndex = text.lastIndexOf('<replace_in_file>', text.length);
+      
+      // Find the most recent opening tag
+      const lastOpeningTagIndex = Math.max(
+        lastDocEditIndex !== -1 ? lastDocEditIndex : -1,
+        lastWriteToFileIndex !== -1 ? lastWriteToFileIndex : -1,
+        lastReplaceInFileIndex !== -1 ? lastReplaceInFileIndex : -1
+      );
+      
+      let tagType = 'document_edit';
+      if (lastOpeningTagIndex === lastWriteToFileIndex) tagType = 'write_to_file';
+      if (lastOpeningTagIndex === lastReplaceInFileIndex) tagType = 'replace_in_file';
       
       if (lastOpeningTagIndex !== -1 && lastOpeningTagIndex >= currentPosition) {
         // Add text before the incomplete block
