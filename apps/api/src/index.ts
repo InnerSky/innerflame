@@ -7,7 +7,7 @@ import dotenv from 'dotenv';
 import path from 'path';
 import { createExpressMiddleware } from '@trpc/server/adapters/express';
 import { createSupabaseClient } from '@innerflame/utils/supabase.js';
-import { aiRouter, handleStreamRequest } from './routes/ai.js';
+import { aiRouter, handleStreamRequest, handleOrchestratorRequest, handleSpecializedAgentRequest } from './routes/ai.js';
 import { initTRPC } from '@trpc/server';
 import { initSSE } from './controllers/sse.js';
 import { SupabaseService } from './services/supabase/supabaseService.js';
@@ -228,6 +228,66 @@ app.get('/ai/stream', async (req, res) => {
 
   // Handle the streaming request with the session data
   await handleStreamRequest(
+    {
+      body: sessionData,
+      app: req.app,
+    } as any,
+    res
+  );
+});
+
+// Orchestrator endpoint - determines which agent to use and streams response
+app.post('/ai/orchestrator', async (req, res) => {
+  try {
+    // Handle the orchestrator request (which will delegate to a streaming agent)
+    // The handleOrchestratorRequest function already calls initSSE()
+    await handleOrchestratorRequest(req, res);
+  } catch (error) {
+    console.error('Orchestrator endpoint error:', error);
+    if (!res.headersSent) {
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : 'Unknown error',
+        success: false 
+      });
+    }
+  }
+});
+
+// Specialized agent endpoint - streams responses from a specific agent type
+app.post('/ai/agent', async (req, res) => {
+  const sessionId = req.query.sessionId as string;
+
+  if (!sessionId) {
+    return res.status(400).json({ error: 'Session ID is required' });
+  }
+
+  // Store the request data in the session
+  streamSessions.set(sessionId, req.body);
+
+  // Send a success response
+  res.json({ success: true, message: 'Agent session initialized' });
+});
+
+// Specialized agent endpoint - GET for EventSource connection
+app.get('/ai/agent', async (req, res) => {
+  const sessionId = req.query.sessionId as string;
+
+  if (!sessionId) {
+    return res.status(400).json({ error: 'Session ID is required' });
+  }
+
+  // Get the session data
+  const sessionData = streamSessions.get(sessionId);
+
+  if (!sessionData) {
+    return res.status(404).json({ error: 'Session not found' });
+  }
+
+  // Initialize SSE connection
+  initSSE(res);
+
+  // Handle the streaming request with the session data
+  await handleSpecializedAgentRequest(
     {
       body: sessionData,
       app: req.app,

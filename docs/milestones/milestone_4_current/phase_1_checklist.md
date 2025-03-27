@@ -28,10 +28,6 @@ Establish a well-defined system prompt for the Cline-like streaming document edi
 - [x] Define approach for combining the base system prompt with custom user instructions
 - [x] Determine how to properly signal document edit capabilities to the frontend
 
-es)
-  - [ ] Edge cases (very large documents, empty documents)
-- [ ] Develop test harness for validating XML tag usage in AI responses
-- [ ] Define metrics for measuring system prompt effectiveness
 
 ## Verification Criteria
 1. [x] System prompt successfully instructs the AI to use XML tags for document edits

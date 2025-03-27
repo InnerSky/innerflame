@@ -228,7 +228,11 @@ export function useChatInterface({
   }, []);
   
   // Send a message and start streaming the response
-  const sendMessage = async (messageContent: string) => {
+  const sendMessage = async (messageData: string | { content: string, agentType?: string }) => {
+    // Extract message content and options
+    const messageContent = typeof messageData === 'string' ? messageData : messageData.content;
+    const agentType = typeof messageData === 'string' ? undefined : messageData.agentType;
+    
     if (!messageContent.trim() || isLoading || !user) return;
     
     // Add user message to chat (optimistic update)
@@ -330,6 +334,7 @@ export function useChatInterface({
         projectId: projectId || undefined,
         projectName: projectName,
         chatHistory: filteredHistory,
+        agentType,
         onConnectionChange: (connected) => {
           if (!connected) {
             setIsLoading(false);

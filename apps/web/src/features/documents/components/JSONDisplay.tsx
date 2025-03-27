@@ -383,7 +383,7 @@ export function JSONDisplay({ jsonData, onDataChange, readOnly = false, disableA
                 </div>
               </div>
             ) : (
-              <h2 className="text-2xl md:text-3xl font-bold tracking-tight group-hover:pr-8 break-words truncate max-w-full">
+              <h2 className="text-2xl md:text-3xl font-bold tracking-tight break-words truncate max-w-full pr-8 relative">
                 {jsonData[titleKey]?.trim() || <span className="text-muted-foreground italic">Add title...</span>}
                 {!readOnly && (
                   <Button
@@ -429,7 +429,7 @@ export function JSONDisplay({ jsonData, onDataChange, readOnly = false, disableA
                 </div>
               </div>
             ) : (
-              <h3 className="text-lg md:text-xl text-muted-foreground/80 font-medium group-hover:pr-8 break-words truncate max-w-full">
+              <h3 className="text-lg md:text-xl text-muted-foreground/80 font-medium break-words truncate max-w-full pr-8 relative">
                 {jsonData[subtitleKey]?.trim() || <span className="text-muted-foreground/50 italic">Add subtitle...</span>}
                 {!readOnly && (
                   <Button

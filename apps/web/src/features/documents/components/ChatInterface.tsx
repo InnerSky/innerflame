@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect, forwardRef, useImperativeHandle } from 'react';
 import { useDocumentsContext } from '../contexts/DocumentsContext.js';
 import { MessageSquare } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card.js';
@@ -39,11 +39,15 @@ function useMediaQuery(query: string) {
   return matches;
 }
 
-export const ChatInterface: React.FC<ChatInterfaceProps> = ({ 
+// Export ChatInterface as a forwardRef component
+export const ChatInterface = forwardRef<
+  { sendMessage: (content: string) => Promise<void> }, 
+  ChatInterfaceProps
+>(({ 
   className = '',
   isStandalone = false,
   suppressAutoScroll = false
-}) => {
+}, ref) => {
   // Get document context
   const { 
     selectedDocument, 
@@ -116,47 +120,30 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
   // Custom send message handler that triggers scroll
   const handleSendMessage = async (content: string) => {
     try {
-      // First call the orchestrator agent to determine which agent should handle this message
-      const response = await fetch('/api/ai/orchestrator', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          message: content,
-          contextType,
-          contextId,
-          documentTitle: documentName,
-          documentContent: content,
-          projectId: selectedProjectId
-        }),
+      // Connect to the orchestrator agent, which will handle agent selection and streaming
+      await sendChatMessage({
+        content,
+        agentType: 'orchestrator'  // Pass agentType as part of the message options
       });
-
-      if (!response.ok) {
-        throw new Error('Orchestrator call failed');
-      }
-
-      const orchestratorResult = await response.text();
-      
-      // Log orchestrator's decision for debugging
-      console.log('Orchestrator decided:', orchestratorResult);
-      
-      // Continue with normal message flow
-      sendChatMessage(content);
       
       // Set flag to scroll to bottom when a user sends a message, but only if not suppressed
       if (!suppressAutoScroll) {
         setShouldScrollToBottom(true);
       }
     } catch (error) {
-      console.error('Error calling orchestrator:', error);
-      // If orchestrator fails, still send the message through normal flow
-      sendChatMessage(content);
+      console.error('Error in sendMessage:', error);
       if (!suppressAutoScroll) {
         setShouldScrollToBottom(true);
       }
     }
   };
+
+  // Expose sendMessage function via ref
+  useImperativeHandle(ref, () => ({
+    sendMessage: async (content: string) => {
+      await handleSendMessage(content);
+    }
+  }));
   
   // Reset the scroll flag after it's been processed
   useEffect(() => {
@@ -172,22 +159,8 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
   // Chat content (messages and input)
   const chatContent = (
     <>
-      {/* Context display */}
-      <div className="bg-muted/50 rounded-lg p-2 mb-3 text-sm text-muted-foreground flex flex-wrap gap-2">
-        <div className="flex items-center gap-1">
-          <span>@project:</span>
-          <span className="font-medium">{projectName}</span>
-        </div>
-        {!isProjectOnlyMode && (
-          <div className="flex items-center gap-1">
-            <span>@document:</span>
-            <span className="font-medium">{documentName}</span>
-          </div>
-        )}
-      </div>
-      
       {/* Chat messages */}
-      <div className="flex-1 min-h-0 overflow-hidden mb-4 w-full">
+      <div className="flex-1 min-h-0 overflow-hidden mb-0 w-full">
         <MessageList
           ref={messageListRef}
           messages={chatHistory}
@@ -223,17 +196,9 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
   if (isStandalone) {
     return (
       <div 
-        className={`h-full flex flex-col p-4 ${className}`}
+        className={`h-full flex flex-col px-4 ${className}`}
         data-chat-container
       >
-        <div className="flex flex-col gap-1 mb-4 flex-shrink-0">
-          <div className="flex items-center gap-2">
-            <MessageSquare className="h-5 w-5" />
-            <h2 className="text-lg font-semibold">
-              {isProjectOnlyMode ? "Project Assistant" : "Document Assistant"}
-            </h2>
-          </div>
-        </div>
         <div className="flex-1 flex flex-col overflow-hidden">
           {chatContent}
         </div>
@@ -244,15 +209,9 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
   // In desktop sidebar, use card container
   return (
     <Card className={`h-full flex flex-col border-0 shadow-none ${className}`}>
-      <CardHeader className="pb-3 flex-shrink-0">
-        <CardTitle className="text-lg flex items-center gap-2">
-          <MessageSquare className="h-5 w-5" />
-          <span>{isProjectOnlyMode ? "Project Assistant" : "Document Assistant"}</span>
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="flex-1 flex flex-col overflow-hidden p-4">
+      <CardContent className="flex-1 flex flex-col overflow-hidden px-4 pt-0">
         {chatContent}
       </CardContent>
     </Card>
   );
-}; 
+}); 

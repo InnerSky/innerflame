@@ -42,7 +42,12 @@ const createSystemMessage = (customPrompt?: string, context: AgentContext = { us
  * 
  * Uses our configuration-based prompt system
  */
-function getSystemPromptForContext(context: AgentContext, customPrompt?: string, shouldLog: boolean = false): string {
+function getSystemPromptForContext(
+  context: AgentContext, 
+  customPrompt?: string, 
+  shouldLog: boolean = false,
+  playbookType: keyof typeof PlaybookType = PlaybookType.LEAN_CANVAS_CHAPTER1
+): string {
   // If a custom prompt is provided, use it directly
   if (customPrompt) {
     return customPrompt;
@@ -59,9 +64,9 @@ function getSystemPromptForContext(context: AgentContext, customPrompt?: string,
     documentTitle: context.documentTitle,
     documentContent: context.documentContent,
     
-    // Enable playbook capability with LEAN_CANVAS_CHAPTER1
+    // Enable playbook capability with specified type
     enablePlaybook: true,
-    playbookType: PlaybookType.LEAN_CANVAS_CHAPTER1
+    playbookType
   };
   
   // Log what playbook is being used
@@ -69,13 +74,6 @@ function getSystemPromptForContext(context: AgentContext, customPrompt?: string,
   
   // Use our new configuration-based system prompt
   const fullPrompt = createSystemPrompt(promptConfig);
-  
-  // Log the full prompt for debugging, but only if requested
-  if (shouldLog) {
-    console.log('=== FULL SYSTEM PROMPT ===');
-    console.log(fullPrompt);
-    console.log('=========================');
-  }
   
   return fullPrompt;
 }
@@ -97,7 +95,11 @@ export function initializeLLMAdapter(provider: LLMProvider): LLMAdapter {
 /**
  * Create a simplified agent with the provided LLM adapter and tools
  */
-export function createAgent(llmAdapter: LLMAdapter, tools: AgentTool[] = []) {
+export function createAgent(
+  llmAdapter: LLMAdapter, 
+  tools: AgentTool[] = [],
+  playbookType: keyof typeof PlaybookType = PlaybookType.LEAN_CANVAS_CHAPTER1
+) {
   
   /**
    * Run the agent with the provided input
@@ -116,20 +118,29 @@ export function createAgent(llmAdapter: LLMAdapter, tools: AgentTool[] = []) {
     if (context.chatHistory && context.chatHistory.length > 0) {
       console.log(`Adding ${context.chatHistory.length} messages from chat history`);
       
-      // Convert chat history to AgentMessage format
-      const historyMessages = context.chatHistory.map(msg => {
-        const role = msg.sender_type === 'user' 
-          ? AgentMessageRole.USER 
-          : AgentMessageRole.ASSISTANT;
-        
-        return {
-          role,
-          content: msg.content || ''
-        } as AgentMessage;
-      });
+      // Convert chat history to AgentMessage format and filter out empty messages
+      const historyMessages = context.chatHistory
+        .filter(msg => msg.content && msg.content.trim() !== '') // Filter out empty messages
+        .map(msg => {
+          const role = msg.sender_type === 'user' 
+            ? AgentMessageRole.USER 
+            : AgentMessageRole.ASSISTANT;
+          
+          return {
+            role,
+            content: msg.content || '' // This fallback should never trigger now due to the filter
+          } as AgentMessage;
+        });
+      
+      console.log(`After filtering, adding ${historyMessages.length} valid messages from chat history`);
       
       // Add history messages
       state.messages.push(...historyMessages);
+    }
+    
+    // Verify user input is not empty
+    if (!input || input.trim() === '') {
+      throw new Error('User input cannot be empty');
     }
     
     // Add the current user message
@@ -148,7 +159,7 @@ export function createAgent(llmAdapter: LLMAdapter, tools: AgentTool[] = []) {
       }
       
       // Get the appropriate system prompt for this context
-      let systemPrompt = getSystemPromptForContext(context, undefined, false);
+      let systemPrompt = getSystemPromptForContext(context, undefined, false, playbookType);
       
       // Add tool descriptions if available
       if (state.tools && state.tools.length > 0) {
@@ -265,7 +276,11 @@ export function createAgent(llmAdapter: LLMAdapter, tools: AgentTool[] = []) {
 /**
  * Create a streaming version of the agent that sends incremental responses via SSE
  */
-export function createStreamingAgent(llmAdapter: LLMAdapter, tools: AgentTool[] = []) {
+export function createStreamingAgent(
+  llmAdapter: LLMAdapter, 
+  tools: AgentTool[] = [],
+  playbookType: keyof typeof PlaybookType = PlaybookType.LEAN_CANVAS_CHAPTER1
+) {
   /**
    * Run the agent with the provided input and stream the response
    */
@@ -290,30 +305,38 @@ export function createStreamingAgent(llmAdapter: LLMAdapter, tools: AgentTool[] 
       if (context.chatHistory && context.chatHistory.length > 0) {
         console.log(`Adding ${context.chatHistory.length} messages from chat history`);
         
-        // Convert chat history to AgentMessage format
-        const historyMessages = context.chatHistory.map(msg => {
-          const role = msg.sender_type === 'user' 
-            ? AgentMessageRole.USER 
-            : AgentMessageRole.ASSISTANT;
-          
-          return {
-            role,
-            content: msg.content || ''
-          } as AgentMessage;
-        });
+        // Convert chat history to AgentMessage format and filter out messages with empty content
+        const historyMessages = context.chatHistory
+          .filter(msg => msg.content && msg.content.trim() !== '') // Filter out empty messages
+          .map(msg => {
+            const role = msg.sender_type === 'user' 
+              ? AgentMessageRole.USER 
+              : AgentMessageRole.ASSISTANT;
+            
+            return {
+              role,
+              content: msg.content || '' // This fallback should never trigger now due to the filter
+            } as AgentMessage;
+          });
+        
+        console.log(`After filtering, adding ${historyMessages.length} valid messages from chat history`);
         
         // Add history messages before the current user message
         messages.push(...historyMessages);
       }
       
-      // Add the current user message
+      // Add the current user message (verify it's not empty)
+      if (!input || input.trim() === '') {
+        throw new Error('User input cannot be empty');
+      }
+      
       messages.push({
         role: AgentMessageRole.USER,
         content: input
       });
       
       // Get the appropriate system prompt for this context
-      let systemPrompt = getSystemPromptForContext(context, undefined, true);
+      let systemPrompt = getSystemPromptForContext(context, undefined, true, playbookType);
       
       // Add tool descriptions if available
       if (tools && tools.length > 0) {
@@ -326,13 +349,8 @@ export function createStreamingAgent(llmAdapter: LLMAdapter, tools: AgentTool[] 
         systemPrompt += toolsInfo;
       }
       
-      // Force direct logging of the full prompt
-      console.log('=== FULL SYSTEM PROMPT (DIRECT LOG) ===');
-      console.log(systemPrompt);
-      console.log('=====================================');
-      
       // Debug log to track which prompt is being used
-      console.log(`Using system prompt for ${context.contextType} context with playbook: ${PlaybookType.LEAN_CANVAS_CHAPTER1}`);
+      console.log(`Using system prompt for ${context.contextType} context with playbook: ${playbookType}`);
       
       // Create a streaming response
       const stream = await llmAdapter.streamMessage(messages, {

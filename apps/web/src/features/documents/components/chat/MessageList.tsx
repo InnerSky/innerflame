@@ -178,12 +178,13 @@ export const MessageList = forwardRef<{ scrollToBottom: () => void }, MessageLis
     <div className="h-full overflow-y-auto overflow-x-hidden w-full" ref={containerRef}>
       {messages.map((message, index) => {
         const isLastMessage = index === messages.length - 1;
+        const isFirstMessage = index === 0;
         
         return (
           <div 
             key={message.id}
             style={isLastMessage ? { marginBottom: `${lastMessagePadding}px` } : {}}
-            className="w-full"
+            className={`w-full px-2 ${!isLastMessage ? 'mb-1.5' : ''} ${isFirstMessage ? 'pt-[30px]' : ''}`}
           >
             {isLastMessage ? (
               <div ref={lastMessageRef}>

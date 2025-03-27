@@ -10,6 +10,8 @@ import { processDocumentEdit } from '../handlers/documentEditHandler.js';
  * Initialize an SSE connection with the client
  */
 export function initSSE(res: Response): Response {
+  console.log('Initializing SSE connection with client');
+  
   // Set headers for SSE
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
@@ -54,6 +56,7 @@ export function sendTokenChunk(res: Response, content: string): void {
  * Send an error message to the client
  */
 export function sendError(res: Response, error: string): void {
+  console.error(`Sending error to client: ${error}`);
   sendSSEEvent(res, 'error', { type: 'error', error });
 }
 
@@ -61,6 +64,8 @@ export function sendError(res: Response, error: string): void {
  * Send a completion message to the client after saving the message to the database
  */
 export async function sendComplete(req: Request, res: Response, data: any = {}): Promise<void> {
+  console.log('Sending completion to client');
+  
   try {
     // Extract the necessary context information from the request
     const { userId, contextType, contextId } = req.body;
@@ -118,6 +123,7 @@ export async function sendComplete(req: Request, res: Response, data: any = {}):
  * Send a tool call event to the client
  */
 export function sendToolCall(res: Response, toolName: string, args: any): void {
+  console.log(`Sending tool call: ${toolName}`);
   sendSSEEvent(res, 'tool', { 
     type: 'tool', 
     tool: toolName,

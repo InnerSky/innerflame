@@ -17,7 +17,8 @@ export const DEFAULT_LEAN_CANVAS_CONTENT = {
   "Revenue Streams": "",
   "Cost Structure": "",
   "Key Metrics": "",
-  "Unfair Advantage": ""
+  "Unfair Advantage": "",
+  "Notes": ""
 };
 
 export class LeanCanvasService {

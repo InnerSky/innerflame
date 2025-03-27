@@ -189,7 +189,7 @@ export function LeanCanvasDisplay({ jsonData, onDataChange, readOnly = false }: 
   };
 
   return (
-    <div className="w-full max-w-full">
+    <div className="w-full max-w-full py-5">
       {/* Title and subtitle section */}
       <JSONDisplay 
         jsonData={{ 
@@ -205,11 +205,9 @@ export function LeanCanvasDisplay({ jsonData, onDataChange, readOnly = false }: 
       {/* Lean Canvas section */}
       {Object.keys(leanCanvasData).length > 0 && (
         <div className="mb-6">
-          <h3 className="text-lg font-medium mb-4">Lean Canvas</h3>
-          
           {/* Lean Canvas Visual Framework */}
-          <div className="w-full rounded-lg border-2 border-gray-300 dark:border-gray-600 mb-6 hidden md:block overflow-hidden [&_.lean-canvas-card]:w-full [&_.lean-canvas-card]:h-full [&_.lean-canvas-card>div]:w-full [&_.lean-canvas-card>div]:h-full [&_.lean-canvas-card>div_.card]:!border-0 [&_.lean-canvas-card>div_.card]:!shadow-none [&_.lean-canvas-card>div_.card]:!bg-transparent [&_.lean-canvas-card>div_.card]:h-full [&_.lean-canvas-card>div_.card]:flex [&_.lean-canvas-card>div_.card]:flex-col [&_.lean-canvas-card>div_.card-header]:!p-3 [&_.lean-canvas-card>div_.card-content]:flex-1 [&_.lean-canvas-card>div_.card-content]:!p-3 [&_.lean-canvas-card>div_.grid]:!grid-cols-1 [&_div.overflow-hidden.border]:!rounded-none [&_div.overflow-hidden.border]:!border-0 [&_div.overflow-hidden]:!border-0 [&_div.overflow-hidden]:!ring-0 [&_div.overflow-hidden.group]:!border-0 [&_div.overflow-hidden.group]:hover:!border-0 [&_.card-title]:!uppercase [&_.card-title]:!normal-case [--divider-color:theme(colors.gray.300)] dark:[--divider-color:theme(colors.gray.600)] [&_*]:!box-border [&_>div>div]:h-full [&_>div>div>div]:h-full">
-            <div className="grid grid-cols-5 grid-rows-2 text-sm text-muted-foreground auto-rows-fr min-h-[16rem] divide-y divide-muted relative h-full">
+          <div className="w-full rounded-lg border-2 border-gray-300 dark:border-gray-600 mb-6 hidden md:block overflow-hidden [&_.lean-canvas-card]:w-full [&_.lean-canvas-card>div]:w-full [&_.lean-canvas-card>div_.card]:!border-0 [&_.lean-canvas-card>div_.card]:!shadow-none [&_.lean-canvas-card>div_.card]:!bg-transparent [&_.lean-canvas-card>div_.card]:flex [&_.lean-canvas-card>div_.card]:flex-col [&_.lean-canvas-card>div_.card-header]:!p-3 [&_.lean-canvas-card>div_.card-content]:flex-1 [&_.lean-canvas-card>div_.card-content]:!p-3 [&_.lean-canvas-card>div_.grid]:!grid-cols-1 [&_div.overflow-hidden.border]:!rounded-none [&_div.overflow-hidden.border]:!border-0 [&_div.overflow-hidden]:!border-0 [&_div.overflow-hidden]:!ring-0 [&_div.overflow-hidden.group]:!border-0 [&_div.overflow-hidden.group]:hover:!border-0 [&_.card-title]:!uppercase [&_.card-title]:!normal-case [--divider-color:theme(colors.gray.300)] dark:[--divider-color:theme(colors.gray.600)] [&_*]:!box-border">
+            <div className="grid grid-cols-5 text-sm text-muted-foreground min-h-[16rem] divide-y divide-muted relative">
               {/* Problem cell spans two rows */}
               <div className="col-span-1 row-span-2 flex flex-col bg-muted/5" style={{ borderRight: '2px solid var(--divider-color)' }}>
                 <div className="flex-1 h-full">
@@ -243,7 +241,7 @@ export function LeanCanvasDisplay({ jsonData, onDataChange, readOnly = false }: 
               </div>
               
               {/* Solution */}
-              <div className="col-span-1 bg-muted/5 h-full" style={{ borderRight: '2px solid var(--divider-color)', borderBottom: '2px solid var(--divider-color)' }}>
+              <div className="col-span-1 bg-muted/5" style={{ borderRight: '2px solid var(--divider-color)', borderBottom: '2px solid var(--divider-color)' }}>
                 {findKey(jsonData, 'solution') && (
                   <div className="lean-canvas-card">
                     <JSONDisplay 
@@ -291,7 +289,7 @@ export function LeanCanvasDisplay({ jsonData, onDataChange, readOnly = false }: 
               </div>
               
               {/* Unfair Advantage */}
-              <div className="col-span-1 bg-muted/5 h-full" style={{ borderRight: '2px solid var(--divider-color)', borderBottom: '2px solid var(--divider-color)' }}>
+              <div className="col-span-1 bg-muted/5" style={{ borderRight: '2px solid var(--divider-color)', borderBottom: '2px solid var(--divider-color)' }}>
                 {findKey(jsonData, 'unfair_advantage') && (
                   <div className="lean-canvas-card">
                     <JSONDisplay 
@@ -339,7 +337,7 @@ export function LeanCanvasDisplay({ jsonData, onDataChange, readOnly = false }: 
               </div>
               
               {/* Key Metrics */}
-              <div className="col-span-1 bg-muted/5 h-full" style={{ borderRight: '2px solid var(--divider-color)' }}>
+              <div className="col-span-1 bg-muted/5" style={{ borderRight: '2px solid var(--divider-color)' }}>
                 {findKey(jsonData, 'key_metrics') && (
                   <div className="lean-canvas-card">
                     <JSONDisplay 
@@ -355,7 +353,7 @@ export function LeanCanvasDisplay({ jsonData, onDataChange, readOnly = false }: 
               </div>
               
               {/* Channels */}
-              <div className="col-span-1 bg-muted/5 h-full" style={{ borderRight: '2px solid var(--divider-color)' }}>
+              <div className="col-span-1 bg-muted/5" style={{ borderRight: '2px solid var(--divider-color)' }}>
                 {findKey(jsonData, 'channels') && (
                   <div className="lean-canvas-card">
                     <JSONDisplay 
@@ -371,8 +369,8 @@ export function LeanCanvasDisplay({ jsonData, onDataChange, readOnly = false }: 
               </div>
               
               {/* Bottom row */}
-              <div className="col-span-5 grid grid-cols-2 divide-x divide-muted h-full">
-                <div className="bg-muted/5 h-full" style={{ borderRight: '2px solid var(--divider-color)', borderTop: '2px solid var(--divider-color)' }}>
+              <div className="col-span-5 grid grid-cols-2 divide-x divide-muted">
+                <div className="bg-muted/5" style={{ borderRight: '2px solid var(--divider-color)', borderTop: '2px solid var(--divider-color)' }}>
                   {findKey(jsonData, 'cost_structure') && (
                     <div className="lean-canvas-card">
                       <JSONDisplay 
@@ -386,7 +384,7 @@ export function LeanCanvasDisplay({ jsonData, onDataChange, readOnly = false }: 
                     </div>
                   )}
                 </div>
-                <div className="bg-muted/5 h-full" style={{ borderTop: '2px solid var(--divider-color)' }}>
+                <div className="bg-muted/5" style={{ borderTop: '2px solid var(--divider-color)' }}>
                   {findKey(jsonData, 'revenue_streams') && (
                     <div className="lean-canvas-card">
                       <JSONDisplay 

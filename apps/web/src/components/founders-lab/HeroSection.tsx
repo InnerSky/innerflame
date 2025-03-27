@@ -35,8 +35,8 @@ export function HeroSection({ scrollToCheckout }: HeroSectionProps) {
       // Use the service to create the lean canvas
       await leanCanvasService.createLeanCanvas(user.id);
       
-      // Navigate to the lean canvas page
-      navigate("/lean-canvas");
+      // Navigate to the lean canvas page with the startup idea
+      navigate("/lean-canvas", { state: { initialIdea: startupIdea } });
     } catch (error) {
       console.error("Error creating lean canvas:", error);
       alert("Failed to create lean canvas. Please try again.");

@@ -4,6 +4,7 @@ import {
   extractDocumentContent, 
   createAIEditVersion 
 } from '../services/documents/documentVersionService.js';
+import { JsonFixer } from '../utils/jsonFixer.js';
 
 /**
  * Process a document edit from a completed message
@@ -24,7 +25,7 @@ export async function processDocumentEdit(
     }
     
     // Extract document content from the tags
-    const documentContent = extractDocumentContent(fullResponse);
+    let documentContent = extractDocumentContent(fullResponse);
     
     if (!documentContent) {
       console.warn('Document edit tags found but content extraction failed');
@@ -33,6 +34,28 @@ export async function processDocumentEdit(
         documentUpdated: false,
         error: 'Failed to extract document content from edit tags'
       };
+    }
+    
+    // Check if content appears to be JSON and fix if needed
+    if (documentContent.trim().startsWith('{') && documentContent.trim().endsWith('}')) {
+      console.log('Detected potential JSON content, attempting to validate and fix if needed');
+      
+      try {
+        // Try parsing as-is first
+        JSON.parse(documentContent);
+        console.log('Content is already valid JSON');
+      } catch (error) {
+        // JSON parsing failed, attempt to fix
+        console.log('Invalid JSON detected, attempting to fix formatting issues');
+        const fixedJson = JsonFixer.fix(documentContent);
+        
+        if (fixedJson) {
+          console.log('Successfully fixed JSON formatting issues');
+          documentContent = fixedJson;
+        } else {
+          console.warn('Could not fix JSON formatting issues, proceeding with original content');
+        }
+      }
     }
     
     // Get document context from the request
