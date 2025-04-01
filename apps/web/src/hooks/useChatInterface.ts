@@ -7,7 +7,7 @@ import {
   MessageContextType,
   CreateMessageParams
 } from '@/features/documents/models/message.js';
-import { useAuth } from './useAuth.ts';
+import { useAuth } from '@/contexts/AuthContext.js';
 import { useToast } from './use-toast.ts';
 import { limitChatHistoryTokens } from '@/utils/textUtils.js';
 import {

@@ -1,18 +1,22 @@
 # Technical Blueprint
 
+**Version:** 1.1
+**Date:** 2023-10-27
+
 ## Table of Contents
-- [Introduction](#introduction)
-- [Project Structure](#project-structure)
-- [Technology Stack](#technology-stack)
-- [Data Schema](#data-schema)
-- [API Endpoints](#api-endpoints)
-- [Component Library](#component-library)
-- [Utility Functions](#utility-functions)
-- [State Management](#state-management)
-- [Authentication Flow](#authentication-flow)
-- [External Services](#external-services)
-- [Design Patterns](#design-patterns)
-- [Features](#features)
+
+*   [Introduction](#introduction)
+*   [Project Structure](#project-structure)
+*   [Technology Stack](#technology-stack)
+*   [Data Schema](#data-schema)
+*   [API Endpoints](#api-endpoints)
+*   [Component Library](#component-library)
+*   [Utility Functions](#utility-functions)
+*   [State Management](#state-management)
+*   [Authentication Flow](#authentication-flow)
+*   [External Services](#external-services)
+*   [Design Patterns](#design-patterns)
+*   [Features](#features)
 
 ## Introduction
 
@@ -33,7 +37,7 @@ innerflame/
 │   │   ├── src/            # Application source code
 │   │   │   ├── components/ # UI components specific to web app
 │   │   │   ├── contexts/   # React context providers
-│   │   │   ├── features/   # Feature-specific code
+│   │   │   ├── features/   # Feature-specific code (e.g., onboarding, entity editing)
 │   │   │   ├── hooks/      # Custom React hooks
 │   │   │   ├── lib/        # Client libraries
 │   │   │   ├── pages/      # Route components
@@ -49,24 +53,24 @@ innerflame/
 │   │
 │   └── api/                # Backend API service
 │       ├── src/
-│       │   ├── controllers/
-│       │   ├── routes/
-│       │   ├── services/
+│       │   ├── controllers/ # (Optional structure for request handling)
+│       │   ├── routers/     # tRPC routers defining API endpoints
+│       │   ├── services/    # Business logic (e.g., questionnaire service, AI service)
 │       │   │   └── ai/     # AI agent implementation
 │       │   │       └── agent.ts  # Custom agentic framework implementation
-│       │   ├── utils/
-│       │   └── index.ts
+│       │   ├── utils/      # Backend utilities
+│       │   └── index.ts    # API server entry point
 │       ├── package.json
 │       └── tsconfig.json
 ├── packages/
 │   ├── types/              # Shared TypeScript types
 │   │   ├── src/
-│   │   │   ├── document.ts # Document-related types
-│   │   │   ├── project.ts  # Project-related types
+│   │   │   ├── entities.ts # Core entity types
 │   │   │   ├── message.ts  # Message-related types
+│   │   │   ├── questionnaire.ts # Questionnaire structure/response types
 │   │   │   └── index.ts
 │   │   └── package.json
-│   ├── ui/                 # Shared UI components
+│   ├── ui/                 # Shared UI components (built with Radix/Tailwind)
 │   │   ├── src/
 │   │   │   ├── components/
 │   │   │   └── index.ts
@@ -79,7 +83,7 @@ innerflame/
 │   └── ai-tools/           # Shared AI tools implementation
 │       ├── src/
 │       │   ├── tools/      # Tool implementations for AI agents
-│       │   │   ├── documentUpdate.ts  # Document modification tool
+│       │   │   ├── entityUpdate.ts  # Entity modification tool
 │       │   │   └── askUserQuestion.ts # Interactive question tool
 │       │   ├── langgraph/  # Type definitions for agent interfaces
 │       │   │   └── types.ts # Shared types for agent implementation
@@ -103,7 +107,7 @@ innerflame/
 ├── docs/                   # Project documentation
 │   ├── milestones/         # Project milestone tracking
 │   ├── technical_blueprint.md  # This document
-│   └── other documentation
+│   └── questionnaire_system.md # Detailed Questionnaire System Doc (Separate or Linked)
 ├── netlify.toml            # Netlify deployment configuration
 ├── package.json            # Root package.json with workspaces
 ├── tsconfig.json           # Base TypeScript configuration
@@ -114,484 +118,557 @@ innerflame/
 ### Configuration Overview
 
 #### Root Configuration
-- `package.json`: Defines workspaces and shared dependencies
-- `tsconfig.json`: Base TypeScript configuration with path aliases for packages
-- `turbo.json`: Defines the build pipeline and task dependencies
-- `eslint.config.js`: Unified ESLint configuration for code quality
-- `.prettierrc.json`: Formatting standards
-- `netlify.toml`: Deployment configuration for the web application
+
+*   `package.json`: Defines workspaces and shared dependencies
+*   `tsconfig.json`: Base TypeScript configuration with path aliases for packages
+*   `turbo.json`: Defines the build pipeline and task dependencies
+*   `eslint.config.js`: Unified ESLint configuration for code quality
+*   `.prettierrc.json`: Formatting standards
+*   `netlify.toml`: Deployment configuration for the web application
 
 #### Web Application Configuration
-- `apps/web/vite.config.ts`: Sets up build tools, plugins, and path aliases
-- `apps/web/tsconfig.json`: Extends root configuration with web-specific settings
-- `apps/web/tailwind.config.js`: Styling configuration for the web app
+
+*   `apps/web/vite.config.ts`: Sets up build tools, plugins, and path aliases
+*   `apps/web/tsconfig.json`: Extends root configuration with web-specific settings
+*   `apps/web/tailwind.config.js`: Styling configuration for the web app
 
 #### Package Configuration
+
 Each package in the `packages/` directory has its own:
-- `package.json`: Defines dependencies and build scripts
-- `tsconfig.json`: TypeScript configuration for the package
-- Entry points for consistent importing
+
+*   `package.json`: Defines dependencies and build scripts
+*   `tsconfig.json`: TypeScript configuration for the package
+*   Entry points for consistent importing
 
 ## Technology Stack
 
 ### Frontend
-- **Framework**: React 18
-- **Language**: TypeScript
-- **Module System**: ES Modules (ESM) with .js extensions for imports
-- **Build Tool**: Vite
-- **UI Framework**: Custom components library built on Radix UI primitives
-- **Styling**: Tailwind CSS
-- **State Management**: React Context API and hooks system
-- **Routing**: React Router (v6)
-- **Form Handling**: React Hook Form with Zod validation
-- **API Client**: tRPC client for type-safe API calls
-- **Real-time Communication**: SSE (Server-Sent Events) client for streaming
-- **Markdown Rendering**: React Markdown with remark-gfm
-- **Data Visualization**: Recharts
-- **Progressive Web App**: Vite PWA plugin
+
+*   **Framework**: React 18
+*   **Language**: TypeScript
+*   **Module System**: ES Modules (ESM) with .js extensions for imports
+*   **Build Tool**: Vite
+*   **UI Framework**: Custom components library built on Radix UI primitives
+*   **Styling**: Tailwind CSS
+*   **State Management**: React Context API and hooks system (potentially Zustand/Jotai for specific complex states)
+*   **Routing**: React Router (v6)
+*   **Form Handling**: React Hook Form with Zod validation
+*   **API Client**: tRPC client for type-safe API calls
+*   **Real-time Communication**: SSE (Server-Sent Events) client for streaming
+*   **Markdown Rendering**: React Markdown with remark-gfm
+*   **Data Visualization**: Recharts
+*   **Progressive Web App**: Vite PWA plugin
 
 ### Backend
-- **Runtime**: Node.js
-- **Language**: TypeScript with ESM
-- **API Framework**: tRPC for type-safe API endpoints
-- **AI Orchestration**: Custom agentic framework for agent workflows
-- **LLM Provider Abstraction**: 
-  - Modular architecture allowing seamless switching between different LLM providers
-  - Two-layer design with Adapters (high-level interfaces) and Handlers (low-level API clients)
-  - Support for advanced features like reasoning, caching, and detailed token usage tracking
-  - Modern ESM-compatible implementation with TypeScript
-- **Streaming Protocol**: Server-Sent Events (SSE) for real-time communication
-- **Database Client**: Supabase.js
-- **Authentication**: Supabase Auth with JWT validation
-- **Tool Calling**: Server-side interception and execution of Claude API tool calls
-- **Path Normalization**: Express middleware for consistent API endpoint routing
+
+*   **Runtime**: Node.js
+*   **Language**: TypeScript with ESM
+*   **API Framework**: tRPC for type-safe API endpoints
+*   **AI Orchestration**: Custom agentic framework for agent workflows
+*   **LLM Provider Abstraction**:
+    *   Modular architecture allowing seamless switching between different LLM providers
+    *   Two-layer design with Adapters (high-level interfaces) and Handlers (low-level API clients)
+    *   Support for advanced features like reasoning, caching, and detailed token usage tracking
+    *   Modern ESM-compatible implementation with TypeScript
+*   **Streaming Protocol**: Server-Sent Events (SSE) for real-time communication
+*   **Database Client**: Supabase.js
+*   **Authentication**: Supabase Auth with JWT validation
+*   **Tool Calling**: Server-side interception and execution of Claude API tool calls
+*   **Path Normalization**: Express middleware for consistent API endpoint routing
 
 ### Infrastructure
-- **Database**: Supabase PostgreSQL
-- **Authentication**: Supabase Auth with Google Auth integration
-- **Storage**: Supabase Storage
-- **Frontend Hosting**: Netlify
-- **Backend Hosting**: Google Cloud Run
-- **CI/CD**: GitHub Actions
-- **Monorepo Management**: Turborepo for build orchestration
+
+*   **Database**: Supabase PostgreSQL
+*   **Authentication**: Supabase Auth with Google Auth integration
+*   **Storage**: Supabase Storage
+*   **Frontend Hosting**: Netlify
+*   **Backend Hosting**: Google Cloud Run
+*   **CI/CD**: GitHub Actions
+*   **Monorepo Management**: Turborepo for build orchestration
 
 ### Development Tools
-- **Package Management**: NPM with workspaces
-- **Build Orchestration**: Turborepo
-- **Code Quality**: ESLint with flat configuration
-- **Formatting**: Prettier
-- **Git Hooks**: Husky with lint-staged
+
+*   **Package Management**: NPM with workspaces
+*   **Build Orchestration**: Turborepo
+*   **Code Quality**: ESLint with flat configuration
+*   **Formatting**: Prettier
+*   **Git Hooks**: Husky with lint-staged
 
 ## Data Schema
 
 ### Core Tables
-All tables include standard fields: id (UUID primary key), created_at, updated_at, and deleted_at (for soft deletes).
 
-#### users
-| Column | Type | Description |
-|--------|------|-------------|
-| id | UUID | Primary key, linked to Supabase auth.users |
-| email | TEXT | User's email address |
-| name | TEXT | User's full name |
-| avatar_url | TEXT | URL to user's profile image |
-| preferences | JSONB | User settings and preferences |
+All tables include standard fields: `id` (UUID primary key), `created_at`, `updated_at`, and potentially `deleted_at` (for soft deletes where appropriate).
 
-#### projects
-| Column | Type | Description |
-|--------|------|-------------|
-| id | UUID | Primary key |
-| user_id | UUID | References users.id |
-| name | TEXT | Project name |
-| description | TEXT | Project description |
-| status | TEXT | 'active', 'archived', 'deleted' |
+#### `users`
 
-#### documents
-| Column | Type | Description |
-|--------|------|-------------|
-| id | UUID | Primary key |
-| project_id | UUID | References projects.id |
-| document_type | TEXT | 'lean_canvas', 'future_press_conference', etc. |
-| name | TEXT | Document name |
-| status | TEXT | 'draft', 'completed', 'archived' |
-| version | INTEGER | Current version number |
-| data_type | TEXT | 'json', 'html', 'markdown' |
+| Column       | Type      | Description                                |
+| :----------- | :-------- | :----------------------------------------- |
+| id           | UUID      | Primary key, linked to Supabase auth.users |
+| email        | TEXT      | User's email address                       |
+| full\_name   | TEXT      | User's full name                           |
+| avatar\_url  | TEXT      | URL to user's profile image                |
+| bio          | TEXT      | User's biography                           |
+| is\_admin    | BOOLEAN   | Flag indicating admin privileges           |
+| created\_at  | TIMESTAMP | Timestamp of user creation                 |
+| updated\_at  | TIMESTAMP | Timestamp of last update                   |
 
-#### document_versions
-| Column | Type | Description |
-|--------|------|-------------|
-| id | UUID | Primary key |
-| document_id | UUID | References documents.id |
-| version | INTEGER | Version number |
-| content | JSONB/TEXT | Document content (format depends on data_type) |
-| created_by | UUID | References users.id |
-| timestamp | TIMESTAMP | When version was created |
+#### `entities`
 
-#### messages
-| Column | Type | Description |
-|--------|------|-------------|
-| id | UUID | Primary key |
-| user_id | UUID | References users.id |
-| sender_type | TEXT | 'user', 'ai' |
-| content | TEXT | Message content |
-| context_type | TEXT | 'canvas', 'journal', etc. |
-| context_id | UUID | References documents.id or projects.id |
-| detected_intent | TEXT[] | Intent tags detected in message |
-| has_proposed_changes | BOOLEAN | Whether message proposes document changes |
-| proposed_entity_changes | JSONB | Structured changes to entities |
-| display_thread_id | UUID | For UI organization |
-| reply_to_message_id | UUID | References messages.id |
-| content_embedding | VECTOR(1536) | Vector embedding for semantic search |
+| Column            | Type      | Description                                                                          |
+| :---------------- | :-------- | :----------------------------------------------------------------------------------- |
+| id                | UUID      | Primary key                                                                          |
+| user\_id          | UUID      | References `users.id`                                                                |
+| title             | TEXT      | Entity name (e.g., Project Title, Document Name)                                     |
+| entity\_type      | TEXT      | Type of entity ('project', 'lean\_canvas', 'journal', etc.)                           |
+| content           | TEXT      | Optional main content or description (for simpler entities)                          |
+| metadata          | JSONB     | Flexible field for additional properties (e.g., status, specific type attributes)    |
+| active\_version\_id | UUID      | References `entity_versions.id` (points to the current active version, if versioned) |
+| created\_at       | TIMESTAMP | Timestamp of entity creation                                                         |
+| updated\_at       | TIMESTAMP | Timestamp of last update                                                             |
 
-#### message_tags
-| Column | Type | Description |
-|--------|------|-------------|
-| id | UUID | Primary key |
-| message_id | UUID | References messages.id |
-| tag | TEXT | Tag value |
-| created_by | TEXT | 'user', 'ai', 'system' |
+#### `entity_versions`
 
-#### message_references
-| Column | Type | Description |
-|--------|------|-------------|
-| id | UUID | Primary key |
-| message_id | UUID | References messages.id |
-| entity_type | TEXT | 'canvas', 'project', etc. |
-| entity_id | UUID | ID of referenced entity |
-| reference_type | TEXT | 'mentions', 'modifies', 'creates', 'analyzes' |
+| Column                | Type      | Description                                                              |
+| :-------------------- | :-------- | :----------------------------------------------------------------------- |
+| id                    | UUID      | Primary key                                                              |
+| entity\_id            | UUID      | References `entities.id`                                                 |
+| entity\_type          | TEXT      | Type of the related entity (matches `entities.entity_type`)              |
+| version\_number       | INTEGER   | Sequential version number for the entity                                 |
+| full\_content         | JSONB/TEXT| Complete content snapshot for this version                               |
+| changes               | JSONB     | Diff from the base version (optional, e.g., JSON Patch)                  |
+| base\_version\_id     | UUID      | References `entity_versions.id` (parent version for diffing)             |
+| created\_by\_message\_id | UUID      | References `messages.id` (links version creation to a specific message)  |
+| version\_type         | TEXT      | Nature of the version (e.g., 'initial', 'user\_edit', 'ai\_suggestion')  |
+| significance          | TEXT      | Description of the version's importance or changes                       |
+| user\_label           | TEXT      | User-defined label for the version                                       |
+| created\_at           | TIMESTAMP | Timestamp of version creation                                            |
+
+#### `messages`
+
+| Column                  | Type         | Description                                                              |
+| :---------------------- | :----------- | :----------------------------------------------------------------------- |
+| id                      | UUID         | Primary key                                                              |
+| user\_id                | UUID         | References `users.id` (for user messages)                              |
+| sender\_type            | TEXT         | 'user', 'ai'                                                             |
+| content                 | TEXT         | Message content                                                          |
+| context\_type           | TEXT         | 'entity', 'project', 'system', etc. (Indicates the context scope)        |
+| context\_id             | UUID         | References `entities.id` (Links message to a specific entity/project)    |
+| detected\_intent        | TEXT[]       | Intent tags detected in message                                          |
+| has\_proposed\_changes  | BOOLEAN      | Whether message proposes entity changes                                  |
+| proposed\_entity\_changes | JSONB        | Structured changes to entities proposed by the message                   |
+| display\_thread\_id     | UUID         | For UI organization/grouping                                             |
+| reply\_to\_message\_id  | UUID         | References `messages.id`                                                 |
+| content\_embedding      | VECTOR(1536) | Vector embedding for semantic search (requires `pgvector` extension)   |
+| created\_at             | TIMESTAMP    | Timestamp of message creation                                            |
+
+#### `message_tags`
+
+| Column     | Type      | Description                       |
+| :--------- | :-------- | :-------------------------------- |
+| id         | UUID      | Primary key                       |
+| message_id | UUID      | References `messages.id`          |
+| tag        | TEXT      | Tag value                         |
+| created_by | TEXT      | 'user', 'ai', 'system'            |
+
+#### `message_references`
+
+| Column         | Type      | Description                                           |
+| :------------- | :-------- | :---------------------------------------------------- |
+| id             | UUID      | Primary key                                           |
+| message_id     | UUID      | References `messages.id`                              |
+| entity_type    | TEXT      | 'canvas', 'project', etc.                             |
+| entity_id      | UUID      | ID of referenced entity                               |
+| reference_type | TEXT      | 'mentions', 'modifies', 'creates', 'analyzes', etc.   |
+
+#### `questionnaires`
+
+Stores the definitions and metadata for different versions of questionnaires.
+
+| Column      | Type      | Description                                                                      |
+| :---------- | :-------- | :------------------------------------------------------------------------------- |
+| id          | UUID      | Primary Key. Unique identifier for this specific questionnaire version.          |
+| name        | TEXT      | Human-readable name for internal reference (e.g., "Onboarding v1.1").            |
+| type        | TEXT      | Category of the questionnaire (e.g., 'onboarding', 'feedback').                  |
+| version     | INTEGER   | Sequential version number *within* a specific `type`.                            |
+| structure   | JSONB     | **The core definition:** An ordered array of question and info_step objects.      |
+| is_active   | BOOLEAN   | If `true`, this is the current version presented for its `type`.                 |
+| created_at  | TIMESTAMP | Timestamp of creation.                                                           |
+| updated_at  | TIMESTAMP | Timestamp of last update.                                                        |
+
+#### `questionnaire_responses`
+
+Stores user progress and answers for a specific questionnaire instance they interacted with.
+
+| Column             | Type      | Description                                           |
+|-------------------|-----------|-------------------------------------------------------|
+| id                | UUID      | Primary key                                           |
+| user_id           | UUID      | Foreign key to users table                            |
+| questionnaire_id  | UUID      | Foreign key to questionnaires table                   |
+| responses         | JSONB     | JSON object with question responses                   |
+| status            | TEXT      | Status of questionnaire (not_started, in_progress, completed) |
+| started_at        | TIMESTAMP | When the user started the questionnaire               |
+| completed_at      | TIMESTAMP | When the user completed the questionnaire             |
+| created_at        | TIMESTAMP | Record creation timestamp                             |
+| updated_at        | TIMESTAMP | Record update timestamp                               |
 
 ### Relationships
-- users to projects: 1:N (One user can own multiple projects)
-- projects to documents: 1:N (A project can contain multiple documents)
-- documents to document_versions: 1:N (A document has multiple versions)
-- documents to messages: 1:N (Messages can reference specific documents)
-- projects to messages: 1:N (Messages can belong to a project)
-- messages to message_tags: 1:N (A message can have multiple tags)
-- messages to message_references: 1:N (A message can reference multiple entities)
+
+*   `users` to `entities`: 1:N (One user can own multiple entities)
+*   `users` to `questionnaire_responses`: 1:N (One user can have multiple responses)
+*   `entities` to `entity_versions`: 1:N (An entity has multiple versions)
+*   `entities` to `messages`: 1:N (Messages can reference specific entities via `context_id`)
+*   `questionnaires` to `questionnaire_responses`: 1:N (A questionnaire version can have many responses)
+*   `messages` to `message_tags`: 1:N (A message can have multiple tags)
+*   `messages` to `message_references`: 1:N (A message can reference multiple entities/concepts)
+*   `entity_versions` to `messages`: 1:N (A version can be created by a message)
+*   `entity_versions` to `entity_versions`: 1:N (Versions can have base versions for diffing)
 
 ### Indices
-- messages: user_id, context_id, created_at, display_thread_id, reply_to_message_id
-- entity_versions: entity_id, entity_type, is_current
-- message_tags: message_id, tag
-- message_references: message_id, entity_id, entity_type, reference_type
+
+*   `users`: email
+*   `entities`: user_id, entity_type, active_version_id
+*   `entity_versions`: entity_id, entity_type, created_by_message_id, base_version_id
+*   `messages`: user_id, context_id, created_at, display_thread_id, reply_to_message_id, content_embedding (using pgvector index e.g., IVFFlat or HNSW)
+*   `message_tags`: message_id, tag
+*   `message_references`: message_id, entity_id, entity_type, reference_type
+*   `questionnaires`: (type, version) UNIQUE, (type, is_active)
+*   `questionnaire_responses`: (user_id, questionnaire_id) UNIQUE (if only one attempt allowed per version), user_id, status
 
 ## API Endpoints
 
-The API follows tRPC conventions for type-safe communication between client and server.
+The API follows tRPC conventions for type-safe communication between client and server. Defined in `apps/api/src/routers/`.
 
-### Core Endpoints
+### Core Routers and Endpoints
 
-#### Authentication
-- `auth.login`: Login with email/password or OAuth
-- `auth.register`: Register a new user
-- `auth.logout`: Logout current user
-- `auth.getSession`: Get current session info
+#### `auth` Router
 
-#### Projects
-- `projects.create`: Create a new project
-- `projects.get`: Get a project by ID
-- `projects.list`: List all projects for a user
-- `projects.update`: Update project details
-- `projects.delete`: Delete a project
+*   `auth.login`: Login with email/password or OAuth
+*   `auth.register`: Register a new user
+*   `auth.logout`: Logout current user
+*   `auth.getSession`: Get current session info
 
-#### Documents
-- `documents.create`: Create a new document
-- `documents.get`: Get a document by ID
-- `documents.list`: List documents for a project
-- `documents.update`: Update document details
-- `documents.delete`: Delete a document
+#### `entities` Router
 
-#### Document Versions
-- `documentVersions.create`: Create a new document version
-- `documentVersions.get`: Get a specific version
-- `documentVersions.list`: List versions for a document
-- `documentVersions.revertTo`: Revert to a previous version
+*   `entities.create`: Create a new entity (e.g., project, document)
+*   `entities.get`: Get an entity by ID
+*   `entities.list`: List entities for a user (potentially filtered by type)
+*   `entities.update`: Update entity details (title, metadata)
+*   `entities.delete`: Delete an entity (soft delete recommended)
 
-#### Messages
-- `messages.create`: Create a new message
-- `messages.get`: Get a message by ID
-- `messages.list`: List messages for a context
-- `messages.update`: Update a message
-- `messages.delete`: Delete a message
+#### `entityVersions` Router
 
-#### AI Interaction
-- `ai.streamConversation`: SSE endpoint for streaming AI responses
-- `ai.askQuestion`: Send a question to the AI agent
-- `ai.executeAction`: Execute an AI tool action
+*   `entityVersions.create`: Create a new entity version (e.g., saving changes)
+*   `entityVersions.get`: Get a specific version by ID
+*   `entityVersions.list`: List versions for an entity
+*   `entityVersions.revertTo`: Make a previous version the active one (updates `entities.active_version_id`)
+
+#### `messages` Router
+
+*   `messages.create`: Create a new message
+*   `messages.get`: Get a message by ID
+*   `messages.list`: List messages for a context
+*   `messages.update`: Update a message
+*   `messages.delete`: Delete a message
+
+#### `ai` Router
+
+*   `ai.streamConversation`: SSE endpoint for streaming AI responses for a given context.
+*   `ai.askQuestion` (Potentially merged into `messages.create` with AI handling): Send a question to the AI agent.
+*   `ai.executeAction`: Execute an AI tool action (likely handled internally during stream/response generation).
+
+#### `questionnaires` Router
+
+*   `questionnaires.getActive`: Fetches the structure of the active questionnaire for a given type (e.g., 'onboarding'). Input: `{ type: string }`. Output: `Questionnaire | null`.
+*   (Admin only potentially) `questionnaires.create`: Create a new questionnaire version.
+*   (Admin only potentially) `questionnaires.update`: Update questionnaire details / structure.
+*   (Admin only potentially) `questionnaires.setActive`: Set a specific version as active (and deactivate others of the same type).
+
+#### `questionnaireResponses` Router
+
+*   `questionnaireResponses.findOrCreate`: Finds an 'in_progress' or 'not_started' response for a user and active questionnaire type, or creates a new one if none exists. Input: `{ questionnaireType: string }`. Output: `{ questionnaire, questionnaireResponse }`.
+*   `questionnaireResponses.get`: Fetches a specific response record by ID (useful for resuming). Input: `{ responseId: string }`. Output: `QuestionnaireResponse`.
+*   `questionnaireResponses.update`: Updates the `responses` JSON and potentially `status`. Input: `{ responseId: string, responses: object, status?: string }`. Output: `Success/Failure`.
+*   `questionnaireResponses.submit`: Final update, marks as 'completed'. Input: `{ responseId: string, responses: object }`. Output: `Success/Failure`.
 
 ## Component Library
 
-### Core UI Components
-Built on Radix UI primitives and styled with Tailwind CSS.
+Located in `packages/ui/`. Built on Radix UI primitives and styled with Tailwind CSS.
 
 #### Layout Components
-- **AppShell**: Main application layout with sidebar, header, and content area
-- **Sidebar**: Collapsible navigation sidebar
-- **Panel**: Split panel container with resizable areas
-- **Card**: Basic container with header, content, and footer areas
+
+*   **AppShell**: Main application layout with sidebar, header, and content area
+*   **Sidebar**: Collapsible navigation sidebar
+*   **Panel**: Split panel container with resizable areas
+*   **Card**: Basic container with header, content, and footer areas
 
 #### Interactive Components
-- **Button**: Primary, secondary, ghost, and destructive variants
-- **Input**: Text input with validation states
-- **Select**: Dropdown select with multi-select option
-- **Checkbox**: Checkboxes with labels and validation
-- **RadioGroup**: Radio button groups
-- **Switch**: Toggle switches for boolean values
-- **Tabs**: Tabbed interface for content organization
-- **Dialog**: Modal dialogs for focused interactions
-- **Toast**: Notification system for feedback
+
+*   **Button**: Primary, secondary, ghost, and destructive variants
+*   **Input**: Text input with validation states
+*   **Select**: Dropdown select with multi-select option
+*   **Checkbox**: Checkboxes with labels and validation
+*   **RadioGroup**: Radio button groups
+*   **Switch**: Toggle switches for boolean values
+*   **Tabs**: Tabbed interface for content organization
+*   **Dialog**: Modal dialogs for focused interactions
+*   **Toast**: Notification system for feedback
 
 #### Data Display Components
-- **Table**: Data table with sorting and pagination
-- **List**: Ordered and unordered lists with item variants
-- **Tree**: Hierarchical tree view for nested data
-- **Avatar**: User avatar with fallback
-- **Badge**: Status badges for visual indicators
-- **Progress**: Progress bar and spinner components
+
+*   **Table**: Data table with sorting and pagination
+*   **List**: Ordered and unordered lists with item variants
+*   **Tree**: Hierarchical tree view for nested data
+*   **Avatar**: User avatar with fallback
+*   **Badge**: Status badges for visual indicators
+*   **Progress**: Progress bar and spinner components
 
 #### Special Purpose Components
-- **Chat**: Chat interface with message bubbles and input
-- **DocumentEditor**: Document editing interface with sections
-- **CanvasView**: Visual canvas representation of document
-- **CodeBlock**: Syntax highlighted code blocks
+
+*   **Chat**: Chat interface with message bubbles and input (`apps/web/`)
+*   **EntityEditor**: Generic entity editing interface (`apps/web/`)
+*   **CanvasView**: Visual canvas representation (likely specific entity type view) (`apps/web/`)
+*   **CodeBlock**: Syntax highlighted code blocks (`packages/ui/`)
+*   **QuestionnaireRenderer**: Dynamically renders questionnaire steps based on JSON structure (`apps/web/features/onboarding/`)
+*   **InfoStepDisplay**: Renders the informational steps within the questionnaire (`apps/web/features/onboarding/`)
+*   Specific Question Type Components (e.g., `SingleChoiceQuestion`, `ScaleQuestion`) used by `QuestionnaireRenderer` (`apps/web/features/onboarding/components/`)
 
 ## Utility Functions
 
-### Supabase Integration
-- **createSupabaseClient**: Create and configure Supabase client
-- **getUser**: Get current authenticated user
-- **getSession**: Get current authentication session
+Located primarily in `packages/utils/` for shared utilities, and `apps/web/src/utils/` or `apps/api/src/utils/` for app-specific ones.
 
-### Data Handling
-- **formatDate**: Format date strings consistently
-- **slugify**: Convert strings to URL-friendly slugs
-- **debounce**: Debounce function for input handling
-- **sortByCreatedAt**: Sort arrays by timestamp
+### Supabase Integration (`packages/utils/`)
 
-### State Management
-- **createContext**: Create typed context with error handling
-- **useLocalStorage**: Persistent state with localStorage
+*   **createSupabaseClient**: Create and configure Supabase client (client-side and server-side versions)
+*   **getUser**: Get current authenticated user (server-side helper)
+*   **getSession**: Get current authentication session (client-side helper)
 
-### AI Integration
-- **createAIStream**: Create an SSE stream for AI responses
-- **parseToolCalls**: Parse and process AI tool calls
-- **updateDocumentFromToolCall**: Apply document changes from AI tool call
-- **streamEndpointPath**: Consistently use `/api/ai/stream` for API endpoints
+### Data Handling (`packages/utils/`)
+
+*   **formatDate**: Format date strings consistently
+*   **slugify**: Convert strings to URL-friendly slugs
+*   **debounce / throttle**: Utility functions for input handling/API calls
+*   **sortBy**: Generic sorting utility
+
+### State Management (`apps/web/src/hooks/` or `apps/web/src/contexts/`)
+
+*   **createContext**: Utility for creating typed context with proper provider and hook.
+*   **useLocalStorage**: Hook for persistent state with localStorage.
+
+### AI Integration (`apps/api/src/services/ai/` or `packages/ai-tools/`)
+
+*   **createAIStream**: Create an SSE stream for AI responses
+*   **parseToolCalls**: Parse and process AI tool calls from LLM response
+*   **updateEntityFromToolCall**: Apply entity changes based on AI tool call
+*   **streamEndpointPath**: Constant defining the SSE stream path (`/api/ai/stream`)
+
+### Questionnaire Handling (`apps/web/src/features/onboarding/utils/`)
+
+*   **evaluateCondition**: Function to evaluate the `condition` object of an `info_step` based on current responses.
+*   **validateResponse**: Function to validate user input for a question based on its `required` status and type constraints.
 
 ## State Management
 
-### Global State
-- **AuthContext**: User authentication state
-- **UIContext**: Global UI state (theme, sidebar open/closed)
-- **NotificationContext**: Toast notifications system
+### Global State (`apps/web/src/contexts/`)
+
+*   **AuthContext**: User authentication state, profile.
+*   **UIContext**: Global UI state (theme, sidebar open/closed, potentially modal states).
+*   **NotificationContext**: Manages toast notifications.
 
 ### Feature-specific State
-- **ProjectContext**: Current project state
-- **DocumentContext**: Current document state and versions
-- **ChatContext**: Chat conversation state
+
+Managed via local component state (`useState`, `useReducer`) or feature-specific contexts/state libraries (like Zustand) where necessary.
+
+*   **EntityContext**: State for the currently viewed/edited entity, its active version, and potentially recent versions (`apps/web/src/features/entities/`).
+*   **ChatContext**: State for the current chat conversation, messages, streaming status (`apps/web/src/features/chat/`).
+*   **QuestionnaireContext**: State during an active questionnaire session, including current step index, user responses (`apps/web/src/features/onboarding/`).
 
 ### State Management Patterns
-- Use React Context for global/shared state
-- Use local component state for UI-specific state
-- Use custom hooks for reusable state logic
-- Prefer server state for data that should be persisted
+
+*   Use React Context for low-frequency update global/shared state (Auth, UI Theme).
+*   Use local component state (`useState`) for UI-specific, non-shared state.
+*   Consider Zustand or Jotai for complex, high-frequency update states shared across non-parent/child components (e.g., complex editor state).
+*   Use custom hooks (`useEntity`, `useChat`) to encapsulate state logic and data fetching.
+*   Prefer server state managed via tRPC queries/mutations (`react-query` integration) for data persistence. Client state synchronizes with server state.
 
 ## Authentication Flow
 
-1. **Initial Authentication**:
-   - User signs in via Supabase Auth (email/password or Google)
-   - JWT token is stored securely
-   - User profile is fetched and stored in AuthContext
+1.  **Initial Authentication**:
+    *   User visits app, checks for existing Supabase session.
+    *   If no session, prompts login/signup (Email/Password or Google OAuth via Supabase UI/SDK).
+    *   On successful auth, Supabase returns a JWT session.
+    *   Frontend stores session (Supabase SDK handles this) and fetches user profile (`users` table) via tRPC.
+    *   User data stored in `AuthContext`.
 
-2. **Session Management**:
-   - JWT token is included with all API requests
-   - Token is refreshed automatically when needed
-   - Session is checked on application startup
+2.  **Session Management**:
+    *   Supabase client SDK automatically attaches JWT to outgoing requests (if configured correctly with tRPC).
+    *   Backend tRPC middleware verifies JWT validity using Supabase Auth helpers.
+    *   SDK handles automatic token refreshing.
+    *   Session validity checked on app load and potentially periodically.
 
-3. **Authorization**:
-   - Projects and documents are protected by user_id
-   - Row-level security in Supabase enforces ownership
-   - API endpoints verify authentication before operations
+3.  **Authorization**:
+    *   **API Level:** tRPC middleware ensures user is authenticated for protected procedures. Procedures check if the authenticated user has permission to access/modify the requested resource (e.g., checking `user_id` on an entity).
+    *   **Database Level:** Supabase Row Level Security (RLS) policies are implemented on tables (`entities`, `messages`, `questionnaire_responses`, etc.) to ensure users can only access/modify their own data by default. Policies check `auth.uid()` against the `user_id` column.
 
 ## External Services
 
 ### Supabase
-- **Purpose**: Database, authentication, and storage
-- **Configuration**: Environment variables for URL and key
-- **Features Used**: Auth, Database, Storage, and RLS
 
-### Claude API
-- **Purpose**: AI agent for document assistance
-- **Integration**: 
-  - Implemented via LLM Provider abstraction layer
-  - Two-layer architecture with AnthropicAdapter and AnthropicHandler
-  - Support for multiple Claude models (3.5, 3.7, etc.)
-  - Enhanced capabilities including reasoning/thinking, caching, and detailed usage metrics
-- **Configuration**: API key in environment variables
-- **Features Used**: 
-  - Tool calling for document operations
-  - Streaming responses with SSE
-  - Reasoning capabilities for enhanced transparency
-  - Caching for improved performance
+*   **Purpose**: Database, Authentication, Storage
+*   **Configuration**: Environment variables (`SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` for backend).
+*   **Features Used**: PostgreSQL Database, Auth (JWT, OAuth, Email/Password), Storage (for user avatars, potentially document attachments), Row Level Security (RLS).
+
+### Claude API (via Anthropic)
+
+*   **Purpose**: AI agent for chat, document generation, and strategic guidance.
+*   **Integration**: Via the custom LLM Provider Abstraction layer (`packages/ai-tools/`). Uses `AnthropicAdapter` and `AnthropicHandler`.
+*   **Configuration**: `ANTHROPIC_API_KEY` in environment variables.
+*   **Features Used**: Text generation, Streaming responses (SSE), Tool Calling (Function Calling) for structured actions like entity updates, potentially different model versions (Claude 3.5 Sonnet, Haiku, etc.).
 
 ### Google Auth
-- **Purpose**: OAuth authentication provider
-- **Configuration**: OAuth client ID in Supabase dashboard
-- **Features Used**: User authentication
+
+*   **Purpose**: OAuth authentication provider integrated with Supabase Auth.
+*   **Configuration**: OAuth client ID and secret configured in Supabase Auth dashboard.
+*   **Features Used**: User authentication via Google accounts.
 
 ### Netlify
-- **Purpose**: Frontend hosting and deployment
-- **Configuration**: Build commands in netlify.toml
-- **Features Used**: Continuous deployment, serverless functions
+
+*   **Purpose**: Frontend hosting and deployment (`apps/web/`).
+*   **Configuration**: `netlify.toml` defines build commands, output directory (`apps/web/dist`), environment variables proxying.
+*   **Features Used**: Continuous Deployment (via GitHub Actions trigger or Netlify integration), CDN, potentially Netlify Functions for simple tasks (though primary backend is on Cloud Run).
 
 ### Google Cloud Run
-- **Purpose**: Backend service hosting
-- **Configuration**: Dockerfile and deployment scripts
-- **Features Used**: Container hosting, scaling
+
+*   **Purpose**: Backend API service hosting (`apps/api/`).
+*   **Configuration**: `Dockerfile` in `apps/api/`, Google Cloud Build/Run deployment scripts/config (e.g., `cloudbuild.yaml`). Requires service account configuration, environment variable management.
+*   **Features Used**: Serverless container hosting, auto-scaling, request-based pricing.
 
 ## Design Patterns
 
 ### CRUD Operations
-1. Define type interfaces for the entity
-2. Create tRPC procedure for the operation
-3. Implement database query using Supabase client
-4. Return typed response to the client
-5. Handle optimistic updates in the UI when appropriate
+
+1.  Define shared types for the data entity (`packages/types/`).
+2.  Define Zod schemas for input validation (`packages/types/` or within router files).
+3.  Create tRPC procedures (query/mutation) in the relevant backend router (`apps/api/src/routers/`).
+4.  Implement database logic using Supabase client within the procedure's resolver, ensuring user authorization (checking `ctx.user.id`).
+5.  Return typed response.
+6.  Frontend uses tRPC client hooks (`api.router.procedure.useQuery`/`useMutation`) to interact with the API.
+7.  Utilize `react-query` cache invalidation and optimistic updates for better UX.
 
 ### Error Handling
-1. Use try/catch blocks for async operations
-2. Provide typed error responses from API
-3. Use toast notifications for user feedback
-4. Log errors to console in development
-5. Implement fallback UI for error states
 
-### Real-time Updates
-1. Use SSE for streaming AI responses
-2. Parse and display incremental updates
-3. Store messages in database as they come in
-4. Provide visual feedback during streaming
+1.  Use `try/catch` in async operations (especially API calls, external service interactions).
+2.  tRPC allows throwing specific `TRPCError` types (e.g., `UNAUTHORIZED`, `NOT_FOUND`, `BAD_REQUEST`) which are propagated to the client with type safety.
+3.  Frontend uses `error` state from tRPC hooks to display appropriate feedback (e.g., toast notifications via `NotificationContext`, inline error messages).
+4.  Implement global error boundaries in React for unexpected client-side errors.
+5.  Log detailed errors on the backend (consider structured logging service).
 
-### Tool Calling Pattern
-1. AI generates tool calls in structured format
-2. Server intercepts tool calls and executes them
-3. Document updates are applied to the database
-4. Success response is sent immediately to continue streaming
-5. UI is updated with the changes
+### Real-time Updates (SSE)
+
+1.  Backend defines an SSE endpoint (e.g., `/api/ai/stream`).
+2.  Client uses `EventSource` API to connect to the endpoint.
+3.  Backend streams data chunks (e.g., AI message tokens) using `res.write()`. Each chunk follows SSE format (`data: ...\n\n`).
+4.  Client listens for `message` events, parses `event.data`, and updates UI incrementally (e.g., appending text to chat message).
+5.  Backend signals end of stream appropriately (e.g., sending a special `event: end` message or just closing the connection).
+6.  Handle connection errors and retries on the client.
+
+### Tool Calling Pattern (AI)
+
+1.  Define available tools (functions the AI can request to call) with names, descriptions, and parameter schemas (e.g., using JSON schema).
+2.  Include tool definitions in the prompt/API call to the LLM (Claude API).
+3.  LLM response indicates a tool call request with arguments.
+4.  Backend intercepts this specific response structure.
+5.  Backend executes the corresponding server-side function with the provided arguments (e.g., `updateEntity`, `searchWeb`).
+6.  Backend performs the action (e.g., update database, call external API).
+7.  (Crucial for streaming) Acknowledge tool execution success *immediately* back to the LLM API if necessary to allow text generation to continue seamlessly (specific to some provider implementations).
+8.  Optionally, send the *result* of the tool execution back to the LLM in a subsequent message turn for it to incorporate into its final response.
+9.  Update application state/UI based on the tool's side effects (e.g., entity updated in DB triggers UI refresh).
 
 ### API Path Normalization
-1. Express middleware normalizes paths by removing the `/api` prefix
-2. Allows frontend to consistently use `/api/*` endpoints across environments
-3. Backend routes are defined once without the prefix but accessible with both patterns
-4. Ensures consistent API URL structure between development and production
-5. Simplifies frontend code by eliminating environment-specific path handling
 
-### LLM Provider Abstraction
-1. Interface-based approach abstracting core LLM functionality
-2. Provider factory pattern for selecting and instantiating LLM providers
-3. Message format standardization across different provider implementations
-4. Streaming and tool calling support maintained with provider-specific adapters
-5. Environment-based configuration with fallbacks and validation
-6. Two-layer architecture with Adapters and Handlers for cleaner separation of concerns
-7. Advanced features supported through provider-specific extensions:
-   - Extended thinking/reasoning capabilities for enhanced transparency
-   - Prompt caching for improved performance and lower latency
-   - Detailed token usage tracking and optimization
-   - Automatic retry handling for API rate limits and connection issues
-8. Compatibility with multiple Claude model versions (3.5, 3.7, etc.)
-9. ESM-compatible implementation with modern TypeScript practices
+1.  Express middleware (`apps/api/src/index.ts`) intercepts requests.
+2.  If path starts with `/api`, middleware removes this prefix before passing to the tRPC Express adapter.
+3.  Allows frontend to consistently use `/api/trpc/*` paths, regardless of whether the backend is running standalone (dev) or behind a gateway/proxy (prod) that might strip `/api`.
+4.  Backend tRPC routers are defined *without* the `/api` prefix.
 
-### Custom Agentic Framework
+### LLM Provider Abstraction (`packages/ai-tools/`)
 
-1. **Simplified Architecture**:
-   - Single agent implementation in `apps/api/src/services/ai/agent.ts`
-   - Uses typed interfaces from LangGraph for structure but implements custom logic
-   - No reliance on external state graph libraries, reducing complexity and dependencies
+1.  Define core interfaces (`LLMAdapter`, `LLMHandler`) specifying methods like `chat`, `streamChat`, `invokeTool`.
+2.  Implement concrete Adapters (e.g., `AnthropicAdapter`) that handle high-level logic, message formatting, and delegate low-level API calls.
+3.  Implement concrete Handlers (e.g., `AnthropicHandler`) responsible for direct API interaction (fetching, error handling, retries) with a specific provider.
+4.  Use a Factory (`LLMFactory`) to instantiate the correct Adapter/Handler based on environment configuration.
+5.  Application code interacts only with the `LLMAdapter` interface, ensuring provider-agnosticism.
+6.  Supports advanced features (caching, reasoning calls, token tracking) via optional interface methods or specific adapter implementations.
 
-2. **Message Management**:
-   - Handles conversation history and context
-   - Maintains message thread structure and relationships
-   - Properly formats messages for consumption by LLMs
+### Custom Agentic Framework (`apps/api/src/services/ai/`)
 
-3. **Tool Execution**:
-   - Intercepts special formatting in LLM responses for tool calls
-   - Executes tools with proper context and error handling
-   - Returns results back to conversation flow
+1.  **Simplified Architecture**: Central agent logic resides in `agent.ts`. May use helper classes/functions for clarity. Leverages LangGraph *types* for structure but implements custom state management and execution flow.
+2.  **Message/State Management**: Agent loads relevant context (user info, entity data, message history) from database based on request context (`context_id`). Manages conversation state in memory during a request/stream, persisting results back to `messages` and potentially `entities`/`entity_versions` tables.
+3.  **Tool Execution**: Parses LLM output for predefined tool call syntax (e.g., Claude's XML format). Executes tools defined in `packages/ai-tools/tools/` using application context (DB clients, etc.). Handles tool success/error feedback for the agent loop.
+4.  **Streaming Integration**: Designed to work with SSE. Tool calls might pause the direct streaming of LLM text, execute the tool, and then resume streaming, or acknowledge the tool call to the LLM provider immediately while executing the tool asynchronously (depending on provider requirements for smooth streaming).
 
-4. **State Management**:
-   - Manages agent state including messages, context, and tool results
-   - Persists state between interactions in database
-   - Handles resuming conversations from saved state
+### JSON-Driven UI Structure (Questionnaires)
 
-5. **Streaming Integration**:
-   - Seamlessly integrates with SSE for streaming responses
-   - Handles partial updates and tool calls during streaming
-   - Manages streaming interruption and resumption for interactive tools
-
-This custom approach offers greater flexibility and control over the agent workflow while maintaining a clean, type-safe implementation that integrates well with the rest of the application architecture.
+1.  Define dynamic UI structures (like questionnaires) as JSON data stored in the database (e.g., `questionnaires.structure`).
+2.  JSON schema defines different item types (`single_choice`, `info_step`, etc.) and their properties.
+3.  Implement versioning (`questionnaires.version`) and activation (`questionnaires.is_active`) for managing changes.
+4.  Frontend fetches the active JSON structure via API.
+5.  A dedicated renderer component (`QuestionnaireRenderer`) iterates through the JSON array.
+6.  Based on the `item.type`, it dynamically renders the corresponding UI component (e.g., `SingleChoiceQuestion`, `InfoStepDisplay`).
+7.  Conditional logic (`info_step.condition`) is evaluated client-side based on current responses to determine visibility.
+8.  User responses are collected and stored, mapping question IDs to values (`questionnaire_responses.responses`).
+9.  **Benefits**: High flexibility, allows content/structure updates without frontend deployment.
 
 ## Features
 
-### Document Creation and Editing
+### Entity Creation and Editing (Documents, Projects, etc.)
 
-**Purpose**: Allow users to create and edit business strategy documents with AI assistance.
-
-**Technical Implementation**:
-- Document structure is defined as a TypeScript interface
-- Content is stored as JSON in the document_versions table
-- UI renders different components based on document_type
-- Changes are tracked and versioned for each update
-- AI suggestions use tool calls to update specific sections
-
-**Current Status**: In development as part of Milestone 1
-
-**Dependencies**:
-- Supabase for document storage
-- Claude API for AI assistance
-- tRPC for API communication
-- UI components for document editing
+*   **Purpose**: Allow users to create and manage various structured entities (Lean Canvas, project plans, etc.) within the platform, assisted by AI.
+*   **Technical Implementation**:
+    *   Uses the generic `entities` and `entity_versions` tables. `entity_type` determines behavior/rendering.
+    *   `entity_versions.full_content` stores the main data (e.g., JSON for Lean Canvas).
+    *   Frontend uses dynamic components (`EntityEditor`, specific views like `CanvasView`) based on `entity_type`.
+    *   Saving creates a new `entity_versions` record. `entities.active_version_id` points to the current one.
+    *   AI interaction (via Chat) uses tool calls (`entityUpdate`) to propose changes, which result in new suggested `entity_versions`.
+*   **Current Status**: Core functionality planned for Milestone 1.
+*   **Dependencies**: Supabase (DB), tRPC (API), React Components, AI Tool Calling.
 
 ### AI Chat Interface
 
-**Purpose**: Provide a conversational interface for users to interact with AI assistants.
+*   **Purpose**: Provide a contextual, conversational interface for users to interact with AI assistants (Mentor, Generator) for guidance, content generation, and entity modification.
+*   **Technical Implementation**:
+    *   Frontend `Chat` component connects to backend SSE endpoint (`ai.streamConversation`).
+    *   Messages stored in `messages` table, linked via `context_id` to the relevant `entity` or `project`.
+    *   Backend uses Custom Agentic Framework and LLM Abstraction Layer to handle conversation flow, context management, and LLM interaction (Claude).
+    *   Streaming via SSE provides real-time responses.
+    *   Tool calls within AI responses are intercepted and executed server-side.
+    *   User preferences (from onboarding) are passed as context to tailor AI responses.
+*   **Current Status**: Core functionality implemented in Milestone 1.
+*   **Dependencies**: SSE, Custom Agentic Framework, LLM Abstraction, Supabase (DB), React Components.
 
-**Technical Implementation**:
-- Chat interface uses SSE for streaming responses
-- Messages are stored in the messages table with context references
-- AI responses can include special tags for document updates
-- Tool calls are processed server-side to execute actions
-- Intent detection categorizes messages for better assistance
-- LLM Provider abstraction allows flexible integration with different AI models
-  - Advanced features enhance the AI experience:
-    - Extended thinking/reasoning for greater explainability
-    - Prompt caching for faster repeat responses
-    - Detailed token usage tracking for optimization
-    - Automatic retry handling for reliability
-  - Support for multiple Claude models (3.5, 3.7) with model-specific optimizations
-- Custom agentic framework handles agent state, message management, and tool execution
-- Interface-based architecture supports seamless provider switching without client changes
+### Version Control (for Entities)
 
-**Current Status**: Implemented in Milestone 1
+*   **Purpose**: Allow users to view the history of changes to their entities and revert to previous states.
+*   **Technical Implementation**:
+    *   Leverages the `entity_versions` table, which stores snapshots (`full_content`) of entities over time.
+    *   `entities.active_version_id` indicates the currently live version.
+    *   Frontend component displays a list of versions (`entityVersions.list` API call) for a given entity.
+    *   Reverting involves updating `entities.active_version_id` to point to an older `entity_versions.id` (`entityVersions.revertTo` API call).
+    *   Optional: Use JSON diff library to compute and display `changes` between versions.
+*   **Current Status**: Planned for Milestone 2.
+*   **Dependencies**: Supabase (DB), tRPC (API), React Components (Version History Display).
 
-**Dependencies**:
-- Custom agentic framework for AI orchestration
-- LLM Provider abstraction (supports Anthropic/Claude with expansion capability)
-- SSE for streaming responses
-- Supabase for message storage
-- UI components for chat interface
+### Dynamic Questionnaire System (Onboarding & Feedback)
 
-### Version Control
-
-**Purpose**: Track changes to documents and allow reverting to previous versions.
-
-**Technical Implementation**:
-- Documents have versions stored in document_versions table
-- Each version has a reference to the document and a version number
-- Changes can be tracked at the field level using JSON diffing
-- Users can view version history and revert to previous versions
-- AI can suggest changes as a new version without applying them
-
-**Current Status**: Planned for Milestone 2
-
-**Dependencies**:
-- Supabase for version storage
-- UI components for version history
-- JSON diffing utilities 
+*   **Purpose**: Provide a flexible system for creating and managing questionnaires, initially used for user onboarding to personalize the experience, but extensible for feedback, etc.
+*   **Technical Implementation**:
+    *   Uses `questionnaires` table to store versioned JSON definitions (`structure`) of questionnaires, categorized by `type` (e.g., 'onboarding').
+    *   `is_active` flag controls which version is presented.
+    *   `structure` JSON defines an array of steps (questions like `single_choice`, `text_input`; informational steps `info_step`).
+    *   `info_step` can be conditionally displayed based on previous answers using the `condition` object.
+    *   Frontend uses `QuestionnaireRenderer` component to dynamically display steps based on fetched JSON structure and evaluates conditions.
+    *   User answers are stored in `questionnaire_responses` table (`responses` JSONB field), linked to the specific `questionnaire` version answered.
+    *   API endpoints (`questionnaires`, `questionnaireResponses` routers) manage fetching structures and saving responses.
+    *   Onboarding responses are used to tailor initial AI interactions.
+*   **Current Status**: Design complete, implementation planned for Milestone 1 / early Milestone 2.
+*   **Dependencies**: Supabase (DB), tRPC (API), React Components (`QuestionnaireRenderer`, etc.).

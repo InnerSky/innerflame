@@ -6,6 +6,71 @@ export default {
     './index.html',
     '../../packages/ui/src/**/*.{ts,tsx}',
   ],
+  safelist: [
+    // Grays / Neutrals
+    'bg-slate-50',
+    'bg-slate-100',
+    'bg-gray-50',
+    'bg-gray-100',
+    'bg-zinc-50',
+    'bg-zinc-100',
+    'bg-neutral-50',
+    'bg-neutral-100',
+    'bg-stone-50',
+    'bg-stone-100',
+
+    // Reds
+    'bg-red-50',
+    'bg-red-100',
+
+    // Oranges
+    'bg-orange-50',
+    'bg-orange-100',
+
+    // Ambers / Yellows
+    'bg-amber-50',
+    'bg-amber-100',
+    'bg-yellow-50',
+    'bg-yellow-100',
+
+    // Limes / Greens
+    'bg-lime-50',
+    'bg-lime-100',
+    'bg-green-50',
+    'bg-green-100',
+    'bg-emerald-50',
+    'bg-emerald-100',
+
+    // Teals / Cyans
+    'bg-teal-50',
+    'bg-teal-100',
+    'bg-cyan-50',
+    'bg-cyan-100',
+
+    // Blues / Sky
+    'bg-sky-50',
+    'bg-sky-100',
+    'bg-blue-50',
+    'bg-blue-100',
+
+    // Indigos / Violets
+    'bg-indigo-50',
+    'bg-indigo-100',
+    'bg-violet-50',
+    'bg-violet-100',
+
+    // Purples / Fuchsias
+    'bg-purple-50',
+    'bg-purple-100',
+    'bg-fuchsia-50',
+    'bg-fuchsia-100',
+
+    // Pinks / Roses
+    'bg-pink-50',
+    'bg-pink-100',
+    'bg-rose-50',
+    'bg-rose-100',
+  ],
   theme: {
     extend: {
       fontSize: {

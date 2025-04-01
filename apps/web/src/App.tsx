@@ -27,6 +27,7 @@ import Settings from "./pages/Settings";
 import UsagePolicy from "./pages/UsagePolicy";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import Documents from "./features/documents/pages/Documents";
+import TestQuestionnaire from "./pages/test-questionnaire";
 import { SignOutDialog } from "@/components/SignOutDialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -35,6 +36,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { supabase } from "@/lib/supabase";
+import { anonymousAuthService } from "@/features/auth/services/anonymousAuthService.js";
 const OfflinePage = lazy(() => import("./pages/OfflinePage.js"));
 const LeanCanvas = lazy(() => import("./pages/LeanCanvas.js"));
 
@@ -55,9 +57,21 @@ interface ProfileMenuProps {
 }
 
 function ProfileMenu({ onOpenChange, isMobile = false }: ProfileMenuProps) {
-  const { user, loading, signOut } = useAuth();
+  const { user, loading, signOut, isAnonymous } = useAuth();
   const [isAdmin, setIsAdmin] = useState(false);
   const navigate = useNavigate();
+  
+  // Add debug logging
+  console.log('Auth State:', {
+    user: user ? {
+      id: user.id,
+      email: user.email,
+      metadata: user.user_metadata,
+    } : null,
+    loading,
+    isAnonymous,
+    isAdmin
+  });
   
   // Check admin status when user changes
   useEffect(() => {
@@ -88,9 +102,7 @@ function ProfileMenu({ onOpenChange, isMobile = false }: ProfileMenuProps) {
   const handleSignOut = async () => {
     if (signOut) {
       await signOut();
-      // Navigate to landing page after signing out
       navigate('/');
-      // Close mobile menu if applicable
       onOpenChange && onOpenChange(false);
     }
   };
@@ -103,18 +115,22 @@ function ProfileMenu({ onOpenChange, isMobile = false }: ProfileMenuProps) {
     );
   }
   
-  if (!user) {
+  // Show Sign In button for both non-logged in and anonymous users
+  if (!user || isAnonymous) {
     return (
       <AuthModal 
+        defaultTab={isAnonymous ? "sign-up" : "sign-in"}
         trigger={
-          <Button className={isMobile ? "w-full text-sm sm:text-base" : ""}>Sign In</Button>
+          <Button className={isMobile ? "w-full text-sm sm:text-base" : ""}>
+            {isAnonymous ? "Sign Up to Save" : "Sign In"}
+          </Button>
         }
       />
     );
   }
   
+  // From here on, we only show profile UI for authenticated non-anonymous users
   if (isMobile) {
-    // Direct rendering in mobile menu
     return (
       <>
         <div className="flex items-center space-x-3 mb-3 px-4 py-2 border rounded-md bg-background/50">
@@ -158,14 +174,12 @@ function ProfileMenu({ onOpenChange, isMobile = false }: ProfileMenuProps) {
         
         <Separator className="my-3 opacity-50" />
         
-        <SignOutDialog 
-          onSignOut={handleSignOut}
-        />
+        <SignOutDialog onSignOut={handleSignOut} />
       </>
     );
   }
   
-  // Desktop dropdown
+  // Desktop dropdown for authenticated non-anonymous users
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -198,10 +212,7 @@ function ProfileMenu({ onOpenChange, isMobile = false }: ProfileMenuProps) {
         
         <div className="py-1">
           <Link to="/settings" className="w-full block">
-            <Button 
-              variant="ghost" 
-              className="w-full justify-start text-sm"
-            >
+            <Button variant="ghost" className="w-full justify-start text-sm">
               Settings
               <SettingsIcon className="ml-auto h-4 w-4" />
             </Button>
@@ -209,10 +220,7 @@ function ProfileMenu({ onOpenChange, isMobile = false }: ProfileMenuProps) {
           
           {isAdmin && (
             <Link to="/admin" className="w-full block">
-              <Button 
-                variant="ghost" 
-                className="w-full justify-start text-sm"
-              >
+              <Button variant="ghost" className="w-full justify-start text-sm">
                 Admin Dashboard
                 <Shield className="ml-auto h-4 w-4" />
               </Button>
@@ -223,9 +231,7 @@ function ProfileMenu({ onOpenChange, isMobile = false }: ProfileMenuProps) {
         <Separator className="my-1" />
         
         <div className="py-1">
-          <SignOutDialog 
-            onSignOut={handleSignOut}
-          />
+          <SignOutDialog onSignOut={handleSignOut} />
         </div>
       </DropdownMenuContent>
     </DropdownMenu>
@@ -244,6 +250,43 @@ function AppContent() {
   const isDocumentsPage = location.pathname === '/documents';
   const isLeanCanvasPage = location.pathname === '/lean-canvas';
   const hideNavAndFooter = isDocumentsPage || isLeanCanvasPage;
+
+  // Automatically sign in anonymously if no user is present
+  useEffect(() => {
+    const autoSignInAnonymously = async () => {
+      // Only proceed if:
+      // 1. We're done loading auth state
+      // 2. There's no user logged in
+      // 3. We're not on the auth callback page (to prevent interference with OAuth flow)
+      if (!loading && !user && !location.pathname.includes('/auth/callback')) {
+        console.log('No user detected, attempting anonymous sign in after database fixes...');
+        try {
+          // Add a loading indicator or state here if needed
+          const anonymousUser = await anonymousAuthService.getOrCreateAnonymousUser();
+          
+          if (anonymousUser) {
+            console.log('Anonymous sign in SUCCESSFUL after database fixes! User details:', {
+              id: anonymousUser.id,
+              isAnonymous: anonymousUser.app_metadata?.is_anonymous,
+              created_at: anonymousUser.created_at,
+              app_metadata: anonymousUser.app_metadata
+            });
+          } else {
+            console.log('Anonymous sign in not needed or not available - proceeding as unauthenticated user');
+            
+            // The app can still function without anonymous auth
+            // You can implement fallback behavior here if needed
+          }
+        } catch (error) {
+          console.error('Error during automatic anonymous sign in:', error);
+          // We don't want this error to break the application
+          // The user can still use the app unauthenticated
+        }
+      }
+    };
+
+    autoSignInAnonymously();
+  }, [loading, user, location.pathname]);
 
   // Check admin status when user changes
   useEffect(() => {
@@ -430,6 +473,7 @@ function AppContent() {
           <Route path="/offline" element={<OfflinePage />} />
           <Route path="/usage-policy" element={<UsagePolicy />} />
           <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+          <Route path="/test-questionnaire" element={<TestQuestionnaire />} />
         </Routes>
       </Suspense>
 

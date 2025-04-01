@@ -5,10 +5,11 @@ import { Badge } from "@/components/ui/badge";
 import { AnimatedSection } from "@/components/animated-section";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext.js";
 import { useNavigate } from "react-router-dom";
 import leanCanvasService from "@/features/documents/services/leanCanvasService.js";
+import { anonymousAuthService } from "@/features/auth/services/anonymousAuthService.js";
 
 interface HeroSectionProps {
   scrollToCheckout: () => void;
@@ -19,30 +20,68 @@ export function HeroSection({ scrollToCheckout }: HeroSectionProps) {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [isCreating, setIsCreating] = useState(false);
+  const [hasExistingCanvas, setHasExistingCanvas] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Check if user has any lean canvases
+  useEffect(() => {
+    async function checkExistingCanvas() {
+      if (!user?.id) {
+        setHasExistingCanvas(false);
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        const mostRecentCanvas = await leanCanvasService.getMostRecentLeanCanvas(user.id);
+        setHasExistingCanvas(!!mostRecentCanvas);
+      } catch (error) {
+        console.error("Error checking for existing canvas:", error);
+        setHasExistingCanvas(false);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    checkExistingCanvas();
+  }, [user?.id]);
 
   const handleGenerateCanvas = async () => {
     if (!startupIdea.trim()) return;
     
-    if (!user?.id) {
-      // If user is not logged in, we could redirect to auth or handle appropriately
-      alert("Please sign in to generate a Lean Canvas");
-      return;
-    }
-    
     try {
       setIsCreating(true);
       
-      // Use the service to create the lean canvas
-      await leanCanvasService.createLeanCanvas(user.id);
+      let currentUser = user;
       
-      // Navigate to the lean canvas page with the startup idea
-      navigate("/lean-canvas", { state: { initialIdea: startupIdea } });
+      // If no user is logged in, create an anonymous user
+      if (!currentUser?.id) {
+        currentUser = await anonymousAuthService.getOrCreateAnonymousUser();
+        if (!currentUser?.id) {
+          throw new Error("Failed to create anonymous user");
+        }
+      }
+      
+      // Create the lean canvas with the current user (anonymous or registered)
+      await leanCanvasService.createLeanCanvas(currentUser.id);
+      
+      // Navigate to the lean canvas page
+      navigate("/lean-canvas", { 
+        state: { 
+          initialIdea: startupIdea,
+          isAnonymous: anonymousAuthService.isAnonymousUser(currentUser)
+        } 
+      });
     } catch (error) {
       console.error("Error creating lean canvas:", error);
       alert("Failed to create lean canvas. Please try again.");
     } finally {
       setIsCreating(false);
     }
+  };
+
+  const handleGoToCanvas = () => {
+    navigate("/lean-canvas");
   };
 
   return (
@@ -132,46 +171,55 @@ export function HeroSection({ scrollToCheckout }: HeroSectionProps) {
           <Card className="border-2 border-primary/20 bg-white/95 dark:bg-neutral-900/95 backdrop-blur shadow-lg">
             <CardContent className="p-6 md:p-8">
               <h2 className="text-2xl font-bold text-primary mb-4">
-                Start Building Your Business Today
+                {hasExistingCanvas ? "Continue Building Your Business" : "Start Building Your Business Today"}
               </h2>
               
               <div className="space-y-4">
-                <label htmlFor="startup-idea" className="block text-sm font-medium">
-                  Describe your startup idea:
-                </label>
-                <Textarea
-                  id="startup-idea"
-                  placeholder="e.g., A platform that helps remote workers find coworking spaces with AI matchmaking based on work style, amenities needed, and location preferences..."
-                  value={startupIdea}
-                  onChange={(e) => setStartupIdea(e.target.value)}
-                  className="resize-none min-h-[120px] w-full border border-gray-200 dark:border-gray-700 focus:border-primary/50 dark:focus:border-primary/70 bg-white dark:bg-neutral-800 dark:placeholder:text-gray-400"
-                />
+                {!hasExistingCanvas && (
+                  <>
+                    <label htmlFor="startup-idea" className="block text-sm font-medium">
+                      Describe your startup idea:
+                    </label>
+                    <Textarea
+                      id="startup-idea"
+                      placeholder="e.g., A platform that helps remote workers find coworking spaces with AI matchmaking based on work style, amenities needed, and location preferences..."
+                      value={startupIdea}
+                      onChange={(e) => setStartupIdea(e.target.value)}
+                      className="resize-none min-h-[120px] w-full border border-gray-200 dark:border-gray-700 focus:border-primary/50 dark:focus:border-primary/70 bg-white dark:bg-neutral-800 dark:placeholder:text-gray-400"
+                    />
+                  </>
+                )}
                 
                 <Button 
-                  onClick={handleGenerateCanvas}
+                  onClick={hasExistingCanvas ? handleGoToCanvas : handleGenerateCanvas}
                   size="lg"
                   className="w-full bg-primary hover:bg-primary/90 text-white"
-                  disabled={isCreating}
+                  disabled={isLoading || isCreating || (!hasExistingCanvas && !startupIdea.trim())}
                 >
                   <Zap className="mr-2 h-5 w-5" />
-                  {isCreating ? "Creating Canvas..." : "Generate Lean Canvas Now"}
+                  {isLoading ? "Loading..." : 
+                   isCreating ? "Creating Canvas..." : 
+                   hasExistingCanvas ? "Go to My Lean Canvas" : 
+                   "Generate Lean Canvas Now"}
                 </Button>
               </div>
               
-              <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="flex items-start gap-2">
-                  <CheckCircle2 className="h-4 w-4 text-primary mt-1 flex-shrink-0" />
-                  <span className="text-sm">Identify your key value propositions</span>
+              {!hasExistingCanvas && (
+                <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="flex items-start gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-primary mt-1 flex-shrink-0" />
+                    <span className="text-sm">Identify your key value propositions</span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-primary mt-1 flex-shrink-0" />
+                    <span className="text-sm">Clarify your target segments</span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-primary mt-1 flex-shrink-0" />
+                    <span className="text-sm">Map revenue streams & costs</span>
+                  </div>
                 </div>
-                <div className="flex items-start gap-2">
-                  <CheckCircle2 className="h-4 w-4 text-primary mt-1 flex-shrink-0" />
-                  <span className="text-sm">Clarify your target segments</span>
-                </div>
-                <div className="flex items-start gap-2">
-                  <CheckCircle2 className="h-4 w-4 text-primary mt-1 flex-shrink-0" />
-                  <span className="text-sm">Map revenue streams & costs</span>
-                </div>
-              </div>
+              )}
             </CardContent>
           </Card>
         </div>

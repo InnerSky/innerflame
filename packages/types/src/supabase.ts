@@ -91,6 +91,7 @@ export type Database = {
       }
       entities: {
         Row: {
+          active_version_id: string | null
           content: string | null
           created_at: string | null
           entity_type: string
@@ -99,9 +100,9 @@ export type Database = {
           title: string
           updated_at: string | null
           user_id: string
-          active_version_id: string | null
         }
         Insert: {
+          active_version_id?: string | null
           content?: string | null
           created_at?: string | null
           entity_type: string
@@ -110,9 +111,9 @@ export type Database = {
           title: string
           updated_at?: string | null
           user_id: string
-          active_version_id?: string | null
         }
         Update: {
+          active_version_id?: string | null
           content?: string | null
           created_at?: string | null
           entity_type?: string
@@ -121,9 +122,15 @@ export type Database = {
           title?: string
           updated_at?: string | null
           user_id?: string
-          active_version_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "entities_active_version_id_fkey"
+            columns: ["active_version_id"]
+            isOneToOne: false
+            referencedRelation: "entity_versions"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "entities_user_id_fkey"
             columns: ["user_id"]
@@ -131,13 +138,6 @@ export type Database = {
             referencedRelation: "users"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "entities_active_version_id_fkey"
-            columns: ["active_version_id"]
-            isOneToOne: false
-            referencedRelation: "entity_versions"
-            referencedColumns: ["id"]
-          }
         ]
       }
       entity_versions: {
@@ -332,6 +332,90 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      questionnaire_responses: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          id: string
+          questionnaire_id: string
+          responses: Json
+          started_at: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          questionnaire_id: string
+          responses?: Json
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          questionnaire_id?: string
+          responses?: Json
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "questionnaire_responses_questionnaire_id_fkey"
+            columns: ["questionnaire_id"]
+            isOneToOne: false
+            referencedRelation: "questionnaires"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "questionnaire_responses_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      questionnaires: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          structure: Json
+          type: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          structure: Json
+          type: string
+          updated_at?: string
+          version: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          structure?: Json
+          type?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: []
       }
       resource: {
         Row: {

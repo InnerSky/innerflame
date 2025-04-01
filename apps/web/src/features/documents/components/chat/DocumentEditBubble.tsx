@@ -2,7 +2,7 @@ import React from 'react';
 import { DocumentEditTagState } from '../../utils/documentEditUtils.js';
 import { LoadingDots } from '@/components/ui/loading-dots.js';
 import { MarkdownRenderer } from '@/components/markdown-renderer.js';
-import { Pencil, FileText, Check, Replace } from 'lucide-react';
+import { Pencil, FileText, Replace } from 'lucide-react';
 
 // Helper functions for diff rendering
 function isDiffContent(content: string): boolean {
@@ -11,17 +11,64 @@ function isDiffContent(content: string): boolean {
          content.includes('>>>>>>> REPLACE');
 }
 
-function parseDiffBlocks(content: string): { search: string; replace: string }[] {
-  const diffBlocks: { search: string; replace: string }[] = [];
+// Helper function to find common prefix length between two strings
+function findCommonPrefixLength(str1: string, str2: string): number {
+  let i = 0;
+  while (i < str1.length && i < str2.length && str1[i] === str2[i]) {
+    i++;
+  }
+  return i;
+}
+
+// Helper function to find common suffix length between two strings
+function findCommonSuffixLength(str1: string, str2: string, prefixLength: number): number {
+  let i = 0;
+  while (
+    i < (str1.length - prefixLength) && 
+    i < (str2.length - prefixLength) && 
+    str1[str1.length - 1 - i] === str2[str2.length - 1 - i]
+  ) {
+    i++;
+  }
+  return i;
+}
+
+interface DiffBlock {
+  prefix: string;
+  searchDiff: string;
+  replaceDiff: string;
+  suffix: string;
+}
+
+function processSearchReplace(search: string, replace: string): DiffBlock {
+  // Find common prefix
+  const prefixLength = findCommonPrefixLength(search, replace);
+  
+  // Find common suffix, starting after the prefix
+  const suffixLength = findCommonSuffixLength(
+    search.slice(prefixLength), 
+    replace.slice(prefixLength),
+    prefixLength
+  );
+  
+  return {
+    prefix: search.slice(0, prefixLength),
+    searchDiff: search.slice(prefixLength, search.length - suffixLength),
+    replaceDiff: replace.slice(prefixLength, replace.length - suffixLength),
+    suffix: search.slice(search.length - suffixLength)
+  };
+}
+
+function parseDiffBlocks(content: string): DiffBlock[] {
+  const diffBlocks: DiffBlock[] = [];
   const regex = /<<<<<<< SEARCH\s*([\s\S]*?)=======\s*([\s\S]*?)>>>>>>> REPLACE/g;
   
   let match;
   while ((match = regex.exec(content)) !== null) {
     if (match.length >= 3) {
-      diffBlocks.push({
-        search: match[1],
-        replace: match[2]
-      });
+      const search = match[1].trim();
+      const replace = match[2].trim();
+      diffBlocks.push(processSearchReplace(search, replace));
     }
   }
   
@@ -38,13 +85,30 @@ function renderDiffContent(content: string): React.ReactNode {
   return (
     <div className="space-y-4">
       {diffBlocks.map((block, index) => (
-        <div key={index} className="text-sm">
-          <div className="mb-2 line-through text-red-600 font-mono whitespace-pre-wrap bg-red-50 px-3 py-1.5 rounded">
-            {block.search}
+        <div key={index} className="text-sm font-mono">
+          {/* Show prefix if it exists and is not just whitespace */}
+          {block.prefix.trim() && (
+            <div className="text-muted-foreground dark:text-muted-foreground/60 whitespace-pre-wrap mb-1">
+              {block.prefix}
+            </div>
+          )}
+          
+          {/* Show the actual diff */}
+          <div className="flex flex-col gap-1">
+            <div className="line-through text-red-600 dark:text-red-300/90 whitespace-pre-wrap bg-red-50 dark:bg-red-500/10 px-3 py-1.5 rounded">
+              {block.searchDiff}
+            </div>
+            <div className="text-green-600 dark:text-emerald-300/90 whitespace-pre-wrap bg-green-50 dark:bg-emerald-500/10 px-3 py-1.5 rounded">
+              {block.replaceDiff}
+            </div>
           </div>
-          <div className="text-green-600 font-mono whitespace-pre-wrap bg-green-50 px-3 py-1.5 rounded">
-            {block.replace}
-          </div>
+          
+          {/* Show suffix if it exists and is not just whitespace */}
+          {block.suffix.trim() && (
+            <div className="text-muted-foreground dark:text-muted-foreground/60 whitespace-pre-wrap mt-1">
+              {block.suffix}
+            </div>
+          )}
         </div>
       ))}
     </div>
@@ -74,13 +138,13 @@ export const DocumentEditBubble: React.FC<DocumentEditBubbleProps> = ({
   return (
     <div 
       className={`
-        border-l-2 border-primary/40 pl-3 py-2
+        border-l-2 border-primary/40 dark:border-primary/20 pl-3 py-2
         text-sm relative
         ${className}
       `}
     >
       {/* Header */}
-      <div className="flex items-center gap-2 mb-2 text-xs text-primary/80">
+      <div className="flex items-center gap-2 mb-2 text-xs text-primary/80 dark:text-primary/60">
         <div className="flex items-center">
           {state === DocumentEditTagState.WAITING && <Pencil className="h-3.5 w-3.5" />}
           {(state === DocumentEditTagState.CONTENT_STARTED || state === DocumentEditTagState.COMPLETED) && 
@@ -88,19 +152,13 @@ export const DocumentEditBubble: React.FC<DocumentEditBubbleProps> = ({
         </div>
         <div className="font-medium">
           {isReplaceOperation ? 'Text changes' : 'Document edit'}
-          {state === DocumentEditTagState.COMPLETED && (
-            <span className="ml-2 text-green-600">
-              <Check className="h-3 w-3 inline mr-0.5" />
-              Done
-            </span>
-          )}
         </div>
       </div>
       
       {/* Content section */}
       <div>
         {!hasContent && (
-          <div className="flex items-center gap-2 text-muted-foreground py-1">
+          <div className="flex items-center gap-2 text-muted-foreground dark:text-muted-foreground/60 py-1">
             <LoadingDots />
             <span className="text-xs">Processing...</span>
           </div>

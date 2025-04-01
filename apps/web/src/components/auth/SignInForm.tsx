@@ -1,64 +1,57 @@
-import { useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, Eye, EyeOff } from 'lucide-react';
-import { Separator } from '@/components/ui/separator';
-
-const signInSchema = z.object({
-  email: z.string().email('Please enter a valid email address'),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
-});
-
-type SignInFormValues = z.infer<typeof signInSchema>;
+import { Loader2, AlertTriangle } from 'lucide-react';
+import { DocumentRepository } from '@/features/documents/repositories/documentRepository';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export function SignInForm() {
-  const { signIn, signInWithGoogle } = useAuth();
-  const [isLoading, setIsLoading] = useState(false);
+  const { signInWithGoogle, linkGoogleAccount, isAnonymous, user } = useAuth();
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [showPassword, setShowPassword] = useState(false);
+  const [hasDocuments, setHasDocuments] = useState(false);
+  const [showWarningDialog, setShowWarningDialog] = useState(false);
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<SignInFormValues>({
-    resolver: zodResolver(signInSchema),
-    defaultValues: {
-      email: '',
-      password: '',
-    },
-  });
-
-  const onSubmit = async (data: SignInFormValues) => {
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const { error } = await signIn(data.email, data.password);
+  useEffect(() => {
+    const checkForDocuments = async () => {
+      if (!isAnonymous || !user?.id) return;
       
-      if (error) {
-        setError(error.message);
+      try {
+        const repository = new DocumentRepository();
+        const documents = await repository.getUserDocuments(user.id);
+        setHasDocuments(documents.length > 0);
+      } catch (err) {
+        console.error('Error checking for documents:', err);
       }
-    } catch (err) {
-      setError('An unexpected error occurred. Please try again.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    };
+
+    checkForDocuments();
+  }, [isAnonymous, user?.id]);
 
   const handleGoogleSignIn = async () => {
+    if (isAnonymous && hasDocuments) {
+      setShowWarningDialog(true);
+      return;
+    }
+
+    await performGoogleSignIn();
+  };
+
+  const performGoogleSignIn = async () => {
     setIsGoogleLoading(true);
     setError(null);
 
     try {
-      const { error } = await signInWithGoogle();
+      const { error } = await signInWithGoogle(false); // Explicitly pass false to prevent linking
       
       if (error) {
         setError(error.message);
@@ -67,83 +60,45 @@ export function SignInForm() {
       setError('An unexpected error occurred. Please try again.');
     } finally {
       setIsGoogleLoading(false);
+      setShowWarningDialog(false);
     }
   };
 
-  const togglePasswordVisibility = () => {
-    setShowPassword(!showPassword);
+  const performGoogleLinking = async () => {
+    setIsGoogleLoading(true);
+    setError(null);
+    
+    try {
+      const { error } = await linkGoogleAccount();
+      
+      if (error) {
+        setError(error.message);
+      }
+    } catch (err) {
+      setError('An unexpected error occurred while linking your account. Please try again.');
+    } finally {
+      setIsGoogleLoading(false);
+      setShowWarningDialog(false);
+    }
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+    <div className="space-y-4">
       {error && (
         <Alert variant="destructive">
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
       
-      <div className="space-y-2">
-        <Label htmlFor="email">Email</Label>
-        <Input
-          id="email"
-          type="email"
-          placeholder="you@example.com"
-          {...register('email')}
-        />
-        {errors.email && (
-          <p className="text-sm text-red-500">{errors.email.message}</p>
-        )}
-      </div>
+      {isAnonymous && hasDocuments && (
+        <Alert variant="destructive" className="border-red-200 bg-red-50">
+          <AlertTriangle className="h-4 w-4 text-red-500" />
+          <AlertDescription className="text-red-700">
+            Warning: You have unsaved documents. Signing in will create a new account and your current documents will be lost. Please use the Sign Up tab to save your work.
+          </AlertDescription>
+        </Alert>
+      )}
       
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <Label htmlFor="password">Password</Label>
-          <Button variant="link" className="p-0 h-auto text-xs">
-            Forgot password?
-          </Button>
-        </div>
-        <div className="relative">
-          <Input
-            id="password"
-            type={showPassword ? "text" : "password"}
-            placeholder="••••••••"
-            className="pr-10"
-            {...register('password')}
-          />
-          <Button 
-            type="button"
-            variant="ghost" 
-            size="sm"
-            className="absolute right-0 top-0 h-full px-3 py-2 text-muted-foreground hover:text-foreground"
-            onClick={togglePasswordVisibility}
-            aria-label={showPassword ? "Hide password" : "Show password"}
-          >
-            {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-          </Button>
-        </div>
-        {errors.password && (
-          <p className="text-sm text-red-500">{errors.password.message}</p>
-        )}
-      </div>
-      
-      <Button type="submit" className="w-full" disabled={isLoading}>
-        {isLoading ? (
-          <>
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            Signing in...
-          </>
-        ) : (
-          'Sign In'
-        )}
-      </Button>
-
-      <div className="relative my-4">
-        <Separator />
-        <div className="absolute inset-0 flex items-center justify-center">
-          <span className="bg-background px-2 text-xs text-muted-foreground">OR</span>
-        </div>
-      </div>
-
       <Button 
         type="button" 
         variant="outline" 
@@ -168,6 +123,44 @@ export function SignInForm() {
           </>
         )}
       </Button>
-    </form>
+
+      <Dialog open={showWarningDialog} onOpenChange={setShowWarningDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Warning: Unsaved Documents</DialogTitle>
+            <DialogDescription>
+              You have unsaved documents. There are two options:
+              <ul className="mt-2 list-disc pl-5 space-y-1">
+                <li><strong>Link Account:</strong> Connect your Google account to your current documents (recommended)</li>
+                <li><strong>Sign In Normally:</strong> Create a new account, losing your current documents</li>
+              </ul>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex flex-col sm:flex-row gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setShowWarningDialog(false)}
+              className="w-full sm:w-auto"
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={performGoogleSignIn}
+              className="w-full sm:w-auto"
+            >
+              Sign In Normally
+            </Button>
+            <Button
+              variant="default"
+              onClick={performGoogleLinking}
+              className="w-full sm:w-auto"
+            >
+              Link Account
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 }

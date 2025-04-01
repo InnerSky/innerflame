@@ -10,12 +10,23 @@ import { Separator } from "@/components/ui/separator";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
-import { ChevronRight, CreditCard, Moon, Sun, User, UserCog, Laptop, MonitorSmartphone, Bell, FileText } from "lucide-react";
+import { ChevronRight, CreditCard, Moon, Sun, User, UserCog, Laptop, MonitorSmartphone, Bell, FileText, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { deleteAccount } from "@/lib/auth";
 
 export default function Settings() {
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const { theme, setTheme } = useTheme();
   const navigate = useNavigate();
   const [profileForm, setProfileForm] = useState({
@@ -23,12 +34,40 @@ export default function Settings() {
     email: user?.email || "",
     bio: ""
   });
+  const [deleteConfirm, setDeleteConfirm] = useState("");
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleProfileChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setProfileForm({
       ...profileForm,
       [e.target.name]: e.target.value
     });
+  };
+
+  const handleDeleteAccount = async () => {
+    if (deleteConfirm !== 'DELETE_ALL_DATA_FOREVER') {
+      setError('Please type DELETE_ALL_DATA_FOREVER to confirm account deletion');
+      return;
+    }
+
+    setIsDeleting(true);
+    setError(null);
+    
+    try {
+      const { error } = await deleteAccount();
+      if (error) {
+        setError(error.message);
+      } else {
+        // Sign out and redirect to home page
+        await signOut();
+        navigate('/');
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred while deleting your account');
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   return (
@@ -343,7 +382,50 @@ export default function Settings() {
               <Separator />
 
               <div className="pt-4">
-                <Button variant="destructive">Delete Account</Button>
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button variant="destructive">Delete Account</Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Delete Account</DialogTitle>
+                      <DialogDescription className="pt-4">
+                        This action cannot be undone. This will permanently delete your account and all associated data.
+                        Please type <span className="font-mono font-bold">DELETE_ALL_DATA_FOREVER</span> to confirm.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="py-4">
+                      <Input
+                        type="text"
+                        value={deleteConfirm}
+                        onChange={(e) => setDeleteConfirm(e.target.value)}
+                        placeholder="Type DELETE_ALL_DATA_FOREVER to confirm"
+                        className="font-mono"
+                      />
+                    </div>
+                    {error && (
+                      <Alert variant="destructive">
+                        <AlertDescription>{error}</AlertDescription>
+                      </Alert>
+                    )}
+                    <DialogFooter>
+                      <Button
+                        variant="destructive"
+                        onClick={handleDeleteAccount}
+                        disabled={deleteConfirm !== 'DELETE_ALL_DATA_FOREVER' || isDeleting}
+                      >
+                        {isDeleting ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Deleting Account...
+                          </>
+                        ) : (
+                          'Delete Account'
+                        )}
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
               </div>
             </CardContent>
           </Card>

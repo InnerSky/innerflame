@@ -6,7 +6,7 @@ import {
   MessageContextType,
   determineMessageContext 
 } from '../models/message.js';
-import { useAuth } from '@/hooks/useAuth.ts';
+import { useAuth } from '@/contexts/AuthContext.js';
 import { useChatInterface } from '@/hooks/useChatInterface.ts';
 import { MessageList } from './chat/MessageList.js';
 import { ChatInput } from './chat/ChatInput.js';
@@ -16,6 +16,21 @@ type ChatInterfaceProps = {
   isStandalone?: boolean;
   suppressAutoScroll?: boolean;
 };
+
+// Helper function to check if canvas has content
+function hasCanvasContent(content: string | null): boolean {
+  if (!content) return false;
+  try {
+    const jsonContent = JSON.parse(content);
+    // Check if any value in the key-value pairs is not empty
+    return Object.values(jsonContent).some(value => 
+      typeof value === 'string' && value.trim() !== ''
+    );
+  } catch (e) {
+    console.error('Error parsing canvas content:', e);
+    return false;
+  }
+}
 
 // Media query hook
 function useMediaQuery(query: string) {
@@ -58,7 +73,10 @@ export const ChatInterface = forwardRef<
   } = useDocumentsContext();
   
   // User authentication
-  const { user } = useAuth();
+  const { user, isAnonymous } = useAuth();
+  
+  // Check if canvas has content
+  const canvasHasContent = hasCanvasContent(content);
   
   // Determine the current context type
   const { contextType, contextId } = determineMessageContext(
@@ -188,6 +206,8 @@ export const ChatInterface = forwardRef<
         isLoading={isLoading}
         isDisabled={!user}
         placeholder="How can InnerFlame help you today?"
+        isAnonymous={isAnonymous}
+        canvasHasContent={canvasHasContent}
       />
     </>
   );

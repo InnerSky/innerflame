@@ -1,26 +1,31 @@
 import React, { useState, KeyboardEvent, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button.js';
 import { Textarea } from '@/components/ui/textarea.js';
-import { ArrowUp, Info } from 'lucide-react';
+import { ArrowUp, Info, Check } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog.js';
+import { AuthModal } from '@/components/auth/AuthModal.js';
 
 interface ChatInputProps {
   onSendMessage: (message: string) => void;
   isLoading: boolean;
   isDisabled?: boolean;
   placeholder?: string;
+  isAnonymous?: boolean;
+  canvasHasContent?: boolean;
 }
 
 export const ChatInput: React.FC<ChatInputProps> = ({
   onSendMessage,
   isLoading,
   isDisabled = false,
-  placeholder = "How can InnerFlame help you today?"
+  placeholder = "How can InnerFlame help you today?",
+  isAnonymous = false,
+  canvasHasContent = false
 }) => {
   const [message, setMessage] = useState('');
   const [showManual, setShowManual] = useState(false);
@@ -57,6 +62,9 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   const handleBlur = () => {
     setIsFocused(false);
   };
+
+  // Determine if we should show the conversion overlay
+  const showConversionOverlay = isAnonymous && canvasHasContent;
   
   return (
     <div className={`flex flex-col mt-auto transition-all duration-200`}>
@@ -74,54 +82,100 @@ export const ChatInput: React.FC<ChatInputProps> = ({
         `}
       >
         {/* Input area */}
-        <div className="px-4 pt-4 pb-3">
-          <div className="relative w-full">
-            <div className="w-full pr-12 overflow-hidden"> {/* Container that creates space for button */}
-              <Textarea
-                ref={textareaRef}
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                onKeyDown={handleKeyDown}
-                onFocus={handleFocus}
-                onBlur={handleBlur}
-                placeholder={placeholder}
-                className="w-full min-h-[72px] max-h-[288px] resize-none overflow-y-auto border-0 focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 shadow-none"
-                style={{
-                  height: 'auto',
-                  overflowY: message.split('\n').length > 12 ? 'scroll' : 'hidden'
-                }}
-                rows={Math.min(Math.max(message.split('\n').length || 3, 3), 12)}
-                disabled={isLoading || isDisabled}
-              />
+        <div className={`${showConversionOverlay ? 'hidden' : ''}`}>
+          <div className="px-4 pt-4 pb-3">
+            <div className="relative w-full">
+              <div className="w-full pr-12 overflow-hidden">
+                <Textarea
+                  ref={textareaRef}
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  onFocus={handleFocus}
+                  onBlur={handleBlur}
+                  placeholder={placeholder}
+                  className="w-full min-h-[72px] max-h-[288px] resize-none overflow-y-auto border-0 focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 shadow-none"
+                  style={{
+                    height: 'auto',
+                    overflowY: message.split('\n').length > 12 ? 'scroll' : 'hidden'
+                  }}
+                  rows={Math.min(Math.max(message.split('\n').length || 3, 3), 12)}
+                  disabled={isLoading || isDisabled}
+                />
+              </div>
+              {/* Absolutely positioned send button */}
+              <Button 
+                onClick={handleSendMessage} 
+                type="submit" 
+                className="absolute right-0 top-[2px] w-10 h-9 rounded-md p-0 flex items-center justify-center"
+                disabled={isLoading || isDisabled || !message.trim()}
+              >
+                <ArrowUp className="h-4 w-4" />
+              </Button>
             </div>
-            {/* Absolutely positioned send button */}
-            <Button 
-              onClick={handleSendMessage} 
-              type="submit" 
-              className="absolute right-0 top-[2px] w-10 h-9 rounded-md p-0 flex items-center justify-center"
-              disabled={isLoading || isDisabled || !message.trim()}
+          </div>
+          
+          {/* Toolbar */}
+          <div className="flex items-center justify-between gap-2 px-5 pb-4">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0"
+              onClick={() => setShowManual(true)}
             >
-              <ArrowUp className="h-4 w-4" />
+              <Info className="h-4 w-4" />
             </Button>
+            {message.trim() && (
+              <p className="text-xs text-muted-foreground">
+                Use <strong>Shift</strong> + <strong>Return</strong> for a new line
+              </p>
+            )}
           </div>
         </div>
-        
-        {/* Toolbar */}
-        <div className="flex items-center justify-between gap-2 px-5 pb-4">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-8 w-8 p-0"
-            onClick={() => setShowManual(true)}
-          >
-            <Info className="h-4 w-4" />
-          </Button>
-          {message.trim() && (
-            <p className="text-xs text-muted-foreground">
-              Use <strong>Shift</strong> + <strong>Return</strong> for a new line
-            </p>
-          )}
-        </div>
+
+        {/* Conversion overlay */}
+        {showConversionOverlay && (
+          <div className="w-full bg-background/95 backdrop-blur-sm flex items-center justify-center rounded-t-lg border-2 border-primary">
+            <div className="text-center w-full max-w-md py-6 px-4">
+              <h3 className="text-lg font-semibold text-primary bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent mb-6">
+                🔥 Unlock Your Complete Lean Canvas 🔥
+              </h3>
+              <div className="space-y-3 text-left mb-6">
+                <div className="flex items-center gap-2">
+                  <div className="rounded-full bg-green-100 p-1 flex-shrink-0">
+                    <Check className="h-3 w-3 text-green-600" />
+                  </div>
+                  <span className="text-xs">📊 Save & share your business model with stakeholders</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="rounded-full bg-green-100 p-1 flex-shrink-0">
+                    <Check className="h-3 w-3 text-green-600" />
+                  </div>
+                  <span className="text-xs">💡 Refine your strategy with AI-powered insights</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="rounded-full bg-green-100 p-1 flex-shrink-0">
+                    <Check className="h-3 w-3 text-green-600" />
+                  </div>
+                  <span className="text-xs">🚀 Test multiple scenarios with variant canvases</span>
+                </div>
+              </div>
+              <div>
+                <AuthModal 
+                  defaultTab="sign-up"
+                  trigger={
+                    <Button className="w-full bg-gradient-to-r from-orange-600 to-red-600 text-white hover:from-orange-700 hover:to-red-700 text-xs py-2">
+                      Continue for Free - No Credit Card
+                    </Button>
+                  }
+                />
+                <div className="text-[10px] text-muted-foreground mt-2">
+                  ⏱️ Takes less than 30 seconds
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* User Manual Modal */}

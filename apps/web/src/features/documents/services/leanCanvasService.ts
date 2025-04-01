@@ -4,7 +4,7 @@ import { Document } from '../models/document.js';
 
 // Default content for a new lean canvas
 export const DEFAULT_LEAN_CANVAS_CONTENT = {
-  "Title": "New Canvas",
+  "Title": "",
   "Subtitle": "",
   "Customer Segments": "",
   "Early Adopters": "",
