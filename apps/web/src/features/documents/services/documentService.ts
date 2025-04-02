@@ -1,7 +1,7 @@
 import { DocumentRepository } from '../repositories/documentRepository.js';
 import { Document, DocumentType } from '../models/document.js';
 import { MessageService } from './messageService.js';
-import { MessageContextType } from '../models/message.js';
+import { MessageContextType } from '@innerflame/types';
 
 // Singleton instance
 let instance: DocumentService | null = null;

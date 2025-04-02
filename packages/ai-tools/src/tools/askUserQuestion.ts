@@ -1,13 +1,12 @@
 /**
  * Ask user question tool for AI agents
  */
-import type { Message } from '@innerflame/types/message.js';
+import type { Message, MessageContextType } from '@innerflame/types';
 
 interface AskUserQuestionParams {
   question: string;
   contextId: string;
-  contextType: string;
-  displayThreadId: string;
+  contextType: MessageContextType;
 }
 
 /**
@@ -15,10 +14,9 @@ interface AskUserQuestionParams {
  * This is a placeholder implementation that will be replaced with actual WebSocket functionality
  */
 export async function askUserQuestion(
-  params: AskUserQuestionParams,
-  timeoutMs = 300000 // 5 minutes
+  params: AskUserQuestionParams
 ): Promise<Message> {
-  const { question, contextId, contextType, displayThreadId } = params;
+  const { question, contextId, contextType } = params;
   
   // In a real implementation, this would send a message to the user via WebSocket
   // and wait for a response using a promise that resolves when the user replies
@@ -28,18 +26,22 @@ export async function askUserQuestion(
   // For now, we'll just simulate a response after a short delay
   return new Promise((resolve) => {
     setTimeout(() => {
-      resolve({
+      // Create a simulated response with all required Message properties
+      const simulatedResponse: Message = {
         id: 'simulated-response-id',
-        userId: 'user-id',
-        senderType: 'user',
+        user_id: 'user-id',
+        sender_type: 'user',
         content: 'This is a simulated response from the user.',
-        contextType,
-        contextId,
-        hasProposedChanges: false,
-        displayThreadId,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      });
+        context_type: contextType,
+        context_id: contextId,
+        context_entity_version_id: null,
+        contentEmbedding: undefined,
+        reply_to_message_id: null,
+        createdAt: new Date(),
+        isEdited: false
+      };
+      
+      resolve(simulatedResponse);
     }, 1000);
   });
 } 

@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card.j
 import { 
   MessageContextType,
   determineMessageContext 
-} from '../models/message.js';
+} from '@innerflame/types';
 import { useAuth } from '@/contexts/AuthContext.js';
 import { useChatInterface } from '@/hooks/useChatInterface.ts';
 import { MessageList } from './chat/MessageList.js';

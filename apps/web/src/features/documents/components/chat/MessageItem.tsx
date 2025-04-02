@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useCallback } from 'react';
-import { Message as MessageModel } from '../../models/message.js';
+import { Message as MessageModel } from '@innerflame/types';
 import { MarkdownRenderer } from '@/components/markdown-renderer.js';
 import { MessageActions } from '../MessageActions.js';
 import { MessageEditor } from '../MessageEditor.js';

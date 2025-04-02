@@ -6,7 +6,7 @@ import {
   MessageSenderType, 
   MessageContextType,
   CreateMessageParams
-} from '@/features/documents/models/message.js';
+} from '@innerflame/types';
 import { useAuth } from '@/contexts/AuthContext.js';
 import { useToast } from './use-toast.ts';
 import { limitChatHistoryTokens } from '@/utils/textUtils.js';
@@ -243,10 +243,10 @@ export function useChatInterface({
       sender_type: MessageSenderType.User,
       context_type: contextType,
       context_id: contextId ?? null,
+      context_entity_version_id: null,
+      reply_to_message_id: null,
       createdAt: new Date(),
-      has_proposed_changes: false,
-      display_thread_id: null,
-      reply_to_message_id: null
+      isEdited: false
     };
     
     // Append to history
@@ -298,10 +298,10 @@ export function useChatInterface({
             ? 'project'
             : 'general',
         context_id: contextId ?? null,
+        context_entity_version_id: null,
+        reply_to_message_id: null,
         createdAt: new Date(),
-        has_proposed_changes: false,
-        display_thread_id: null,
-        reply_to_message_id: null
+        isEdited: false
       };
       
       // Add the streaming placeholder to chat history

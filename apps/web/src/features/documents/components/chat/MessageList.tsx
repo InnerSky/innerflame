@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState, useImperativeHandle, forwardRef, useCallback } from 'react';
-import { Message as MessageModel } from '../../models/message.js';
+import { Message as MessageModel } from '@innerflame/types';
 import { MessageItem } from './MessageItem.js';
 import { Spinner } from '@/components/Spinner.js';
 import { DocumentEditTagState } from '../../utils/documentEditUtils.js';

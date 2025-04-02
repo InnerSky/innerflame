@@ -274,14 +274,11 @@ export type Database = {
         Row: {
           content: string
           content_embedding: string | null
+          context_entity_version_id: string | null
           context_id: string | null
           context_type: string | null
           created_at: string | null
-          detected_intent: string[] | null
-          display_thread_id: string | null
-          has_proposed_changes: boolean | null
           id: string
-          proposed_entity_changes: Json | null
           reply_to_message_id: string | null
           sender_type: string
           user_id: string
@@ -289,14 +286,11 @@ export type Database = {
         Insert: {
           content: string
           content_embedding?: string | null
+          context_entity_version_id?: string | null
           context_id?: string | null
           context_type?: string | null
           created_at?: string | null
-          detected_intent?: string[] | null
-          display_thread_id?: string | null
-          has_proposed_changes?: boolean | null
           id?: string
-          proposed_entity_changes?: Json | null
           reply_to_message_id?: string | null
           sender_type: string
           user_id: string
@@ -304,19 +298,23 @@ export type Database = {
         Update: {
           content?: string
           content_embedding?: string | null
+          context_entity_version_id?: string | null
           context_id?: string | null
           context_type?: string | null
           created_at?: string | null
-          detected_intent?: string[] | null
-          display_thread_id?: string | null
-          has_proposed_changes?: boolean | null
           id?: string
-          proposed_entity_changes?: Json | null
           reply_to_message_id?: string | null
           sender_type?: string
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "messages_document_version_id_fkey"
+            columns: ["context_entity_version_id"]
+            isOneToOne: false
+            referencedRelation: "entity_versions"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "messages_reply_to_message_id_fkey"
             columns: ["reply_to_message_id"]

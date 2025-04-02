@@ -10,7 +10,6 @@ interface CreateMessageParams {
   contextType?: string;
   contextId?: string;
   replyToMessageId?: string;
-  displayThreadId?: string;
 }
 
 export class MessageService {
@@ -30,8 +29,7 @@ export class MessageService {
       senderType,
       contextType,
       contextId,
-      replyToMessageId,
-      displayThreadId
+      replyToMessageId
     } = params;
     
     // Validate context values
@@ -51,9 +49,7 @@ export class MessageService {
       context_type: contextType || null,
       context_id: contextId || null,
       reply_to_message_id: replyToMessageId || null,
-      display_thread_id: displayThreadId || null,
-      created_at: new Date().toISOString(),
-      has_proposed_changes: false
+      created_at: new Date().toISOString()
     };
     
     console.log(`Creating ${senderType} message with context_type=${contextType}, context_id=${contextId}`);

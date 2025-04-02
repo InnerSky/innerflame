@@ -3,7 +3,7 @@
  */
 
 // Import Message type
-import { Message } from '../models/message.js';
+import { Message } from '@innerflame/types';
 
 // Types for messages
 type TokenChunk = {
