@@ -1,6 +1,7 @@
 import { Response, Request } from 'express';
 import { MessageService } from '../services/message/messageService.js';
 import { processDocumentEdit } from '../handlers/documentEditHandler.js';
+import { MessageSenderType, MessageContextType } from '@innerflame/types';
 
 /**
  * Server-Sent Events Controller for streaming responses
@@ -68,7 +69,7 @@ export async function sendComplete(req: Request, res: Response, data: any = {}):
   
   try {
     // Extract the necessary context information from the request
-    const { userId, contextType, contextId } = req.body;
+    const { userId, contextType, contextId, contextEntityVersionId } = req.body;
     const fullResponse = data.fullResponse || '';
     
     let savedMessage = null;
@@ -76,23 +77,45 @@ export async function sendComplete(req: Request, res: Response, data: any = {}):
     
     // Process document edit if present
     let documentEditResult = null;
-    if (contextType === 'document' && fullResponse) {
+    if (contextType === MessageContextType.Document && fullResponse) {
       documentEditResult = await processDocumentEdit(req, fullResponse);
     }
     
     // Save message to Supabase if we have a user ID and content
     if (userId && fullResponse) {
       try {
+        // Determine the appropriate context entity version ID
+        // If document was updated, use the new version ID from the edit result
+        let messageContextEntityVersionId = contextEntityVersionId;
+        
+        if (documentEditResult?.documentUpdated) {
+          if (documentEditResult.versionId) {
+            // Use the new version ID if available
+            messageContextEntityVersionId = documentEditResult.versionId;
+            console.log(`Using new document version ID: ${messageContextEntityVersionId} (version number: ${documentEditResult.versionNumber})`);
+          } else if (documentEditResult.versionNumber) {
+            // If only version number is available (backward compatibility)
+            console.log(`Document was updated to version number: ${documentEditResult.versionNumber}, but no version ID was provided`);
+            
+            if (contextEntityVersionId) {
+              console.log(`Falling back to original contextEntityVersionId: ${contextEntityVersionId}`);
+            } else {
+              console.log(`No contextEntityVersionId available despite document update`);
+            }
+          }
+        }
+        
         // Create the assistant message with the exact same context as the user message
         savedMessage = await MessageService.createMessage({
           content: fullResponse,
           userId,
-          senderType: 'assistant',
-          contextType: contextType, // Ensure we use the same context type as the user message
-          contextId: contextId      // Ensure we use the same context ID as the user message
+          senderType: MessageSenderType.Assistant,
+          contextType: contextType as MessageContextType, // Type cast to ensure proper type
+          contextId: contextId,
+          contextEntityVersionId: messageContextEntityVersionId
         });
         
-        console.log(`Saved assistant message with contextType=${contextType}, contextId=${contextId}`);
+        console.log(`Saved assistant message with contextType=${contextType}, contextId=${contextId}, contextEntityVersionId=${messageContextEntityVersionId}`);
       } catch (err) {
         error = err instanceof Error ? err.message : 'Error saving message';
         console.error('Error saving assistant message:', err);
@@ -109,6 +132,7 @@ export async function sendComplete(req: Request, res: Response, data: any = {}):
         processed: documentEditResult.processed,
         updated: documentEditResult.documentUpdated,
         versionNumber: documentEditResult.versionNumber,
+        versionId: documentEditResult.versionId,
         error: documentEditResult.error
       } : null
     });

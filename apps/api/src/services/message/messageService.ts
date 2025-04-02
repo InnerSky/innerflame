@@ -2,13 +2,15 @@
  * Server-side Message Service for Supabase
  */
 import { SupabaseService } from '../supabase/supabaseService.js';
+import { MessageContextType, MessageSenderType } from '@innerflame/types';
 
 interface CreateMessageParams {
   content: string;
   userId: string;
-  senderType: 'user' | 'assistant';
-  contextType?: string;
+  senderType: MessageSenderType;
+  contextType?: MessageContextType;
   contextId?: string;
+  contextEntityVersionId?: string;
   replyToMessageId?: string;
 }
 
@@ -29,15 +31,16 @@ export class MessageService {
       senderType,
       contextType,
       contextId,
+      contextEntityVersionId,
       replyToMessageId
     } = params;
     
     // Validate context values
-    if (!contextType && senderType === 'assistant') {
+    if (!contextType && senderType === MessageSenderType.Assistant) {
       console.warn('Assistant message created without contextType');
     }
     
-    if (!contextId && contextType && senderType === 'assistant') {
+    if (!contextId && contextType && senderType === MessageSenderType.Assistant) {
       console.warn(`Assistant message created with contextType=${contextType} but missing contextId`);
     }
     
@@ -48,11 +51,12 @@ export class MessageService {
       sender_type: senderType,
       context_type: contextType || null,
       context_id: contextId || null,
+      context_entity_version_id: contextEntityVersionId || null,
       reply_to_message_id: replyToMessageId || null,
       created_at: new Date().toISOString()
     };
     
-    console.log(`Creating ${senderType} message with context_type=${contextType}, context_id=${contextId}`);
+    console.log(`Creating ${senderType} message with context_type=${contextType}, context_id=${contextId}, context_entity_version_id=${contextEntityVersionId}`);
     
     // Insert the message
     const { data, error } = await supabase

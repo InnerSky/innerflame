@@ -103,7 +103,7 @@ export async function createAIEditVersion(
   newContent: string,
   userId: string,
   fullResponse?: string
-): Promise<{ success: boolean; versionNumber?: number; error?: string }> {
+): Promise<{ success: boolean; versionNumber?: number; versionId?: string; error?: string }> {
   const supabase = createSupabaseClient();
   const now = new Date().toISOString();
   
@@ -211,7 +211,8 @@ export async function createAIEditVersion(
     
     return {
       success: true,
-      versionNumber: newVersionNumber
+      versionNumber: newVersionNumber,
+      versionId: newVersion.id // Return the ID of the newly created version
     };
     
   } catch (error) {

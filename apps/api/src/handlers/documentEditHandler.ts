@@ -16,6 +16,7 @@ export async function processDocumentEdit(
   processed: boolean; 
   documentUpdated: boolean; 
   versionNumber?: number;
+  versionId?: string;
   error?: string;
 }> {
   try {
@@ -80,6 +81,7 @@ export async function processDocumentEdit(
       processed: true,
       documentUpdated: result.success,
       versionNumber: result.versionNumber,
+      versionId: result.versionId,
       error: result.error
     };
     

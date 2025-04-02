@@ -73,7 +73,8 @@ export async function handleOrchestratorRequest(req: Request, res: Response): Pr
     documentContent, 
     projectId, 
     projectName,
-    chatHistory
+    chatHistory,
+    contextEntityVersionId
   } = req.body;
   
   // Validate required fields
@@ -91,7 +92,8 @@ export async function handleOrchestratorRequest(req: Request, res: Response): Pr
     documentContent,
     projectId,
     projectName,
-    chatHistory
+    chatHistory,
+    contextEntityVersionId
   };
   
   try {
@@ -167,7 +169,8 @@ export async function handleSpecializedAgentRequest(req: Request, res: Response)
     projectId, 
     projectName,
     chatHistory,
-    agentType
+    agentType,
+    contextEntityVersionId
   } = req.body;
   
   // Validate required fields
@@ -185,7 +188,8 @@ export async function handleSpecializedAgentRequest(req: Request, res: Response)
     documentContent,
     projectId,
     projectName,
-    chatHistory
+    chatHistory,
+    contextEntityVersionId
   };
   
   try {
@@ -233,7 +237,8 @@ export async function handleStreamRequest(req: Request, res: Response): Promise<
     documentContent, 
     projectId, 
     projectName,
-    chatHistory
+    chatHistory,
+    contextEntityVersionId
   } = req.body;
   
   // Validate required fields
@@ -251,7 +256,8 @@ export async function handleStreamRequest(req: Request, res: Response): Promise<
     documentContent,
     projectId,
     projectName,
-    chatHistory // Pass chat history to context
+    chatHistory, // Pass chat history to context
+    contextEntityVersionId
   };
   
   try {
