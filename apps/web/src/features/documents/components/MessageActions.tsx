@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Message } from '../models/message.js';
+import { Message } from '@innerflame/types';
 import { Button } from '@/components/ui/button.js';
 import { 
   DropdownMenu, 

@@ -2,9 +2,9 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { DocumentsProvider } from '@/features/documents/contexts/DocumentsContext.js';
 import { Document } from '@/features/documents/models/document.js';
 import leanCanvasService from '@/features/documents/services/leanCanvasService.js';
-import { MessageService } from '@/features/documents/services/messageService.js';
+import { MessageServiceStatic as MessageService } from '@/lib/services.js';
 import { useToast } from '@/hooks/use-toast.ts';
-import { MessageContextType, MessageSenderType } from '@/features/documents/models/message.js';
+import { MessageContextType, MessageSenderType } from '@innerflame/types';
 import { useAuth } from '@/contexts/AuthContext.js';
 
 interface LeanCanvasContextWrapperProps {

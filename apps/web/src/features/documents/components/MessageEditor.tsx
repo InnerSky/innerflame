@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Message } from '../models/message.js';
+import { Message } from '@innerflame/types';
 import { Button } from '@/components/ui/button.js';
 import { Textarea } from '@/components/ui/textarea.js';
 import { Check, X } from 'lucide-react';

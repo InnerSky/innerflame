@@ -8,7 +8,7 @@ import { LeanCanvasDesktop } from '@/features/documents/components/lean-canvas/i
 import leanCanvasService from '@/features/documents/services/leanCanvasService.js';
 import { useToast } from '@/hooks/use-toast.ts';
 import { DocumentsProvider, useDocumentsContext } from '@/features/documents/contexts/DocumentsContext.js';
-import { MessageContextType } from '@/features/documents/models/message.js';
+import { MessageContextType } from '@innerflame/types';
 
 // This component receives the initial idea and is only rendered after DocumentsProvider is established
 function LeanCanvasContent({ 

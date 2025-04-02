@@ -84,6 +84,7 @@ export class MessageService {
       senderType,
       contextType,
       contextId,
+      contextEntityVersionId,
       replyToMessageId
     } = params;
     
@@ -94,6 +95,7 @@ export class MessageService {
       sender_type: senderType,
       context_type: contextType !== MessageContextType.None ? contextType : null,
       context_id: contextId || null,
+      context_entity_version_id: contextEntityVersionId || null,
       reply_to_message_id: replyToMessageId || null,
       created_at: new Date().toISOString()
     };

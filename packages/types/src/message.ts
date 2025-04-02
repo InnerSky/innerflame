@@ -42,6 +42,7 @@ export interface CreateMessageParams {
   senderType: MessageSenderType;
   contextType?: MessageContextType;
   contextId?: string;
+  contextEntityVersionId?: string;
   replyToMessageId?: string;
 }
 

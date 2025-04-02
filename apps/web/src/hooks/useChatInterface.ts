@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { MessageService } from '@/features/documents/services/messageService.js';
+import { MessageServiceStatic as MessageService } from '@/lib/services.js';
 import { createAIStream } from '@/features/documents/services/sseClient.js';
 import { 
   Message as MessageModel, 
@@ -235,6 +235,11 @@ export function useChatInterface({
     
     if (!messageContent.trim() || isLoading || !user) return;
     
+    // Get the current document version ID when in document context
+    const contextEntityVersionId = contextType === MessageContextType.Document && contextId && documentsContext.selectedDocument?.currentVersionId
+      ? documentsContext.selectedDocument.currentVersionId
+      : null;
+    
     // Add user message to chat (optimistic update)
     const userMessage: MessageModel = {
       id: `temp-${Date.now()}`,
@@ -243,7 +248,7 @@ export function useChatInterface({
       sender_type: MessageSenderType.User,
       context_type: contextType,
       context_id: contextId ?? null,
-      context_entity_version_id: null,
+      context_entity_version_id: contextEntityVersionId,
       reply_to_message_id: null,
       createdAt: new Date(),
       isEdited: false
@@ -260,7 +265,8 @@ export function useChatInterface({
         userId: user.id,
         senderType: MessageSenderType.User,
         contextType,
-        contextId: contextId || undefined
+        contextId: contextId || undefined,
+        contextEntityVersionId: contextEntityVersionId || undefined // Pass the version ID, convert null to undefined
       });
       
       // Replace the temporary message with the saved one
@@ -298,7 +304,7 @@ export function useChatInterface({
             ? 'project'
             : 'general',
         context_id: contextId ?? null,
-        context_entity_version_id: null,
+        context_entity_version_id: contextEntityVersionId,
         reply_to_message_id: null,
         createdAt: new Date(),
         isEdited: false
