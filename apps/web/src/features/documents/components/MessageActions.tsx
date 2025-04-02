@@ -23,12 +23,14 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet.js';
-import { Edit, Trash, MoreVertical } from 'lucide-react';
+import { Edit, Trash, MoreVertical, RotateCcw } from 'lucide-react';
 
 interface MessageActionsProps {
   message: Message;
   onEdit: (messageId: string) => void;
   onDelete: (messageId: string) => void;
+  showRestoreVersion?: boolean;
+  onRestoreVersion?: (messageId: string) => void;
   isMobile?: boolean;
   canEdit?: boolean;
   position?: 'left' | 'right';
@@ -38,6 +40,8 @@ export const MessageActions: React.FC<MessageActionsProps> = ({
   message, 
   onEdit, 
   onDelete,
+  showRestoreVersion = false,
+  onRestoreVersion = () => {},
   isMobile = false,
   canEdit = true,
   position = 'right'
@@ -54,6 +58,10 @@ export const MessageActions: React.FC<MessageActionsProps> = ({
       setShowMobileActions(false);
     }
     setShowDeleteConfirm(true);
+  };
+  
+  const handleRestoreVersion = () => {
+    onRestoreVersion(message.id);
   };
   
   const confirmDelete = () => {
@@ -81,6 +89,12 @@ export const MessageActions: React.FC<MessageActionsProps> = ({
                 <DropdownMenuItem onClick={handleEdit}>
                   <Edit className="mr-2 h-4 w-4" />
                   <span>Edit</span>
+                </DropdownMenuItem>
+              )}
+              {showRestoreVersion && (
+                <DropdownMenuItem onClick={handleRestoreVersion}>
+                  <RotateCcw className="mr-2 h-4 w-4" />
+                  <span>Restore Version</span>
                 </DropdownMenuItem>
               )}
               <DropdownMenuItem 
@@ -152,6 +166,19 @@ export const MessageActions: React.FC<MessageActionsProps> = ({
               >
                 <Edit className="mr-3 h-5 w-5" />
                 <span>Edit Message</span>
+              </Button>
+            )}
+            {showRestoreVersion && (
+              <Button 
+                variant="outline" 
+                className="flex justify-start items-center px-4 py-6 text-base"
+                onClick={() => {
+                  setShowMobileActions(false);
+                  handleRestoreVersion();
+                }}
+              >
+                <RotateCcw className="mr-3 h-5 w-5" />
+                <span>Restore Version</span>
               </Button>
             )}
             <Button 

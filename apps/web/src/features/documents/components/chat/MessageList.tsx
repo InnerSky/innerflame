@@ -190,6 +190,8 @@ export const MessageList = forwardRef<{ scrollToBottom: () => void }, MessageLis
               <div ref={lastMessageRef}>
                 <MessageItem
                   message={message}
+                  messages={messages}
+                  messageIndex={index}
                   isStreaming={message.id in streamingMessages}
                   streamingContent={streamingContents[message.id]}
                   documentEditState={documentEditStates[message.id]}
@@ -207,6 +209,8 @@ export const MessageList = forwardRef<{ scrollToBottom: () => void }, MessageLis
             ) : (
               <MessageItem
                 message={message}
+                messages={messages}
+                messageIndex={index}
                 isStreaming={message.id in streamingMessages}
                 streamingContent={streamingContents[message.id]}
                 documentEditState={documentEditStates[message.id]}

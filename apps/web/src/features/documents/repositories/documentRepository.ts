@@ -607,4 +607,21 @@ export class DocumentRepository {
       return mapEntityToDocument(entity, currentVersion);
     });
   }
-} 
+
+  // Get a specific document version by version ID
+  async getVersionById(versionId: string): Promise<DocumentVersion | null> {
+    const { data: version, error } = await supabase
+      .from('entity_versions')
+      .select('*')
+      .eq('id', versionId)
+      .single();
+      
+    if (error) throw error;
+    if (!version) return null;
+    
+    return mapEntityVersionToDocumentVersion(version);
+  }
+}
+
+// Export singleton instance for use throughout the app
+export const documentRepository = new DocumentRepository(); 
