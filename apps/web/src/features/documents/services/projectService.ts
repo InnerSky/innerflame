@@ -1,7 +1,7 @@
 import { DocumentService } from './documentService.js';
 import { DocumentRepository } from '../repositories/documentRepository.js';
 import { Document } from '../models/document.js';
-import { MessageService } from './messageService.js';
+import { MessageServiceStatic as MessageService } from '@/lib/services.js';
 import { MessageContextType } from '@innerflame/types';
 
 // Singleton instance
