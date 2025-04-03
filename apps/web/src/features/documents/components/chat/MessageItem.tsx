@@ -18,6 +18,9 @@ import { DocumentVersionRestoreModal } from '../modals/DocumentVersionRestoreMod
 import { ConfirmRestoreModal } from '../modals/ConfirmRestoreModal.js';
 import { documentRepository } from '../../repositories/documentRepository.js';
 import { cn } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast.ts';
+import { useDocumentsContext } from '../../contexts/DocumentsContext.js';
+import { ChatInterfaceRef } from '../ChatInterface.js';
 
 interface MessageItemProps {
   message: MessageModel;
@@ -37,9 +40,11 @@ interface MessageItemProps {
   onStartEdit: (messageId: string) => void;
 }
 
-export const MessageItem: React.FC<MessageItemProps> = ({
-  message,
-  messages,
+export function MessageItem({ 
+  message, 
+  onEdit, 
+  onDelete, 
+  messages, 
   messageIndex,
   isStreaming,
   streamingContent,
@@ -49,17 +54,20 @@ export const MessageItem: React.FC<MessageItemProps> = ({
   isEdited,
   isMobileScreen,
   isStandalone,
-  onEdit,
-  onDelete,
   onCancelEdit,
-  onStartEdit
-}) => {
+  onStartEdit,
+  chatInterfaceRef 
+}: MessageItemProps & { 
+  chatInterfaceRef?: React.RefObject<ChatInterfaceRef>
+}) {
   const isUserMessage = String(message.sender_type) === 'user';
   const [showRestoreModal, setShowRestoreModal] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [versionData, setVersionData] = useState<Record<string, string> | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [versionNumber, setVersionNumber] = useState<number | undefined>(undefined);
+  const { toast } = useToast();
+  const { selectDocument } = useDocumentsContext();
   
   // Determine whether to show restore version button
   const shouldShowRestoreVersion = useMemo(() => {
@@ -165,7 +173,6 @@ export const MessageItem: React.FC<MessageItemProps> = ({
                 const contentObj = JSON.parse(version.content.content);
                 setVersionData(contentObj as Record<string, string>);
               } catch (e) {
-                console.error('Failed to parse nested content string', e);
                 setVersionData(null);
               }
             } else {
@@ -178,7 +185,6 @@ export const MessageItem: React.FC<MessageItemProps> = ({
               // Try to parse if it's a JSON string
               setVersionData(JSON.parse(version.content));
             } catch (e) {
-              console.error('Failed to parse version content', e);
               setVersionData(null);
             }
           }
@@ -187,7 +193,11 @@ export const MessageItem: React.FC<MessageItemProps> = ({
         }
       }
     } catch (error) {
-      console.error('Error fetching version', error);
+      toast({
+        title: "Failed to load version",
+        description: "Could not retrieve the document version.",
+        variant: "destructive"
+      });
     } finally {
       setIsLoading(false);
     }
@@ -199,23 +209,67 @@ export const MessageItem: React.FC<MessageItemProps> = ({
     setShowConfirmModal(true);
   };
   
-  // Handle final confirmation (actual restoration would be implemented here)
-  const handleFinalConfirm = () => {
-    // The actual restoration logic would be implemented here
-    // For now, we just close the modal
-    setShowConfirmModal(false);
+  // Handle final confirmation to actually restore the version
+  const handleFinalConfirm = async () => {
+    if (!message.context_entity_version_id) return;
     
-    // TODO: Implement the actual restoration logic
-    console.log('Document version would be restored here');
+    try {
+      setIsLoading(true);
+      
+      // Store the message content before deletion
+      const messageContent = message.content;
+      
+      // Show loading toast
+      toast({
+        title: "Restoring document version...",
+        description: "Please wait while we restore your document."
+      });
+      
+      // Call the repository method to restore the version
+      const restoredDocument = await documentRepository.restoreVersion(message.context_entity_version_id);
+      
+      // Update the document in the context
+      selectDocument(restoredDocument);
+      
+      // Copy the message text to the chat input and delete messages
+      if (chatInterfaceRef?.current) {
+        // Set input text to the original message
+        chatInterfaceRef.current.setInputText(messageContent);
+        
+        // First identify all messages that come after this one in the UI
+        if (messages && messageIndex !== undefined) {
+          // Delete messages in reverse order (newest first) to avoid index shifting issues
+          for (let i = messages.length - 1; i > messageIndex; i--) {
+            await chatInterfaceRef.current.deleteMessage(messages[i].id);
+          }
+          
+          // Finally delete the message that triggered the restoration
+          await chatInterfaceRef.current.deleteMessage(message.id);
+        } else {
+          // Fallback if we don't have the messages array or index
+          await chatInterfaceRef.current.deleteMessage(message.id);
+        }
+      }
+      
+      // Show success toast
+      toast({
+        title: "Document restored successfully",
+        description: `The document has been restored to version ${versionNumber || ''}.`,
+        variant: "default"
+      });
+      
+      // Close the modal when done
+      setShowConfirmModal(false);
+    } catch (error) {
+      toast({
+        title: "Failed to restore document",
+        description: error instanceof Error ? error.message : "An unknown error occurred",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
-
-  // Add debugging useEffect to track component lifecycle
-  useEffect(() => {
-    // Component mounted
-    return () => {
-      // Component will unmount
-    };
-  }, [message.id]);
 
   return (
     <>
@@ -319,7 +373,8 @@ export const MessageItem: React.FC<MessageItemProps> = ({
         onConfirm={handleFinalConfirm}
         versionId={message.context_entity_version_id}
         versionNumber={versionNumber}
+        isLoading={isLoading}
       />
     </>
   );
-}; 
+} 

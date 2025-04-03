@@ -9,13 +9,20 @@ import {
 import { useAuth } from '@/contexts/AuthContext.js';
 import { useChatInterface } from '@/hooks/useChatInterface.ts';
 import { MessageList } from './chat/MessageList.js';
-import { ChatInput } from './chat/ChatInput.js';
+import { ChatInput, ChatInputRef } from './chat/ChatInput.js';
 
 type ChatInterfaceProps = {
   className?: string;
   isStandalone?: boolean;
   suppressAutoScroll?: boolean;
 };
+
+// Define the extended ref interface
+export interface ChatInterfaceRef {
+  sendMessage: (content: string) => Promise<void>;
+  deleteMessage: (messageId: string) => Promise<boolean | undefined>;
+  setInputText: (text: string) => void;
+}
 
 // Helper function to check if canvas has content
 function hasCanvasContent(content: string | null): boolean {
@@ -55,10 +62,7 @@ function useMediaQuery(query: string) {
 }
 
 // Export ChatInterface as a forwardRef component
-export const ChatInterface = forwardRef<
-  { sendMessage: (content: string) => Promise<void> }, 
-  ChatInterfaceProps
->(({ 
+export const ChatInterface = forwardRef<ChatInterfaceRef, ChatInterfaceProps>(({ 
   className = '',
   isStandalone = false,
   suppressAutoScroll = false
@@ -126,6 +130,12 @@ export const ChatInterface = forwardRef<
   // Track when to scroll to bottom (only for user messages)
   const [shouldScrollToBottom, setShouldScrollToBottom] = useState(false);
   
+  // Create a ref for the ChatInput component
+  const chatInputRef = useRef<ChatInputRef>(null);
+  
+  // Create a self-reference to pass to children
+  const selfRef = useRef<ChatInterfaceRef | null>(null);
+  
   // UI event handlers
   const handleStartEdit = (messageId: string) => {
     setEditingMessageId(messageId);
@@ -156,12 +166,29 @@ export const ChatInterface = forwardRef<
     }
   };
 
-  // Expose sendMessage function via ref
-  useImperativeHandle(ref, () => ({
-    sendMessage: async (content: string) => {
-      await handleSendMessage(content);
-    }
-  }));
+  // Expose sendMessage and other functions via ref
+  useImperativeHandle(ref, () => {
+    // Create the ref interface object
+    const interfaceRef: ChatInterfaceRef = {
+      sendMessage: async (content: string) => {
+        await handleSendMessage(content);
+      },
+      deleteMessage: async (messageId: string) => {
+        return deleteMessage(messageId);
+      },
+      setInputText: (text: string) => {
+        if (chatInputRef.current) {
+          chatInputRef.current.setInputText(text);
+          chatInputRef.current.focusInput();
+        }
+      }
+    };
+    
+    // Store in our self-reference
+    selfRef.current = interfaceRef;
+    
+    return interfaceRef;
+  }, []);
   
   // Reset the scroll flag after it's been processed
   useEffect(() => {
@@ -197,11 +224,13 @@ export const ChatInterface = forwardRef<
           onCancelEdit={handleCancelEdit}
           onStartEdit={handleStartEdit}
           shouldScrollToBottom={suppressAutoScroll ? false : shouldScrollToBottom}
+          chatInterfaceRef={selfRef}
         />
       </div>
       
       {/* Input area */}
       <ChatInput
+        ref={chatInputRef}
         onSendMessage={handleSendMessage}
         isLoading={isLoading}
         isDisabled={!user}

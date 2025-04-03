@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { MessageServiceStatic as MessageService } from '@/lib/services.js';
+import { useState, useEffect, useRef, useCallback, SetStateAction } from 'react';
+import { MessageServiceStatic as MessageService, messageSubscriptionService } from '@/lib/services.js';
 import { createAIStream } from '@/features/documents/services/sseClient.js';
 import { 
   Message as MessageModel, 
@@ -46,8 +46,44 @@ export function useChatInterface({
 }: UseChatInterfaceProps) {
   // Message state
   const [chatHistory, setChatHistory] = useState<MessageModel[]>([]);
+  const chatHistoryRef = useRef<MessageModel[]>([]);
+  const idSetRef = useRef(new Set<string>());
   const [isLoading, setIsLoading] = useState(false);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
+  
+  // Add completion tracking to prevent duplicate onComplete processing
+  const completedStreamsRef = useRef<Set<string>>(new Set());
+  
+  // Track message IDs to detect duplicates
+  useEffect(() => {
+    chatHistoryRef.current = chatHistory;
+    
+    // Check for duplicates
+    const messageIds = chatHistory.map(m => m.id);
+    const uniqueIds = new Set(messageIds);
+    
+    if (uniqueIds.size !== messageIds.length) {
+      // Find the duplicated IDs
+      const counts: Record<string, number> = {};
+      const duplicates: string[] = [];
+      
+      messageIds.forEach(id => {
+        counts[id] = (counts[id] || 0) + 1;
+        if (counts[id] > 1 && !duplicates.includes(id)) {
+          duplicates.push(id);
+        }
+      });
+      
+      console.error('🔴 DUPLICATE MESSAGES DETECTED', {
+        duplicateIds: duplicates,
+        messageIds,
+        currentState: chatHistory.map(m => ({ id: m.id, content: m.content.substring(0, 20) }))
+      });
+    }
+    
+    // Update ID set for future reference
+    idSetRef.current = uniqueIds;
+  }, [chatHistory]);
   
   // Editing state
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
@@ -72,6 +108,11 @@ export function useChatInterface({
   const loadingContextRef = useRef<{contextType?: MessageContextType, contextId?: string | null}>({});
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
   
+  // Add subscription cleanup ref
+  const subscriptionCleanupRef = useRef<(() => void) | null>(null);
+  // Ref to track previous subscription context signature
+  const prevSubscriptionSignatureRef = useRef<string>('');
+  
   // Services
   const { user } = useAuth();
   const { toast } = useToast();
@@ -81,6 +122,9 @@ export function useChatInterface({
   
   // Store the latest streaming content for state management
   const latestStreamingContentRef = useRef<Record<string, string>>({});
+  
+  // Add ref to track recently processed message IDs to prevent duplicates
+  const processedMessageIdsRef = useRef<Set<string>>(new Set());
   
   // Helper function to update streaming state
   const updateStreamingState = useCallback((updates: Partial<StreamingState>) => {
@@ -201,12 +245,12 @@ export function useChatInterface({
         setStreamingState(prev => {
           const currentState = prev.documentEditStates[messageId];
           
-          // Log state transitions for debugging
           if (currentState !== editData.state) {
-            console.log(`Document edit state transition: ${currentState} -> ${editData.state}`, { 
-              hasContentTag: content.includes('<content>'),
-              contentLength: editData.content?.length
-            });
+            // Remove log for state transitions
+            // console.log(`Document edit state transition: ${currentState} -> ${editData.state}`, { 
+            //   hasContentTag: content.includes('<content>'),
+            //   contentLength: editData.content?.length
+            // });
           }
           
           if (currentState === editData.state) {
@@ -225,6 +269,22 @@ export function useChatInterface({
       
       debounceTimerRef.current = null;
     }, 50); // Reduce debounce to 50ms to be more responsive to state changes
+  }, []);
+  
+  // Clean state updater without debug logging
+  const updateChatHistory = useCallback((updater: SetStateAction<MessageModel[]>) => {
+    if (typeof updater === 'function') {
+      setChatHistory(prev => {
+        try {
+          return updater(prev);
+        } catch (error) {
+          console.error('Error updating chat history:', error);
+          return prev;
+        }
+      });
+    } else {
+      setChatHistory(updater);
+    }
   }, []);
   
   // Send a message and start streaming the response
@@ -255,7 +315,7 @@ export function useChatInterface({
     };
     
     // Append to history
-    setChatHistory(prev => [...prev, userMessage]);
+    updateChatHistory(prev => [...prev, userMessage]);
     setIsLoading(true);
     
     try {
@@ -266,11 +326,11 @@ export function useChatInterface({
         senderType: MessageSenderType.User,
         contextType,
         contextId: contextId || undefined,
-        contextEntityVersionId: contextEntityVersionId || undefined // Pass the version ID, convert null to undefined
+        contextEntityVersionId: contextEntityVersionId // Pass the version ID directly, not converting null to undefined
       });
       
       // Replace the temporary message with the saved one
-      setChatHistory(prev => 
+      updateChatHistory(prev => 
         prev.map(msg => msg.id === userMessage.id ? savedMessage : msg)
       );
       
@@ -311,7 +371,7 @@ export function useChatInterface({
       };
       
       // Add the streaming placeholder to chat history
-      setChatHistory(prev => [...prev, streamingPlaceholder]);
+      updateChatHistory(prev => [...prev, streamingPlaceholder]);
       
       // Close any existing stream
       if (streamCloseRef.current) {
@@ -341,6 +401,7 @@ export function useChatInterface({
         projectName: projectName,
         chatHistory: filteredHistory,
         agentType,
+        contextEntityVersionId: contextEntityVersionId, // Pass the version ID directly, not converting null to undefined
         onConnectionChange: (connected) => {
           if (!connected) {
             setIsLoading(false);
@@ -359,13 +420,11 @@ export function useChatInterface({
               const editData = parseDocumentEdit(updatedContent);
               const currentState = prev.documentEditStates[streamingId];
               
-              // Log state transitions for debugging
-              if (currentState !== editData.state) {
-                console.log(`Document edit state transition: ${currentState} -> ${editData.state}`, { 
-                  hasContentTag: updatedContent.includes('<content>'),
-                  contentLength: editData.content?.length
-                });
-              }
+              // Remove log for state transitions
+              // console.log(`Document edit state transition: ${currentState} -> ${editData.state}`, { 
+              //   hasContentTag: updatedContent.includes('<content>'),
+              //   contentLength: editData.content?.length
+              // });
               
               // Update state
               updatedDocumentEditStates = {
@@ -384,12 +443,6 @@ export function useChatInterface({
               documentEditStates: updatedDocumentEditStates
             };
           });
-          
-          // Remove debounced tag processing - we now do it directly
-          // processDocumentEditTags(
-          //   streamingId, 
-          //   (streamingState.streamingContents[streamingId] || '') + chunk
-          // );
         },
         onError: (error) => {
           console.error('Streaming error:', error);
@@ -424,47 +477,24 @@ export function useChatInterface({
         onComplete: async (data) => {
           setIsLoading(false);
           
+          // Skip if already completed this stream
+          const streamKey = `${streamingId}:${data.messageId || 'unknown'}`;
+          if (completedStreamsRef.current.has(streamKey)) {
+            return;
+          }
+          
+          // Mark as completed
+          completedStreamsRef.current.add(streamKey);
+          
           // If there is a document edit that was successfully processed
           if (data.documentEdit?.updated) {
-            console.log('Document edit detected and processed with new version:', data.documentEdit.versionNumber);
-            
-            // If this is a document context, we can refresh the document
-            if (contextType === MessageContextType.Document && contextId) {
-              // If we have a selected document that matches, refresh it
-              if (documentsContext.selectedDocument?.id === contextId) {
-                // Fetch document versions to update UI
-                documentsContext.fetchDocumentVersions(contextId);
-                
-                // Properly refresh the document selection instead of directly manipulating editor content
-                try {
-                  const repository = new (await import('@/features/documents/repositories/documentRepository.js')).DocumentRepository();
-                  const updatedDoc = await repository.getDocumentWithVersions(contextId);
-                  
-                  if (updatedDoc) {
-                    if (documentsContext.hasUnsavedChanges) {
-                      // Show a notification about the version update but don't override current edits
-                      toast({
-                        title: "Document Updated in Background",
-                        description: `AI edit applied as version ${data.documentEdit.versionNumber}. Refresh document to view changes.`,
-                        variant: "default"
-                      });
-                      
-                      // Still update version list
-                      documentsContext.fetchDocumentVersions(contextId);
-                    } else {
-                      // No unsaved changes, safe to switch to the new version
-                      documentsContext.selectDocument(updatedDoc);
-                      
-                      toast({
-                        title: "Document Updated",
-                        description: `AI edit applied as version ${data.documentEdit.versionNumber}`,
-                        variant: "default"
-                      });
-                    }
-                  }
-                } catch (error) {
-                  console.error('Error refreshing document:', error);
-                }
+            // Document edit was applied, we should refresh the document
+            if (documentsContext?.fetchDocumentVersions && documentsContext.selectedDocument?.id) {
+              try {
+                // Fetch document versions to reflect the updated version
+                await documentsContext.fetchDocumentVersions(documentsContext.selectedDocument.id);
+              } catch (error) {
+                console.error('Error fetching document versions after edit:', error);
               }
             }
           } else if (data.documentEdit?.processed && data.documentEdit?.error) {
@@ -482,104 +512,71 @@ export function useChatInterface({
           // Handle the server-side saved message
           if (data.messageId) {
             try {
+              // Add this message ID to our processed list to prevent duplicates from real-time subscriptions
+              processedMessageIdsRef.current.add(data.messageId);
+              
+              // Clean up old processed IDs after a delay (10 seconds should be plenty)
+              setTimeout(() => {
+                processedMessageIdsRef.current.delete(data.messageId);
+              }, 10000);
+              
               // Fetch the message from the database to get the full message object
               const assistantMessage = await MessageService.getMessage(data.messageId);
               
-              // Update chat history with the final message
-              setChatHistory(prev => 
-                prev.map(msg => 
-                  msg.id === streamingId ? assistantMessage : msg
-                )
-              );
+              // Check if the message already exists in history BEFORE we attempt to update
+              const messageExistsInHistory = chatHistoryRef.current.some(msg => msg.id === assistantMessage.id);
+              const streamingMessageExists = chatHistoryRef.current.some(msg => msg.id === streamingId);
               
-              // Only clear streaming state AFTER we've updated the chat history
-              // This prevents the flash of empty content during the transition
-              setStreamingState(prev => {
-                const updatedMessages = {...prev.streamingMessages};
-                delete updatedMessages[streamingId];
+              // If the final message is already in history AND the streaming message is gone,
+              // this is likely a duplicate onComplete - we can skip all further processing
+              if (messageExistsInHistory && !streamingMessageExists) {
+                return;
+              }
+              
+              // Modify how we update the chat history to be more careful
+              updateChatHistory(prev => {
+                // Check several scenarios
+                const hasStreaming = prev.some(msg => msg.id === streamingId);
+                const hasFinal = prev.some(msg => msg.id === assistantMessage.id);
                 
-                const updatedContents = {...prev.streamingContents};
-                delete updatedContents[streamingId];
-                
-                const updatedDocumentEditStates = {...prev.documentEditStates};
-                delete updatedDocumentEditStates[streamingId];
-                
-                return {
-                  isStreaming: Object.keys(updatedMessages).length > 0,
-                  streamingMessages: updatedMessages,
-                  streamingContents: updatedContents,
-                  documentEditStates: updatedDocumentEditStates,
-                  currentStreamingId: Object.keys(updatedMessages).length > 0 ? prev.currentStreamingId : null
-                };
+                if (hasFinal && hasStreaming) {
+                  // Both exist - remove streaming message
+                  return prev.filter(msg => msg.id !== streamingId);
+                } else if (hasFinal) {
+                  // Final already exists somehow - don't add again
+                  return prev;
+                } else if (hasStreaming) {
+                  // Normal case - replace streaming with final
+                  return prev.map(msg => 
+                    msg.id === streamingId ? assistantMessage : msg
+                  );
+                } else {
+                  // Shouldn't happen - add final message as fallback
+                  return [...prev, assistantMessage];
+                }
               });
             } catch (error) {
               console.error('Error fetching saved message:', error);
               
-              // Show error to user but don't attempt to save client-side
-              toast({
-                title: "Error retrieving message",
-                description: "There was an issue retrieving the message from the server.",
-                variant: "destructive"
-              });
-              
-              // Clean up streaming state since we had an error
-              setStreamingState(prev => {
-                const updatedMessages = {...prev.streamingMessages};
-                delete updatedMessages[streamingId];
-                
-                const updatedContents = {...prev.streamingContents};
-                delete updatedContents[streamingId];
-                
-                const updatedDocumentEditStates = {...prev.documentEditStates};
-                delete updatedDocumentEditStates[streamingId];
-                
-                return {
-                  isStreaming: Object.keys(updatedMessages).length > 0,
-                  streamingMessages: updatedMessages,
-                  streamingContents: updatedContents,
-                  documentEditStates: updatedDocumentEditStates,
-                  currentStreamingId: Object.keys(updatedMessages).length > 0 ? prev.currentStreamingId : null
-                };
-              });
-              
               // Remove the streaming placeholder since we couldn't get the real message
-              setChatHistory(prev => prev.filter(msg => msg.id !== streamingId));
+              updateChatHistory(prev => prev.filter(msg => msg.id !== streamingId));
+            } finally {
+              // Clean up completed streams after a delay (to be safe)
+              setTimeout(() => {
+                completedStreamsRef.current.delete(streamKey);
+              }, 10000);
             }
           } else {
-            // Message was not saved server-side
-            if (data.messageError) {
-              console.error('Server-side message save error:', data.messageError);
-            }
-            
-            // Show error to user
-            toast({
-              title: "Message not saved",
-              description: "Your message could not be saved on the server.",
-              variant: "destructive"
-            });
-            
-            // Clean up streaming state
-            setStreamingState(prev => {
-              const updatedMessages = {...prev.streamingMessages};
-              delete updatedMessages[streamingId];
-              
-              const updatedContents = {...prev.streamingContents};
-              delete updatedContents[streamingId];
-              
-              const updatedDocumentEditStates = {...prev.documentEditStates};
-              delete updatedDocumentEditStates[streamingId];
-              
-              return {
-                isStreaming: Object.keys(updatedMessages).length > 0,
-                streamingMessages: updatedMessages,
-                streamingContents: updatedContents,
-                documentEditStates: updatedDocumentEditStates,
-                currentStreamingId: Object.keys(updatedMessages).length > 0 ? prev.currentStreamingId : null
-              };
-            });
+            // Signal that streaming is done but we don't have a message ID
+            console.warn('Stream complete but no message ID provided');
             
             // Remove the streaming placeholder since we don't have a real message
-            setChatHistory(prev => prev.filter(msg => msg.id !== streamingId));
+            updateChatHistory(prev => prev.filter(msg => msg.id !== streamingId));
+            
+            // Clean up completed streams after a delay (to be safe)
+            setTimeout(() => {
+              completedStreamsRef.current.delete(streamKey);
+            }, 10000);
           }
         },
         onTool: (toolName, args) => {
@@ -602,76 +599,110 @@ export function useChatInterface({
     }
   };
 
-  // Handle editing a message
+  /**
+   * Edit a message
+   */
   const editMessage = async (messageId: string, newContent: string) => {
-    if (!user) return;
+    if (!user || isEditing) return false;
     
-    setIsEditing(true);
+    // Find the original message
+    const message = chatHistory.find(m => m.id === messageId);
+    if (!message) return false;
+    
+    // Store original content for rollback if needed
+    const originalContent = message.content;
+    
+    // Optimistically update UI
+    updateChatHistory(prev => prev.map(m => 
+      m.id === messageId ? { ...m, content: newContent, isEdited: true } : m
+    ));
+    
+    // Add to edited message IDs
+    setEditedMessageIds(prev => {
+      const newSet = new Set(prev);
+      newSet.add(messageId);
+      return newSet;
+    });
     
     try {
-      // Update the message in the database
-      const updatedMessage = await MessageService.updateMessage(
-        messageId,
-        newContent,
-        user.id
-      );
+      setIsEditing(true);
       
-      // Update the chat history with the updated message
-      setChatHistory(prev => 
-        prev.map(msg => msg.id === messageId ? updatedMessage : msg)
-      );
+      // Actually update the message in the database
+      await MessageService.updateMessage(messageId, newContent, user.id);
       
-      // Track this message as edited in our local state
-      setEditedMessageIds(prev => {
-        const newSet = new Set(prev);
-        newSet.add(messageId);
-        return newSet;
-      });
-      
-      toast({
-        title: "Message updated",
-        description: "Your message has been successfully edited.",
-      });
-      
+      // Success - already updated UI
+      setEditingMessageId(null);
       return true;
     } catch (error) {
-      console.error('Error updating message:', error);
+      console.error(`Error editing message ${messageId}:`, error);
+      
+      // On error, revert to original content
+      updateChatHistory(prev => prev.map(m => 
+        m.id === messageId ? { ...m, content: originalContent } : m
+      ));
+      
+      // If the message wasn't previously edited, remove from edited set
+      if (!message.isEdited) {
+        setEditedMessageIds(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(messageId);
+          return newSet;
+        });
+      }
+      
       toast({
-        title: "Error updating message",
-        description: "Your message could not be updated. Please try again.",
+        title: "Error editing message",
+        description: "Failed to edit the message. Please try again.",
         variant: "destructive"
       });
       return false;
     } finally {
-      setEditingMessageId(null);
       setIsEditing(false);
     }
   };
 
-  // Handle deleting a message
+  /**
+   * Delete a message
+   */
   const deleteMessage = async (messageId: string) => {
-    if (!user) return;
+    if (!user || isDeleting) return false;
     
-    setIsDeleting(true);
+    // Don't wait for backend - update UI immediately
+    updateChatHistory(prev => prev.filter(message => message.id !== messageId));
+    
+    // If this is the message being edited, cancel editing
+    if (editingMessageId === messageId) {
+      setEditingMessageId(null);
+    }
     
     try {
-      // Delete the message from the database
-      await MessageService.deleteMessage(messageId, user.id);
-      
-      // Remove the message from the chat history
-      setChatHistory(prev => prev.filter(msg => msg.id !== messageId));
-      
-      toast({
-        title: "Message deleted",
-        description: "Your message has been successfully deleted.",
-      });
-      
-      return true;
+      setIsDeleting(true);
+      const success = await MessageService.deleteMessage(messageId, user.id);
+      // No need to update the chatHistory again since the real-time subscription will handle it
+      // or we've already updated it optimistically
+      return success;
     } catch (error) {
-      console.error('Error deleting message:', error);
+      console.error(`Error deleting message ${messageId}:`, error);
+      
+      // On error, restore the message
+      const message = chatHistory.find(m => m.id === messageId);
+      if (message) {
+        updateChatHistory(prev => {
+          // If message was already added back by real-time, don't add it again
+          if (prev.some(m => m.id === messageId)) {
+            return prev;
+          }
+          // Add back and sort
+          const updatedMessages = [...prev, message].sort((a, b) => 
+            new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+          );
+          return updatedMessages;
+        });
+      }
+      
       toast({
         title: "Error deleting message",
-        description: "Your message could not be deleted. Please try again.",
+        description: "Failed to delete the message. Please try again.",
         variant: "destructive"
       });
       return false;
@@ -703,12 +734,6 @@ export function useChatInterface({
             if (currentState !== editData.state) {
               updatedStates[msgId] = editData.state;
               hasChanges = true;
-              
-              console.log(`Refresh interval - State update: ${currentState} -> ${editData.state}`, {
-                messageId: msgId,
-                hasContentTag: content.includes('<content>'),
-                contentLength: editData.content?.length
-              });
             }
           }
         });
@@ -728,6 +753,158 @@ export function useChatInterface({
       return () => clearInterval(refreshInterval);
     }
   }, [streamingState.isStreaming, streamingState.streamingMessages]);
+  
+  // Subscribe to real-time updates for the current context
+  useEffect(() => {
+    if (!user) return;
+
+    // Generate subscription context signature
+    const subscriptionContextSignature = `${contextType}:${contextId || 'none'}`;
+    
+    // Only resubscribe if context actually changed
+    if (subscriptionContextSignature === prevSubscriptionSignatureRef.current && subscriptionCleanupRef.current) {
+      return; // Skip if the context hasn't changed and we already have a subscription
+    }
+    
+    // Update the context signature ref
+    prevSubscriptionSignatureRef.current = subscriptionContextSignature;
+    
+    // Debounce subscription creation to avoid rapid setup/teardown cycles
+    const setupSubscription = () => {
+      // Clean up any existing subscription
+      if (subscriptionCleanupRef.current) {
+        subscriptionCleanupRef.current();
+        subscriptionCleanupRef.current = null;
+      }
+      
+      // Only subscribe if we have a valid context
+      if (contextType !== undefined) {
+        // Remove log for subscription setup
+        // console.log(`Setting up real-time subscription for context: ${contextType}, ID: ${contextId || 'none'}`);
+        
+        // Subscribe to messages for this context
+        const unsubscribe = messageSubscriptionService.subscribeToMessages(contextType, contextId);
+        
+        // Set up handlers for each event type
+        const insertHandler = messageSubscriptionService.onMessageInserted((newMessage) => {
+          // Skip temporary messages
+          if (newMessage.id.startsWith('temp-')) {
+            return;
+          }
+          
+          // ENHANCED DUPLICATE DETECTION
+          // 1. Check if message is in our processed list from onComplete
+          // 2. Check if message already exists in chat history
+          // 3. Check if it's in a recently completed stream
+          
+          const isProcessed = processedMessageIdsRef.current.has(newMessage.id);
+          const existsInHistory = chatHistoryRef.current.some(m => m.id === newMessage.id);
+          
+          // Check all completed stream keys for this message ID
+          const isInCompletedStream = Array.from(completedStreamsRef.current).some(key => 
+            key.endsWith(`:${newMessage.id}`)
+          );
+          
+          // Skip already processed/existing messages through ANY mechanism
+          if (isProcessed || existsInHistory || isInCompletedStream) {
+            return;
+          }
+          
+          // Only add the message if it's not already in the chat history
+          updateChatHistory(prev => {
+            // Double-check if message already exists (in case state changed after our check)
+            if (prev.some(m => m.id === newMessage.id)) {
+              return prev;
+            }
+            
+            // Sort messages by creation date - oldest first
+            const updatedMessages = [...prev, newMessage].sort((a, b) => 
+              new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+            );
+            
+            return updatedMessages;
+          });
+        });
+        
+        const updateHandler = messageSubscriptionService.onMessageUpdated((updatedMessage) => {
+          // Skip temporary messages
+          if (updatedMessage.id.startsWith('temp-')) {
+            return;
+          }
+          
+          updateChatHistory(prev => {
+            // Check if message exists in the current history
+            if (!prev.some(m => m.id === updatedMessage.id)) {
+              return prev;
+            }
+            
+            // Find and update the message
+            return prev.map(message => 
+              message.id === updatedMessage.id ? updatedMessage : message
+            );
+          });
+          
+          // Add to edited message IDs if not already there
+          setEditedMessageIds(prev => {
+            if (prev.has(updatedMessage.id)) {
+              return prev;
+            }
+            const newSet = new Set(prev);
+            newSet.add(updatedMessage.id);
+            return newSet;
+          });
+          
+          // If this is the message being edited, cancel editing
+          if (editingMessageId === updatedMessage.id) {
+            setEditingMessageId(null);
+          }
+        });
+        
+        const deleteHandler = messageSubscriptionService.onMessageDeleted((deletedMessage) => {
+          // Skip temporary messages
+          if (deletedMessage.id.startsWith('temp-')) {
+            return;
+          }
+          
+          // For DELETE events, we may only receive the ID
+          // Simply check if we have this message in our history and remove it
+          updateChatHistory(prev => {
+            // Check if message exists in the current history
+            const messageExists = prev.some(m => m.id === deletedMessage.id);
+            
+            if (!messageExists) {
+              return prev;
+            }
+            
+            return prev.filter(message => message.id !== deletedMessage.id);
+          });
+          
+          // If this is the message being edited, cancel editing
+          if (editingMessageId === deletedMessage.id) {
+            setEditingMessageId(null);
+          }
+        });
+        
+        // Combine all cleanup functions
+        subscriptionCleanupRef.current = () => {
+          unsubscribe();
+          insertHandler();
+          updateHandler();
+          deleteHandler();
+        };
+      }
+    };
+
+    // Small delay to avoid rapid setup/teardown during component mounting/effects chain
+    const timeoutId = setTimeout(setupSubscription, 100);
+    
+    // Clean up subscription when component unmounts or context changes
+    return () => {
+      clearTimeout(timeoutId);
+      // Keep the existing subscription alive if unmounting
+      // subscriptionCleanupRef.current will be cleaned up on next setup if needed
+    };
+  }, [contextType, contextId, user, editingMessageId]);
   
   return {
     // Message state

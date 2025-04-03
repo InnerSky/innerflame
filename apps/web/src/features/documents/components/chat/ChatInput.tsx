@@ -1,4 +1,4 @@
-import React, { useState, KeyboardEvent, useRef, useEffect } from 'react';
+import React, { useState, KeyboardEvent, useRef, useEffect, forwardRef, useImperativeHandle } from 'react';
 import { Button } from '@/components/ui/button.js';
 import { Textarea } from '@/components/ui/textarea.js';
 import { ArrowUp, Info, Check } from 'lucide-react';
@@ -19,18 +19,34 @@ interface ChatInputProps {
   canvasHasContent?: boolean;
 }
 
-export const ChatInput: React.FC<ChatInputProps> = ({
+// Define the ref interface
+export interface ChatInputRef {
+  setInputText: (text: string) => void;
+  focusInput: () => void;
+}
+
+export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
   onSendMessage,
   isLoading,
   isDisabled = false,
   placeholder = "How can InnerFlame help you today?",
   isAnonymous = false,
   canvasHasContent = false
-}) => {
+}, ref) => {
   const [message, setMessage] = useState('');
   const [showManual, setShowManual] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  
+  // Expose methods via ref
+  useImperativeHandle(ref, () => ({
+    setInputText: (text: string) => {
+      setMessage(text);
+    },
+    focusInput: () => {
+      textareaRef.current?.focus();
+    }
+  }));
   
   // Handle keyboard shortcuts
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -209,4 +225,4 @@ export const ChatInput: React.FC<ChatInputProps> = ({
       </Dialog>
     </div>
   );
-}; 
+}); 

@@ -3,6 +3,7 @@ import { Message as MessageModel } from '@innerflame/types';
 import { MessageItem } from './MessageItem.js';
 import { Spinner } from '@/components/Spinner.js';
 import { DocumentEditTagState } from '../../utils/documentEditUtils.js';
+import { ChatInterfaceRef } from '../ChatInterface.js';
 
 interface MessageListProps {
   messages: MessageModel[];
@@ -21,6 +22,7 @@ interface MessageListProps {
   onCancelEdit: () => void;
   onStartEdit: (messageId: string) => void;
   shouldScrollToBottom?: boolean; // New prop to explicitly control scrolling
+  chatInterfaceRef?: React.RefObject<ChatInterfaceRef>;
 }
 
 // Export MessageList as a forwardRef component
@@ -40,7 +42,8 @@ export const MessageList = forwardRef<{ scrollToBottom: () => void }, MessageLis
   onDelete,
   onCancelEdit,
   onStartEdit,
-  shouldScrollToBottom = false // Default to false
+  shouldScrollToBottom = false, // Default to false
+  chatInterfaceRef
 }, ref) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -176,18 +179,39 @@ export const MessageList = forwardRef<{ scrollToBottom: () => void }, MessageLis
 
   return (
     <div className="h-full overflow-y-auto overflow-x-hidden w-full" ref={containerRef}>
-      {messages.map((message, index) => {
-        const isLastMessage = index === messages.length - 1;
-        const isFirstMessage = index === 0;
-        
-        return (
-          <div 
-            key={message.id}
-            style={isLastMessage ? { marginBottom: `${lastMessagePadding}px` } : {}}
-            className={`w-full px-2 ${!isLastMessage ? 'mb-1.5' : ''} ${isFirstMessage ? 'pt-[30px]' : ''}`}
-          >
-            {isLastMessage ? (
-              <div ref={lastMessageRef}>
+      <div className="px-2 pt-4 pb-[150px] space-y-4 md:space-y-6">
+        {messages.map((message, index) => {
+          const isLastMessage = index === messages.length - 1;
+          const isFirstMessage = index === 0;
+          
+          return (
+            <div 
+              key={message.id}
+              style={isLastMessage ? { marginBottom: `${lastMessagePadding}px` } : {}}
+              className={`w-full px-2 ${!isLastMessage ? 'mb-1.5' : ''} ${isFirstMessage ? 'pt-[30px]' : ''}`}
+            >
+              {isLastMessage ? (
+                <div ref={lastMessageRef}>
+                  <MessageItem
+                    message={message}
+                    messages={messages}
+                    messageIndex={index}
+                    isStreaming={message.id in streamingMessages}
+                    streamingContent={streamingContents[message.id]}
+                    documentEditState={documentEditStates[message.id]}
+                    isEditing={editingMessageId === message.id}
+                    isEditingLoading={isEditing}
+                    isEdited={message.isEdited || editedMessageIds.has(message.id)}
+                    isMobileScreen={isMobileScreen}
+                    isStandalone={isStandalone}
+                    onEdit={onEdit}
+                    onDelete={onDelete}
+                    onCancelEdit={onCancelEdit}
+                    onStartEdit={onStartEdit}
+                    chatInterfaceRef={chatInterfaceRef}
+                  />
+                </div>
+              ) : (
                 <MessageItem
                   message={message}
                   messages={messages}
@@ -204,38 +228,21 @@ export const MessageList = forwardRef<{ scrollToBottom: () => void }, MessageLis
                   onDelete={onDelete}
                   onCancelEdit={onCancelEdit}
                   onStartEdit={onStartEdit}
+                  chatInterfaceRef={chatInterfaceRef}
                 />
-              </div>
-            ) : (
-              <MessageItem
-                message={message}
-                messages={messages}
-                messageIndex={index}
-                isStreaming={message.id in streamingMessages}
-                streamingContent={streamingContents[message.id]}
-                documentEditState={documentEditStates[message.id]}
-                isEditing={editingMessageId === message.id}
-                isEditingLoading={isEditing}
-                isEdited={message.isEdited || editedMessageIds.has(message.id)}
-                isMobileScreen={isMobileScreen}
-                isStandalone={isStandalone}
-                onEdit={onEdit}
-                onDelete={onDelete}
-                onCancelEdit={onCancelEdit}
-                onStartEdit={onStartEdit}
-              />
-            )}
+              )}
+            </div>
+          );
+        })}
+        {/* Invisible element to scroll to */}
+        <div ref={messagesEndRef} />
+        
+        {isLoading && !isInitialLoading && (
+          <div className="flex items-center justify-center p-2">
+            <Spinner size="sm" />
           </div>
-        );
-      })}
-      {/* Invisible element to scroll to */}
-      <div ref={messagesEndRef} />
-      
-      {isLoading && !isInitialLoading && (
-        <div className="flex items-center justify-center p-2">
-          <Spinner size="sm" />
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }); 

@@ -621,6 +621,92 @@ export class DocumentRepository {
     
     return mapEntityVersionToDocumentVersion(version);
   }
+
+  // Restore a document to a specific version
+  async restoreVersion(versionId: string): Promise<Document> {
+    // 1. Get the version to restore
+    const version = await this.getVersionById(versionId);
+    if (!version) throw new Error("Version not found");
+    
+    const now = new Date().toISOString();
+    
+    // 2. Find all versions with higher version numbers
+    const { data: newerVersions, error: versionsError } = await supabase
+      .from('entity_versions')
+      .select('id, version_number')
+      .eq('entity_id', version.entity_id)
+      .gt('version_number', version.version_number)
+      .order('version_number', { ascending: true });
+      
+    if (versionsError) throw versionsError;
+    
+    try {
+      // First, update the entity record to point to the version we're restoring
+      // This must happen BEFORE trying to delete any versions to avoid foreign key constraint violations
+      const { error: updateEntityError } = await supabase
+        .from('entities')
+        .update({
+          title: version.content.title,
+          updated_at: now,
+          active_version_id: versionId
+        })
+        .eq('id', version.entity_id);
+        
+      if (updateEntityError) throw updateEntityError;
+      
+      if (newerVersions && newerVersions.length > 0) {
+        // 3. Get messages referencing these versions
+        const newerVersionIds = newerVersions.map(v => v.id);
+        const { data: messages, error: messagesError } = await supabase
+          .from('messages')
+          .select('id')
+          .in('context_entity_version_id', newerVersionIds);
+          
+        if (messagesError) throw messagesError;
+        
+        // 4. Delete these messages in a batch operation
+        if (messages && messages.length > 0) {
+          const { error: deleteMessagesError } = await supabase
+            .from('messages')
+            .delete()
+            .in('id', messages.map(m => m.id));
+            
+          if (deleteMessagesError) throw deleteMessagesError;
+        }
+        
+        // 5. Now it's safe to delete newer versions, since they're no longer referenced
+        const { error: deleteVersionsError } = await supabase
+          .from('entity_versions')
+          .delete()
+          .in('id', newerVersionIds);
+          
+        if (deleteVersionsError) throw deleteVersionsError;
+      }
+      
+      // 6. Set all versions to not current
+      const { error: updateVersionsError } = await supabase
+        .from('entity_versions')
+        .update({ is_current: false })
+        .eq('entity_id', version.entity_id);
+        
+      if (updateVersionsError) throw updateVersionsError;
+      
+      // 7. Set the specified version as current
+      const { error: setCurrentError } = await supabase
+        .from('entity_versions')
+        .update({ is_current: true })
+        .eq('id', versionId);
+        
+      if (setCurrentError) throw setCurrentError;
+      
+      // 8. Return updated document
+      const document = await this.getDocumentWithVersions(version.entity_id);
+      if (!document) throw new Error("Failed to retrieve restored document");
+      return document;
+    } catch (error) {
+      throw error;
+    }
+  }
 }
 
 // Export singleton instance for use throughout the app

@@ -9,7 +9,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, Loader2 } from 'lucide-react';
 
 interface ConfirmRestoreModalProps {
   isOpen: boolean;
@@ -17,6 +17,7 @@ interface ConfirmRestoreModalProps {
   onConfirm: () => void;
   versionId: string | null;
   versionNumber?: number;
+  isLoading?: boolean;
 }
 
 export function ConfirmRestoreModal({
@@ -24,7 +25,8 @@ export function ConfirmRestoreModal({
   onClose,
   onConfirm,
   versionId,
-  versionNumber
+  versionNumber,
+  isLoading = false
 }: ConfirmRestoreModalProps) {
   return (
     <AlertDialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -34,25 +36,35 @@ export function ConfirmRestoreModal({
             <AlertTriangle className="h-5 w-5" />
             <AlertDialogTitle>Confirm Version Restoration</AlertDialogTitle>
           </div>
-          <AlertDialogDescription className="pt-3">
-            <p className="mb-3">
-              You are about to restore document to version: {versionNumber || '—'}
-            </p>
-            <p className="font-medium text-destructive">
-              This will permanently remove all subsequent messages and document versions.
-            </p>
-            <p className="mt-3 text-muted-foreground">
-              This action cannot be undone. Are you sure you want to proceed?
-            </p>
+          <AlertDialogDescription asChild>
+            <div className="pt-3 space-y-3">
+              <div>
+                You are about to restore document to version: {versionNumber || '—'}
+              </div>
+              <div className="font-medium text-destructive">
+                This will permanently remove all subsequent messages and document versions.
+              </div>
+              <div className="text-muted-foreground">
+                This action cannot be undone. Are you sure you want to proceed?
+              </div>
+            </div>
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel onClick={onClose}>Cancel</AlertDialogCancel>
+          <AlertDialogCancel onClick={onClose} disabled={isLoading}>Cancel</AlertDialogCancel>
           <AlertDialogAction 
             onClick={onConfirm}
             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            disabled={isLoading}
           >
-            Yes, Restore This Version
+            {isLoading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Restoring...
+              </>
+            ) : (
+              'Yes, Restore This Version'
+            )}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

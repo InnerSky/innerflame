@@ -9,6 +9,8 @@ import leanCanvasService from '@/features/documents/services/leanCanvasService.j
 import { useToast } from '@/hooks/use-toast.ts';
 import { DocumentsProvider, useDocumentsContext } from '@/features/documents/contexts/DocumentsContext.js';
 import { MessageContextType } from '@innerflame/types';
+import { ChatInterfaceRef } from '@/features/documents/components/ChatInterface.js';
+import { documentSubscriptionService } from '@/lib/services.js';
 
 // This component receives the initial idea and is only rendered after DocumentsProvider is established
 function LeanCanvasContent({ 
@@ -22,7 +24,7 @@ function LeanCanvasContent({
   jsonData: Record<string, string> | null, 
   onDataChange: (updatedData: Record<string, string>) => Promise<void>,
   onIdeaProcessed: () => void,
-  chatInterfaceRef: React.RefObject<{ sendMessage: (content: string) => Promise<void> }>
+  chatInterfaceRef: React.RefObject<ChatInterfaceRef>
 }) {
   const { toast } = useToast();
   const [hasTriggeredAI, setHasTriggeredAI] = useState(false);
@@ -50,14 +52,11 @@ function LeanCanvasContent({
             await chatInterfaceRef.current.sendMessage(
               `Help me create a lean canvas for this startup idea: ${initialIdea}`
             );
-            
-            console.log('Initial lean canvas prompt sent via ChatInterface for:', initialIdea);
           }
           
           // Let parent know we've processed the idea so location state can be cleared
           onIdeaProcessed();
         } catch (error) {
-          console.error('Error sending initial lean canvas prompt:', error);
           // Still mark as processed to prevent retries on error
           onIdeaProcessed();
         }
@@ -88,8 +87,8 @@ export default function LeanCanvas() {
   const { toast } = useToast();
   const initialIdea = location.state?.initialIdea;
   
-  // Create a ref to the ChatInterface component
-  const chatInterfaceRef = useRef<{ sendMessage: (content: string) => Promise<void> }>(null);
+  // Create a ref to the ChatInterface component with the expanded interface
+  const chatInterfaceRef = useRef<ChatInterfaceRef>(null);
   
   // Document state
   const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
@@ -117,7 +116,6 @@ export default function LeanCanvas() {
     if (location.state?.initialIdea) {
       // Replace current entry in history with the same URL but without the state
       navigate(location.pathname, { replace: true });
-      console.log('Cleared initialIdea from location state to prevent reprocessing on refresh');
     }
   }, [location.pathname, location.state?.initialIdea, navigate]);
 
@@ -231,7 +229,6 @@ export default function LeanCanvas() {
       setSaveStatus('saved');
       setHasUnsavedChanges(false);
     } catch (error) {
-      console.error('Error saving document:', error);
       setSaveStatus('error');
     }
   }, [selectedDocument, content, title]);
@@ -253,6 +250,50 @@ export default function LeanCanvas() {
     setContentFormat(format);
   }, []);
   
+  // Subscribe to real-time document updates
+  useEffect(() => {
+    if (!selectedDocument?.id) return;
+    
+    // Don't subscribe if we have unsaved changes
+    if (hasUnsavedChanges) {
+      return;
+    }
+    
+    // Handler for document updates
+    const handleDocumentUpdate = (updatedDocument: Document) => {
+      // Skip update if we have unsaved changes to prevent overwriting user work
+      if (hasUnsavedChanges) {
+        toast({
+          title: "Document Updated",
+          description: "The document has been updated externally. Save your changes or refresh to see the latest version.",
+          variant: "default",
+        });
+        return;
+      }
+      
+      // Update our state with the new document data
+      selectDocument(updatedDocument);
+      
+      toast({
+        title: "Document Updated",
+        description: "The document has been updated with changes from another user or device.",
+        variant: "default",
+      });
+    };
+    
+    // Set up the subscription
+    const unsubscribe = documentSubscriptionService.subscribeToDocument(selectedDocument.id);
+    
+    // Add the event handler
+    const removeHandler = documentSubscriptionService.onDocumentUpdated(handleDocumentUpdate);
+    
+    // Cleanup function
+    return () => {
+      unsubscribe();
+      removeHandler();
+    };
+  }, [selectedDocument?.id, hasUnsavedChanges, selectDocument, toast]);
+  
   // Parse JSON content whenever it changes
   useEffect(() => {
     if (content) {
@@ -260,7 +301,6 @@ export default function LeanCanvas() {
         const parsedContent = JSON.parse(content);
         setJsonData(parsedContent);
       } catch (parseError) {
-        console.error('Error parsing lean canvas content:', parseError);
         setError('Could not parse the lean canvas data.');
       }
     }
@@ -280,7 +320,6 @@ export default function LeanCanvas() {
       // Update local state for immediate UI feedback
       setJsonData(updatedData);
     } catch (saveError) {
-      console.error('Error updating lean canvas data:', saveError);
       setError('Failed to update your changes. Please try again.');
     }
   };

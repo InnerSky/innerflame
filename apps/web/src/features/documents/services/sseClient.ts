@@ -56,6 +56,7 @@ interface StreamConfig {
   projectName?: string;
   chatHistory?: Message[]; // Add previous messages for context
   agentType?: string; // Add agentType option
+  contextEntityVersionId?: string; // Add document version ID
   onChunk?: (chunk: string) => void;
   onTool?: (toolName: string, args: any) => void;
   onError?: (error: string) => void;
@@ -81,6 +82,7 @@ export function createAIStream(options: StreamConfig): { close: () => void } {
     projectName,
     chatHistory,
     agentType,
+    contextEntityVersionId,
     onConnectionChange,
     onError,
     onChunk,
@@ -103,7 +105,6 @@ export function createAIStream(options: StreamConfig): { close: () => void } {
   
   // Construct full URL with API base URL
   const fullUrl = `${API_BASE_URL}${endpoint}?sessionId=${sessionId}`;
-  console.log('Connecting to API endpoint:', fullUrl);
   
   // Initialize the stream by sending a POST request to create the session
   fetch(fullUrl, {
@@ -121,6 +122,7 @@ export function createAIStream(options: StreamConfig): { close: () => void } {
       projectId,
       projectName,
       chatHistory,
+      contextEntityVersionId,
       agentType: agentType === 'orchestrator' ? undefined : agentType, // Don't pass orchestrator as agent type
     }),
   })
@@ -132,7 +134,6 @@ export function createAIStream(options: StreamConfig): { close: () => void } {
     // For orchestrator endpoint, we don't need to connect to an EventSource
     // since it handles streaming directly in the POST request
     if (agentType === 'orchestrator') {
-      console.log('Orchestrator endpoint initialized, streaming handled directly via POST');
       // Signal connection is active
       onConnectionChange?.(true);
       
@@ -148,7 +149,6 @@ export function createAIStream(options: StreamConfig): { close: () => void } {
               const { done, value } = await reader.read();
               
               if (done) {
-                console.log('Stream complete');
                 onConnectionChange?.(false);
                 onComplete?.({});
                 break;
@@ -156,7 +156,6 @@ export function createAIStream(options: StreamConfig): { close: () => void } {
               
               // Decode and process the chunk
               const chunk = decoder.decode(value, { stream: true });
-              console.log('Received raw chunk:', chunk.substring(0, 50) + '...');
               
               // Process the raw SSE format
               // SSE format consists of "event: name" followed by "data: {json}" and ends with two newlines
@@ -175,8 +174,6 @@ export function createAIStream(options: StreamConfig): { close: () => void } {
                 const dataPayload = dataMatch ? dataMatch[1].trim() : null;
                 
                 if (eventType && dataPayload) {
-                  console.log(`Received event: ${eventType}, data: ${dataPayload.substring(0, 20)}...`);
-                  
                   try {
                     const data = JSON.parse(dataPayload);
                     
@@ -187,23 +184,19 @@ export function createAIStream(options: StreamConfig): { close: () => void } {
                       
                       case 'chunk':
                         if (data.content) {
-                          console.log('Processing content chunk:', data.content.substring(0, 20) + '...');
                           onChunk?.(data.content);
                         }
                         break;
                       
                       case 'tool':
-                        console.log('Tool called:', data.tool);
                         onTool?.(data.tool, data.args);
                         break;
                       
                       case 'error':
-                        console.error('Received error event:', data.error);
                         onError?.(data.error);
                         break;
                       
                       case 'complete':
-                        console.log('Stream complete event received');
                         onComplete?.(data);
                         break;
                     }
@@ -246,18 +239,15 @@ export function createAIStream(options: StreamConfig): { close: () => void } {
   function connectEventSource() {
     // Create the EventSource with the session ID - use the full URL
     eventSource = new EventSource(`${API_BASE_URL}${endpoint}?sessionId=${sessionId}`);
-    console.log('EventSource connected to:', `${API_BASE_URL}${endpoint}?sessionId=${sessionId}`);
     
     // Set up event listeners
     eventSource.addEventListener('connected', (event: MessageEvent) => {
-      console.log('Connected to event stream');
       onConnectionChange?.(true);
     });
     
     eventSource.addEventListener('chunk', (event: MessageEvent) => {
       try {
         const data = JSON.parse(event.data) as TokenChunk;
-        console.log('Received chunk:', data.content.substring(0, 20) + '...');
         onChunk?.(data.content);
       } catch (error) {
         console.error('Error parsing chunk:', error);
@@ -267,7 +257,6 @@ export function createAIStream(options: StreamConfig): { close: () => void } {
     eventSource.addEventListener('tool', (event: MessageEvent) => {
       try {
         const data = JSON.parse(event.data) as ToolCall;
-        console.log('Tool called:', data.tool);
         onTool?.(data.tool, data.args);
       } catch (error) {
         console.error('Error parsing tool call:', error);
@@ -292,7 +281,6 @@ export function createAIStream(options: StreamConfig): { close: () => void } {
     eventSource.addEventListener('complete', (event: MessageEvent) => {
       try {
         const data = JSON.parse(event.data) as CompleteEvent;
-        console.log('Stream complete');
         onComplete?.(data);
       } catch (error) {
         console.error('Error parsing complete event:', error);
@@ -316,7 +304,6 @@ export function createAIStream(options: StreamConfig): { close: () => void } {
   return {
     close: () => {
       if (eventSource) {
-        console.log('Closing event source');
         eventSource.close();
         onConnectionChange?.(false);
       }
