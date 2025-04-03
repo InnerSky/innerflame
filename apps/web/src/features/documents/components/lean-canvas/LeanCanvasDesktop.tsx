@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
 import { PlusCircle } from 'lucide-react';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable.js';
-import { ChatInterface } from '@/features/documents/components/ChatInterface.js';
+import { ChatInterface, ChatInterfaceRef } from '@/features/documents/components/ChatInterface.js';
 import { useDocumentsContext } from '@/features/documents/contexts/DocumentsContext.js';
 
 // We still accept jsonData and onDataChange as props because LeanCanvasDisplay 
@@ -14,9 +14,7 @@ interface LeanCanvasDesktopProps {
   leanCanvas?: Document | null; // Optional now that we use context
   jsonData: Record<string, string> | null;
   onDataChange: (updatedData: Record<string, string>) => Promise<void>;
-  chatInterfaceRef?: React.RefObject<{
-    sendMessage: (content: string) => Promise<void>;
-  }>;
+  chatInterfaceRef?: React.RefObject<ChatInterfaceRef>;
 }
 
 export function LeanCanvasDesktop({ 
