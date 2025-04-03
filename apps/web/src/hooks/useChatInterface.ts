@@ -401,7 +401,7 @@ export function useChatInterface({
         projectName: projectName,
         chatHistory: filteredHistory,
         agentType,
-        contextEntityVersionId: contextEntityVersionId, // Pass the version ID directly, not converting null to undefined
+        contextEntityVersionId: contextEntityVersionId ?? undefined, // Convert null to undefined
         onConnectionChange: (connected) => {
           if (!connected) {
             setIsLoading(false);

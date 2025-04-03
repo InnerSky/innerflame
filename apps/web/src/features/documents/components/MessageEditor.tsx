@@ -98,9 +98,6 @@ export const MessageEditor: React.FC<MessageEditorProps> = ({
           <span>Save</span>
         </Button>
       </div>
-      <div className="text-xs text-muted-foreground mt-1">
-        <span>Tip: Press Ctrl+Enter to save, Escape to cancel</span>
-      </div>
     </div>
   );
 }; 

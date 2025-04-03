@@ -23,7 +23,8 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet.js';
-import { Edit, Trash, MoreVertical, RotateCcw } from 'lucide-react';
+import { Edit, Trash, MoreVertical, RotateCcw, Copy } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast.ts';
 
 interface MessageActionsProps {
   message: Message;
@@ -48,9 +49,33 @@ export const MessageActions: React.FC<MessageActionsProps> = ({
 }) => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showMobileActions, setShowMobileActions] = useState(false);
+  const { toast } = useToast();
   
   const handleEdit = () => {
     onEdit(message.id);
+  };
+  
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(message.content);
+      toast({
+        title: "Copied to clipboard",
+        description: "Message content copied to clipboard",
+        variant: "success",
+        duration: 2000
+      });
+      
+      if (isMobile) {
+        setShowMobileActions(false);
+      }
+    } catch (error) {
+      toast({
+        title: "Failed to copy",
+        description: "Could not copy the message content",
+        variant: "destructive",
+        duration: 3000
+      });
+    }
   };
   
   const handleDelete = () => {
@@ -91,6 +116,10 @@ export const MessageActions: React.FC<MessageActionsProps> = ({
                   <span>Edit</span>
                 </DropdownMenuItem>
               )}
+              <DropdownMenuItem onClick={handleCopy}>
+                <Copy className="mr-2 h-4 w-4" />
+                <span>Copy</span>
+              </DropdownMenuItem>
               {showRestoreVersion && (
                 <DropdownMenuItem onClick={handleRestoreVersion}>
                   <RotateCcw className="mr-2 h-4 w-4" />
@@ -168,6 +197,14 @@ export const MessageActions: React.FC<MessageActionsProps> = ({
                 <span>Edit Message</span>
               </Button>
             )}
+            <Button 
+              variant="outline" 
+              className="flex justify-start items-center px-4 py-6 text-base"
+              onClick={handleCopy}
+            >
+              <Copy className="mr-3 h-5 w-5" />
+              <span>Copy Message</span>
+            </Button>
             {showRestoreVersion && (
               <Button 
                 variant="outline" 

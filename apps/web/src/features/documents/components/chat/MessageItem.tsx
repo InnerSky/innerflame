@@ -307,11 +307,6 @@ export function MessageItem({
                   content={message.content} 
                   className="text-sm [&>*:first-child]:mt-0 [&>*:last-child]:mb-0" 
                 />
-                {isEdited && (
-                  <div className="text-xs text-muted-foreground mt-1">
-                    <span>(edited)</span>
-                  </div>
-                )}
               </>
             )}
           </>

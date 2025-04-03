@@ -17,6 +17,7 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { AuthModal } from "@/components/auth/AuthModal";
 import { OfflineBanner } from "@/components/OfflineBanner";
+import { Toaster } from "@/components/ui/toaster";
 import Home from "./pages/Home";
 import Articles from "./pages/Articles";
 import Article from "./pages/Article";
@@ -45,6 +46,7 @@ function App() {
     <ThemeProvider defaultTheme="system" storageKey="innerflame-ui-theme">
       <BrowserRouter>
         <AppContent />
+        <Toaster />
       </BrowserRouter>
     </ThemeProvider>
   );
