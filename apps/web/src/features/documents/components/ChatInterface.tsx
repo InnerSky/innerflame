@@ -22,6 +22,7 @@ export interface ChatInterfaceRef {
   sendMessage: (content: string) => Promise<void>;
   deleteMessage: (messageId: string) => Promise<boolean | undefined>;
   setInputText: (text: string) => void;
+  getMessages: () => { messages: import('@innerflame/types').Message[], currentMessageIndex: number | null };
 }
 
 // Helper function to check if canvas has content
@@ -181,6 +182,17 @@ export const ChatInterface = forwardRef<ChatInterfaceRef, ChatInterfaceProps>(({
           chatInputRef.current.setInputText(text);
           chatInputRef.current.focusInput();
         }
+      },
+      getMessages: () => {
+        // Find the index of the current streaming message if any
+        const currentMessageIndex = streamingMessages && Object.keys(streamingMessages).length > 0 
+          ? chatHistory.findIndex(msg => streamingMessages[msg.id]) 
+          : null;
+          
+        return {
+          messages: chatHistory,
+          currentMessageIndex
+        };
       }
     };
     
@@ -188,7 +200,7 @@ export const ChatInterface = forwardRef<ChatInterfaceRef, ChatInterfaceProps>(({
     selfRef.current = interfaceRef;
     
     return interfaceRef;
-  }, []);
+  }, [chatHistory, streamingMessages]);
   
   // Reset the scroll flag after it's been processed
   useEffect(() => {

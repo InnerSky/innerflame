@@ -48,12 +48,13 @@ export interface DocumentContent {
 }
 
 export interface DocumentVersion extends Omit<Tables<"entity_versions">,
-  "full_content" | "created_at" | "is_current" | "entity_type" | "changes"> {
+  "full_content" | "created_at" | "is_current" | "entity_type" | "changes" | "approval_status"> {
   content: DocumentContent;    // structured version of full_content
   createdAt: Date;             // converted from string to Date
   isCurrent: boolean;          // renamed and non-nullable
   entityType: DocumentType;    // renamed from entity_type and typed as enum
   changes?: Record<string, unknown>; // typed more specifically
+  approval_status?: string | null;   // Added to support the approval workflow
 }
 
 // UI-specific types

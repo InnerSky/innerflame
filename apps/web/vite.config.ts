@@ -50,6 +50,13 @@ export default defineConfig(({ mode }) => {
         usePolling: true,
       },
       host: true, // needed for docker
+      proxy: {
+        '/api': {
+          target: 'http://localhost:3001',
+          changeOrigin: true,
+          secure: false,
+        }
+      },
     },
   };
 }); 

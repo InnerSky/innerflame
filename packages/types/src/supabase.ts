@@ -142,6 +142,7 @@ export type Database = {
       }
       entity_versions: {
         Row: {
+          approval_status: string | null
           base_version_id: string | null
           changes: Json | null
           created_at: string | null
@@ -157,6 +158,7 @@ export type Database = {
           version_type: string
         }
         Insert: {
+          approval_status?: string | null
           base_version_id?: string | null
           changes?: Json | null
           created_at?: string | null
@@ -172,6 +174,7 @@ export type Database = {
           version_type?: string
         }
         Update: {
+          approval_status?: string | null
           base_version_id?: string | null
           changes?: Json | null
           created_at?: string | null

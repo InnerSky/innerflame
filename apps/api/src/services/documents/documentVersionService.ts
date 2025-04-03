@@ -192,7 +192,8 @@ export async function createAIEditVersion(
         version_type: 'ai_edit',
         is_current: true,
         base_version_id: currentVersion?.id,
-        created_at: now
+        created_at: now,
+        approval_status: 'pending_approval' // Add approval status for AI edits
       })
       .select()
       .single();

@@ -238,12 +238,13 @@ export function MessageItem({
         
         // First identify all messages that come after this one in the UI
         if (messages && messageIndex !== undefined) {
-          // Delete messages in reverse order (newest first) to avoid index shifting issues
-          for (let i = messages.length - 1; i > messageIndex; i--) {
-            await chatInterfaceRef.current.deleteMessage(messages[i].id);
-          }
+          // Temporarily disabled: Delete messages in reverse order
+          // Messages are already deleted from the backend
+          // for (let i = messages.length - 1; i > messageIndex; i--) {
+          //   await chatInterfaceRef.current.deleteMessage(messages[i].id);
+          // }
           
-          // Finally delete the message that triggered the restoration
+          // Only delete the message that triggered the restoration
           await chatInterfaceRef.current.deleteMessage(message.id);
         } else {
           // Fallback if we don't have the messages array or index

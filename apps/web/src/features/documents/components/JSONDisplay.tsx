@@ -362,7 +362,7 @@ export function JSONDisplay({ jsonData, onDataChange, readOnly = false, disableA
                 <Input
                   value={specialFieldValue}
                   onChange={(e) => setSpecialFieldValue(e.target.value)}
-                  className="text-2xl font-bold text-center max-w-full"
+                  className="text-2xl md:text-3xl font-bold text-center max-w-full"
                   autoFocus
                   onKeyDown={(e) => handleKeyDown(e, () => handleSaveSpecialField(titleKey, specialFieldValue))}
                 />
@@ -408,7 +408,7 @@ export function JSONDisplay({ jsonData, onDataChange, readOnly = false, disableA
                 <Input
                   value={specialFieldValue}
                   onChange={(e) => setSpecialFieldValue(e.target.value)}
-                  className="text-lg font-medium text-center text-muted-foreground/80 max-w-full"
+                  className="text-lg md:text-xl font-medium text-center text-muted-foreground/80 max-w-full"
                   autoFocus
                   onKeyDown={(e) => handleKeyDown(e, () => handleSaveSpecialField(subtitleKey, specialFieldValue))}
                 />

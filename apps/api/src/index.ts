@@ -11,6 +11,7 @@ import { aiRouter, handleStreamRequest, handleOrchestratorRequest, handleSpecial
 import { initTRPC } from '@trpc/server';
 import { initSSE } from './controllers/sse.js';
 import { SupabaseService } from './services/supabase/supabaseService.js';
+import documentRoutes from './routes/documentRoutes.js';
 
 // Load environment variables from the API directory with debug
 const currentPath = path.resolve(process.cwd(), '.env');
@@ -128,6 +129,9 @@ try {
   console.error('Failed to initialize Supabase client:', error);
   process.exit(1); // Exit if Supabase initialization fails
 }
+
+// API Routes
+app.use('/documents', documentRoutes);
 
 // Create an API router
 const t = initTRPC.create();

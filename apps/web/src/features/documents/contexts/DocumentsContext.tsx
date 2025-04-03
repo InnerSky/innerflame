@@ -32,6 +32,10 @@ interface DocumentsContextType {
   updateContentFormat: (format: any) => Promise<void>; // Updated to match implementation
   fetchDocumentVersions: (documentId: string) => Promise<void>;
   handleVersionHistoryClick: () => void;
+  
+  // Version approval methods
+  acceptDocumentVersion: (versionId: string) => Promise<void>;
+  rejectDocumentVersion: (versionId: string) => Promise<void>;
 }
 
 const DocumentsContext = createContext<DocumentsContextType | undefined>(undefined);

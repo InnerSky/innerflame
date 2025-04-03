@@ -18,7 +18,9 @@ export function useLeanCanvasChat(leanCanvas: Document | null) {
     updateDocumentType: async () => {},
     updateContentFormat: async () => {},
     fetchDocumentVersions: async () => {},
-    handleVersionHistoryClick: () => {}
+    handleVersionHistoryClick: () => {},
+    acceptDocumentVersion: async () => {},
+    rejectDocumentVersion: async () => {}
   });
 
   // Memoize the DocumentsContext value to prevent recreation on each render
@@ -44,7 +46,9 @@ export function useLeanCanvasChat(leanCanvas: Document | null) {
     updateDocumentType: callbacksRef.current.updateDocumentType,
     updateContentFormat: callbacksRef.current.updateContentFormat,
     fetchDocumentVersions: callbacksRef.current.fetchDocumentVersions,
-    handleVersionHistoryClick: callbacksRef.current.handleVersionHistoryClick
+    handleVersionHistoryClick: callbacksRef.current.handleVersionHistoryClick,
+    acceptDocumentVersion: callbacksRef.current.acceptDocumentVersion,
+    rejectDocumentVersion: callbacksRef.current.rejectDocumentVersion
   }), [leanCanvas]); // Only re-create when leanCanvas changes
   
   return { contextValue };

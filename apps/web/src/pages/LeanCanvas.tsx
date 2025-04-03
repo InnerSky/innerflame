@@ -11,6 +11,7 @@ import { DocumentsProvider, useDocumentsContext } from '@/features/documents/con
 import { MessageContextType } from '@innerflame/types';
 import { ChatInterfaceRef } from '@/features/documents/components/ChatInterface.js';
 import { documentSubscriptionService } from '@/lib/services.js';
+import { supabase } from '@/lib/supabase.js';
 
 // This component receives the initial idea and is only rendered after DocumentsProvider is established
 function LeanCanvasContent({ 
@@ -145,24 +146,31 @@ export default function LeanCanvas() {
 
       try {
         setLoading(true);
-        // Use the service to get the most recent lean canvas
+        // First get the most recent lean canvas ID
         const mostRecentLeanCanvas = await leanCanvasService.getMostRecentLeanCanvas(user.id);
         
         if (mostRecentLeanCanvas) {
-          // Set the document state
-          setSelectedDocument(mostRecentLeanCanvas);
-          setTitle(mostRecentLeanCanvas.title);
-          setContent(mostRecentLeanCanvas.content || '');
-          setLastSaved(mostRecentLeanCanvas.updatedAt ? new Date(mostRecentLeanCanvas.updatedAt) : null);
+          // Then load the full document with versions
+          const fullLeanCanvas = await leanCanvasService.getLeanCanvas(mostRecentLeanCanvas.id);
           
-          // Parse the JSON content
-          try {
-            const parsedContent = mostRecentLeanCanvas.content ? 
-              JSON.parse(mostRecentLeanCanvas.content) : null;
-            setJsonData(parsedContent);
-          } catch (parseError) {
-            console.error('Error parsing lean canvas content:', parseError);
-            setError('Could not parse the lean canvas data.');
+          if (fullLeanCanvas) {
+            // Set the document state
+            setSelectedDocument(fullLeanCanvas);
+            setTitle(fullLeanCanvas.title);
+            setContent(fullLeanCanvas.content || '');
+            setLastSaved(fullLeanCanvas.updatedAt ? new Date(fullLeanCanvas.updatedAt) : null);
+            
+            // Parse the JSON content
+            try {
+              const parsedContent = fullLeanCanvas.content ? 
+                JSON.parse(fullLeanCanvas.content) : null;
+              setJsonData(parsedContent);
+            } catch (parseError) {
+              console.error('Error parsing lean canvas content:', parseError);
+              setError('Could not parse the lean canvas data.');
+            }
+          } else {
+            setError('Could not load the complete Lean Canvas. Please try again.');
           }
         } else {
           // No lean canvas found
@@ -263,22 +271,11 @@ export default function LeanCanvas() {
     const handleDocumentUpdate = (updatedDocument: Document) => {
       // Skip update if we have unsaved changes to prevent overwriting user work
       if (hasUnsavedChanges) {
-        toast({
-          title: "Document Updated",
-          description: "The document has been updated externally. Save your changes or refresh to see the latest version.",
-          variant: "default",
-        });
         return;
       }
       
       // Update our state with the new document data
       selectDocument(updatedDocument);
-      
-      toast({
-        title: "Document Updated",
-        description: "The document has been updated with changes from another user or device.",
-        variant: "default",
-      });
     };
     
     // Set up the subscription
@@ -292,7 +289,7 @@ export default function LeanCanvas() {
       unsubscribe();
       removeHandler();
     };
-  }, [selectedDocument?.id, hasUnsavedChanges, selectDocument, toast]);
+  }, [selectedDocument?.id, hasUnsavedChanges, selectDocument]);
   
   // Parse JSON content whenever it changes
   useEffect(() => {
@@ -324,6 +321,114 @@ export default function LeanCanvas() {
     }
   };
   
+  // Add acceptDocumentVersion and rejectDocumentVersion functions 
+  const acceptDocumentVersion = useCallback(async (versionId: string) => {
+    if (!user?.id) return;
+    
+    try {
+      // Get session token
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token || '';
+      
+      if (!token) {
+        throw new Error('Not authenticated');
+      }
+      
+      // Call API endpoint with proper path
+      // The /api prefix will be handled correctly by Vite's proxy in development
+      // and by the API server's path normalization in production
+      const response = await fetch(`/api/documents/versions/${versionId}/accept`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Error response:', errorText);
+        try {
+          const errorData = JSON.parse(errorText);
+          throw new Error(errorData.error || 'Failed to accept version');
+        } catch (parseError) {
+          throw new Error(`Failed to accept version: ${response.status} ${response.statusText}`);
+        }
+      }
+      
+      // Reload the document after accepting
+      if (selectedDocument) {
+        const updatedDocument = await leanCanvasService.getLeanCanvas(selectedDocument.id);
+        if (updatedDocument) {
+          selectDocument(updatedDocument);
+        }
+      }
+    } catch (error) {
+      console.error('Error accepting version:', error);
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to accept version',
+        variant: 'destructive'
+      });
+      throw error;
+    }
+  }, [user, selectedDocument, selectDocument, toast]);
+
+  const rejectDocumentVersion = useCallback(async (versionId: string) => {
+    if (!user?.id) return;
+    
+    try {
+      // Get session token
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token || '';
+      
+      if (!token) {
+        throw new Error('Not authenticated');
+      }
+      
+      // Call API endpoint with proper path
+      // The /api prefix will be handled correctly by Vite's proxy in development
+      // and by the API server's path normalization in production
+      const response = await fetch(`/api/documents/versions/${versionId}/reject`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Error response:', errorText);
+        try {
+          const errorData = JSON.parse(errorText);
+          throw new Error(errorData.error || 'Failed to reject version');
+        } catch (parseError) {
+          throw new Error(`Failed to reject version: ${response.status} ${response.statusText}`);
+        }
+      }
+      
+      // Get the restored version ID from the response
+      const result = await response.json();
+      
+      // Reload the document after rejecting
+      if (selectedDocument) {
+        const updatedDocument = await leanCanvasService.getLeanCanvas(selectedDocument.id);
+        if (updatedDocument) {
+          selectDocument(updatedDocument);
+        }
+      }
+    } catch (error) {
+      console.error('Error rejecting version:', error);
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to reject version',
+        variant: 'destructive'
+      });
+      throw error;
+    }
+  }, [user, selectedDocument, selectDocument, toast]);
+
   // Create documents context value
   const documentsContextValue = {
     // Document state
@@ -351,7 +456,9 @@ export default function LeanCanvas() {
     updateDocumentType,
     updateContentFormat,
     fetchDocumentVersions,
-    handleVersionHistoryClick
+    handleVersionHistoryClick,
+    acceptDocumentVersion,  // Add the approval methods
+    rejectDocumentVersion   // Add the approval methods
   };
 
   if (loading) {

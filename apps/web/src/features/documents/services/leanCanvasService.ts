@@ -100,6 +100,27 @@ export class LeanCanvasService {
       throw new Error(`Failed to save lean canvas: ${(error as Error).message}`);
     }
   }
+
+  /**
+   * Get a specific lean canvas document by ID
+   * 
+   * @param documentId - The ID of the document to fetch
+   * @returns The document or null if not found
+   */
+  async getLeanCanvas(documentId: string): Promise<Document | null> {
+    try {
+      const document = await this.repository.getDocumentWithVersions(documentId);
+      
+      // Only return if it's a lean canvas document
+      if (document && document.entityType === DocumentType.LeanCanvas) {
+        return document;
+      }
+      return null;
+    } catch (error) {
+      console.error("Error fetching lean canvas by ID:", error);
+      throw new Error(`Failed to fetch lean canvas: ${(error as Error).message}`);
+    }
+  }
 }
 
 // Create and export a singleton instance

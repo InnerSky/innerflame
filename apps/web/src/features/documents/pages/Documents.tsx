@@ -237,13 +237,30 @@ const Documents = () => {
     }
   }, [projectToDelete, user?.id, fetchDocuments, selectProject]);
   
-  // Add a wrapper function for fetchDocumentVersions
+  // Handle version history click
   const handleVersionHistoryClick = useCallback(() => {
     if (selectedDocument?.id) {
       fetchDocumentVersions(selectedDocument.id);
       setShowVersionModal(true);
     }
   }, [selectedDocument, fetchDocumentVersions, setShowVersionModal]);
+
+  // Version approval handlers (placeholders - implement actual functionality if needed)
+  const acceptDocumentVersion = useCallback(async (versionId: string) => {
+    toast({
+      title: 'Not Implemented',
+      description: 'Version approval is not implemented in this view.',
+      variant: 'destructive'
+    });
+  }, [toast]);
+
+  const rejectDocumentVersion = useCallback(async (versionId: string) => {
+    toast({
+      title: 'Not Implemented',
+      description: 'Version rejection is not implemented in this view.',
+      variant: 'destructive'
+    });
+  }, [toast]);
   
   // Add wrapper function for createNewProject to handle no arguments case
   const handleCreateNewProject = useCallback(async (title: string, content: string) => {
@@ -363,17 +380,20 @@ const Documents = () => {
     selectProject,
     setTitle,
     setContent,
-    togglePreviewMode: togglePreviewMode,
+    togglePreviewMode,
     updateDocumentType,
     updateContentFormat,
     fetchDocumentVersions,
     handleVersionHistoryClick,
+    acceptDocumentVersion,
+    rejectDocumentVersion
   }), [
     selectedDocument, title, content, isPreviewMode, saveStatus, lastSaved,
     documentHasUnsavedChanges, contentFormat, documentVersions, selectedProjectId,
     projectsData, saveDocument, selectDocument, selectProject, setTitle,
     setContent, togglePreviewMode, updateDocumentType, updateContentFormat,
-    fetchDocumentVersions, handleVersionHistoryClick
+    fetchDocumentVersions, handleVersionHistoryClick, acceptDocumentVersion,
+    rejectDocumentVersion
   ]);
   
   return (

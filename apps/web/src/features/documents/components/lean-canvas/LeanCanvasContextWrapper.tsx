@@ -140,7 +140,16 @@ export function LeanCanvasContextWrapper({ children, initialIdea }: LeanCanvasCo
 
   // Handle version history click
   const handleVersionHistoryClick = useCallback(() => {
-    // Implement if needed for LeanCanvas
+    // No-op - we don't support version history in this component
+  }, []);
+
+  // Add placeholder implementations for version approval functions
+  const acceptDocumentVersion = useCallback(async () => {
+    // No-op - version approval not supported in this component
+  }, []);
+
+  const rejectDocumentVersion = useCallback(async () => {
+    // No-op - version rejection not supported in this component
   }, []);
 
   // Update document type (simplified - expand as needed)
@@ -180,7 +189,9 @@ export function LeanCanvasContextWrapper({ children, initialIdea }: LeanCanvasCo
     updateDocumentType,
     updateContentFormat,
     fetchDocumentVersions,
-    handleVersionHistoryClick
+    handleVersionHistoryClick,
+    acceptDocumentVersion,
+    rejectDocumentVersion
   };
 
   return (
