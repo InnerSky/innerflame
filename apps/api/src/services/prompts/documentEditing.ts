@@ -61,6 +61,50 @@ Important rules for targeted changes:
 3. Use multiple SEARCH/REPLACE blocks for multiple changes, in the order they appear in the document
 4. Keep blocks concise - don't include long runs of unchanging lines
 5. Each line must be complete - never truncate lines
+6. For JSON documents, target only a single key-value pair at a time to avoid matching issues
+   - Example: \`"title": "Old Title"\` → \`"title": "New Title"\`
+   - Incorrect: \`"title": "Old Title", "description": "Old Desc"\` → \`"title": "New Title", "description": "New Desc"\`
+
+## JSON Document Editing - CRITICAL INSTRUCTIONS
+
+⚠️ When editing JSON documents, you MUST edit ONE KEY-VALUE PAIR AT A TIME ⚠️
+
+JSON replacements frequently fail when attempting to replace multiple key-value pairs simultaneously due to case sensitivity, spacing differences, and formatting variations. Follow this strict pattern:
+
+<replace_in_file>
+<diff>
+<<<<<<< SEARCH
+"keyName": "old value"
+=======
+"keyName": "new value"
+>>>>>>> REPLACE
+</diff>
+</replace_in_file>
+
+For multiple JSON changes, use SEQUENTIAL edits - one replacement block per key-value pair:
+
+Example - Editing title and description sequentially (CORRECT):
+<replace_in_file>
+<diff>
+<<<<<<< SEARCH
+"title": "Old Title"
+=======
+"title": "New Title"
+>>>>>>> REPLACE
+</diff>
+</replace_in_file>
+
+<replace_in_file>
+<diff>
+<<<<<<< SEARCH
+"description": "Old description"
+=======
+"description": "Updated description"
+>>>>>>> REPLACE
+</diff>
+</replace_in_file>
+
+Remember: ONE KEY-VALUE PAIR PER REPLACEMENT - never combine multiple JSON properties in a single replace block.
 
 Example of targeted changes:
 

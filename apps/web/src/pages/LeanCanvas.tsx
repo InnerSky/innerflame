@@ -308,15 +308,35 @@ export default function LeanCanvas() {
     if (!selectedDocument || !user?.id) return;
     
     try {
-      // Update content
-      const newContent = JSON.stringify(updatedData);
-      setContent(newContent);
-      setHasUnsavedChanges(true);
-      setSaveStatus('unsaved');
-      
-      // Update local state for immediate UI feedback
+      // OPTIMISTIC UPDATE: Immediately update UI state for a responsive feel
       setJsonData(updatedData);
-    } catch (saveError) {
+      setSaveStatus('saving');
+      
+      // Perform save operation in the background
+      const savePromise = leanCanvasService.smartAutoSaveLeanCanvas(
+        selectedDocument.id,
+        title || selectedDocument.title,
+        updatedData
+      );
+      
+      // Don't await here - let the save happen in the background
+      
+      // Update status when save completes
+      savePromise.then(updatedDocument => {
+        // Update document state with the returned data
+        setSelectedDocument(updatedDocument);
+        setContent(updatedDocument.content);
+        setLastSaved(new Date());
+        setSaveStatus('saved');
+      }).catch(error => {
+        console.error('Error saving document:', error);
+        setSaveStatus('error');
+        setError('Failed to update your changes. Please try again.');
+      });
+    } catch (error) {
+      // This catch block handles errors in the initial setup
+      console.error('Error initiating save:', error);
+      setSaveStatus('error');
       setError('Failed to update your changes. Please try again.');
     }
   };

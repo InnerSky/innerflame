@@ -22,9 +22,11 @@ interface JSONDisplayProps {
   disableAddCard?: boolean;
   disableKeyEdit?: boolean;
   disableHoverEffects?: boolean;
+  editableKeys?: string[];
+  hideHeaderFields?: boolean;
 }
 
-export function JSONDisplay({ jsonData, onDataChange, readOnly = false, disableAddCard = false, disableKeyEdit = false, disableHoverEffects = false }: JSONDisplayProps) {
+export function JSONDisplay({ jsonData, onDataChange, readOnly = false, disableAddCard = false, disableKeyEdit = false, disableHoverEffects = false, editableKeys, hideHeaderFields = false }: JSONDisplayProps) {
   const [editingKey, setEditingKey] = useState<string | null>(null);
   const [editValue, setEditValue] = useState<string>('');
   const [editKeyValue, setEditKeyValue] = useState<string>('');
@@ -80,11 +82,28 @@ export function JSONDisplay({ jsonData, onDataChange, readOnly = false, disableA
     setAddCardDialogOpen(true);
   };
 
-  // Helper function to find a key case-insensitively
+  // Helper function to find a key case-insensitively and format-insensitively
   const findKey = (obj: Record<string, string>, keyToFind: string): string | null => {
+    if (!keyToFind || !keyToFind.trim()) return null;
+    
+    // Convert search key to lowercase and create normalized versions
     const lowerKeyToFind = keyToFind.toLowerCase();
+    const withUnderscores = lowerKeyToFind.replace(/\s+/g, '_');
+    const withSpaces = lowerKeyToFind.replace(/_+/g, ' ');
+    
     for (const key of Object.keys(obj)) {
-      if (key.toLowerCase() === lowerKeyToFind) {
+      const lowerKey = key.toLowerCase();
+      const keyWithUnderscores = lowerKey.replace(/\s+/g, '_');
+      const keyWithSpaces = lowerKey.replace(/_+/g, ' ');
+      
+      // Check all possible format combinations
+      if (
+        lowerKey === lowerKeyToFind ||
+        lowerKey === withUnderscores || 
+        lowerKey === withSpaces ||
+        keyWithUnderscores === lowerKeyToFind ||
+        keyWithSpaces === lowerKeyToFind
+      ) {
         return key;
       }
     }
@@ -100,6 +119,9 @@ export function JSONDisplay({ jsonData, onDataChange, readOnly = false, disableA
   // Get all the keys from the JSON data
   const keys = Object.keys(jsonData || {});
   
+  // If editableKeys is provided, filter down to only those keys
+  const displayKeys = editableKeys || keys;
+  
   // Check if there's a title, subtitle, notes and footnotes (case-insensitive)
   const titleKey = jsonData ? findKey(jsonData, 'title') : null;
   const subtitleKey = jsonData ? findKey(jsonData, 'subtitle') : null;
@@ -112,13 +134,30 @@ export function JSONDisplay({ jsonData, onDataChange, readOnly = false, disableA
   const hasFootnotes = !!footnotesKey;
   
   // Filter keys to display in the grid (exclude title, subtitle, notes and footnotes if they exist)
-  const gridKeys = keys.filter(key => {
+  const gridKeys = displayKeys.filter(key => {
     if (hasTitle && key.toLowerCase() === 'title'.toLowerCase()) return false;
     if (hasSubtitle && key.toLowerCase() === 'subtitle'.toLowerCase()) return false;
     if (hasNotes && key.toLowerCase() === 'notes'.toLowerCase()) return false;
     if (hasFootnotes && key.toLowerCase() === 'footnotes'.toLowerCase()) return false;
     return true;
   });
+
+  // Updated duplicate key finder that checks the current key being edited
+  const findDuplicateKey = (obj: Record<string, string>, keyToFind: string, currentKey: string): string | null => {
+    if (!keyToFind.trim() || keyToFind.trim() === currentKey.trim()) {
+      return null; // Empty keys or unchanged keys are not duplicates
+    }
+    
+    // Use the more comprehensive findKey function
+    const foundKey = findKey(obj, keyToFind);
+    
+    // If a key was found and it's not the current key being edited, it's a duplicate
+    if (foundKey && foundKey !== currentKey) {
+      return foundKey;
+    }
+    
+    return null;
+  };
 
   // Handle saving edits
   const handleSaveEdit = (oldKey: string, newKey: string, value: string) => {
@@ -133,9 +172,9 @@ export function JSONDisplay({ jsonData, onDataChange, readOnly = false, disableA
       return;
     }
     
-    // Check if the new key would conflict with an existing one
-    if (findKey(jsonData, newKey)) {
-      // You could show an error message here
+    // Check if the new key would conflict with an existing one using comprehensive checking
+    if (findKey(jsonData, newKey) && findKey(jsonData, newKey) !== oldKey) {
+      // Duplicate exists and it's not just the current key
       return;
     }
     
@@ -168,7 +207,15 @@ export function JSONDisplay({ jsonData, onDataChange, readOnly = false, disableA
     
     // Create a new object without the deleted key
     const { [key]: removedKey, ...restData } = jsonData;
-    onDataChange(restData);
+    
+    // Add a special marker to identify this update is from JSONDisplay
+    // This helps LeanCanvasDisplay know to process deletions even when few keys remain
+    const updatedData = {
+      ...restData,
+      __source: 'JSONDisplay'
+    };
+    
+    onDataChange(updatedData);
     
     // Close the dialog and reset state
     setDeleteDialogOpen(false);
@@ -217,9 +264,10 @@ export function JSONDisplay({ jsonData, onDataChange, readOnly = false, disableA
   const handleAddNewCard = () => {
     if (!onDataChange || !jsonData || !newCardKey.trim()) return;
     
-    // Check if key already exists
+    // Check if key already exists using the comprehensive findKey approach
+    // This checks the ENTIRE jsonData object, not just the displayed keys
     if (findKey(jsonData, newCardKey)) {
-      // You could show an error message here
+      // A duplicate exists
       return;
     }
     
@@ -254,11 +302,6 @@ export function JSONDisplay({ jsonData, onDataChange, readOnly = false, disableA
                 placeholder="Enter card title..."
                 autoFocus
               />
-              {jsonData && findKey(jsonData, newCardKey) && newCardKey.trim() !== '' && (
-                <p className="text-xs text-red-500 mt-1">
-                  This title already exists. Please choose another one.
-                </p>
-              )}
             </div>
             <div>
               <label htmlFor="cardValue" className="text-sm font-medium block mb-1.5">
@@ -281,7 +324,14 @@ export function JSONDisplay({ jsonData, onDataChange, readOnly = false, disableA
               </p>
             </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="flex flex-row items-center justify-between w-full">
+            {/* Error message on the left */}
+            {newCardKey.trim() !== '' && jsonData && findKey(jsonData, newCardKey) && (
+              <p className="text-xs text-red-500 mr-auto">
+                This title already exists
+              </p>
+            )}
+            {/* Action buttons */}
             <Button 
               variant="outline" 
               onClick={() => setAddCardDialogOpen(false)}
@@ -290,7 +340,7 @@ export function JSONDisplay({ jsonData, onDataChange, readOnly = false, disableA
             </Button>
             <Button 
               onClick={handleAddNewCard}
-              disabled={!newCardKey.trim() || (jsonData && !!findKey(jsonData, newCardKey) && newCardKey.trim() !== '') ? true : false}
+              disabled={!newCardKey.trim() || Boolean(jsonData && findKey(jsonData, newCardKey))}
             >
               Add Card
             </Button>
@@ -354,15 +404,20 @@ export function JSONDisplay({ jsonData, onDataChange, readOnly = false, disableA
   return (
     <>
     <div className="w-full max-w-full">
-        {/* Title - only if the "title" key exists (case insensitive) */}
-        {hasTitle && titleKey && (
+        {/* Title - only if the "title" key exists (case insensitive) and not hidden */}
+        {!hideHeaderFields && hasTitle && titleKey && (
           <div className="mb-1 text-center animate-in fade-in slide-in-from-bottom-3 duration-500 relative group max-w-full">
             {editingSpecialField === titleKey ? (
-              <div className="mb-3 max-w-full">
+              <div className="mb-3 max-w-full p-0">
                 <Input
                   value={specialFieldValue}
                   onChange={(e) => setSpecialFieldValue(e.target.value)}
-                  className="text-2xl md:text-3xl font-bold text-center max-w-full"
+                  className={cn(
+                    "text-2xl md:text-3xl font-bold text-center max-w-full",
+                    "border-0 focus:ring-0 shadow-none rounded-none", // Remove input borders
+                    "bg-primary/5", // Light primary background for edit indication
+                    "py-2 px-0 m-0" // Remove horizontal padding but keep vertical padding
+                  )}
                   autoFocus
                   onKeyDown={(e) => handleKeyDown(e, () => handleSaveSpecialField(titleKey, specialFieldValue))}
                 />
@@ -400,15 +455,20 @@ export function JSONDisplay({ jsonData, onDataChange, readOnly = false, disableA
           </div>
         )}
 
-        {/* Subtitle - only if the "subtitle" key exists (case insensitive) */}
-        {hasSubtitle && subtitleKey && (
+        {/* Subtitle - only if the "subtitle" key exists (case insensitive) and not hidden */}
+        {!hideHeaderFields && hasSubtitle && subtitleKey && (
           <div className="mb-4 text-center animate-in fade-in slide-in-from-bottom-3 duration-500 relative group max-w-full">
             {editingSpecialField === subtitleKey ? (
-              <div className="mb-3 max-w-full">
+              <div className="mb-3 max-w-full p-0">
                 <Input
                   value={specialFieldValue}
                   onChange={(e) => setSpecialFieldValue(e.target.value)}
-                  className="text-lg md:text-xl font-medium text-center text-muted-foreground/80 max-w-full"
+                  className={cn(
+                    "text-lg md:text-xl font-medium text-center text-muted-foreground/80 max-w-full",
+                    "border-0 focus:ring-0 shadow-none rounded-none", // Remove input borders
+                    "bg-primary/5", // Light primary background for edit indication
+                    "py-2 px-0 m-0" // Remove horizontal padding but keep vertical padding
+                  )}
                   autoFocus
                   onKeyDown={(e) => handleKeyDown(e, () => handleSaveSpecialField(subtitleKey, specialFieldValue))}
                 />
@@ -448,129 +508,161 @@ export function JSONDisplay({ jsonData, onDataChange, readOnly = false, disableA
         )}
 
         {/* If only title exists (no subtitle), show divider after title */}
-        {hasTitle && !hasSubtitle && titleKey && (
+        {!hideHeaderFields && hasTitle && !hasSubtitle && titleKey && (
           <div className="mb-4 text-center">
-          <div className="mt-2 h-1 w-16 bg-primary/60 mx-auto rounded-full"></div>
-        </div>
-      )}
+            <div className="mt-2 h-1 w-16 bg-primary/60 mx-auto rounded-full"></div>
+          </div>
+        )}
 
         {/* Canvas Grid - render all fields except title, subtitle, notes and footnotes */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4 mb-4">
-        {gridKeys.map((key, index) => (
-          <Card 
-            key={key} 
-            className={cn(
-              "overflow-hidden border shadow-sm hover:shadow-md transition-all duration-200",
-              "group animate-in fade-in slide-in-from-bottom-2",
-              "dark:bg-card/95 dark:backdrop-blur-sm",
-              editingKey === key ? "ring-2 ring-primary" : "",
-              disableHoverEffects && "!shadow-none hover:!shadow-none hover:!border-transparent"
-            )}
-            style={{ 
-              animationDelay: `${index * 50}ms`,
-              animationFillMode: 'backwards'
-            }}
-          >
-              <CardHeader className={cn(
-                "bg-muted/30 dark:bg-muted/10 py-2 px-3 md:py-3 md:px-4 border-b group-hover:bg-muted/50 transition-colors duration-200 flex flex-row justify-between items-center",
-                disableHoverEffects && "!group-hover:bg-muted/30 dark:!group-hover:bg-muted/10"
-              )}>
-                {editingKey === key && !disableKeyEdit ? (
-                  <Input
-                    value={editKeyValue}
-                    onChange={(e) => setEditKeyValue(e.target.value)}
-                    className="text-sm font-medium w-full"
-                    placeholder="Card title..."
-                  />
-                ) : (
-                  <>
-                    <CardTitle className={cn(
-                      "text-sm font-medium capitalize text-foreground/90 group-hover:text-foreground transition-colors truncate max-w-[80%]",
-                      disableHoverEffects && "!group-hover:text-foreground/90"
-                    )}>
-                {key}
-              </CardTitle>
-                    {!readOnly && editingKey !== key && (
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        className={cn(
-                          "opacity-0 group-hover:opacity-100 p-1 h-7 w-7 flex-shrink-0",
-                        )}
-                        onClick={() => startEditing(key, jsonData[key] || '')}
-                      >
-                        <Pencil className="h-3 w-3" />
-                      </Button>
-                    )}
-                  </>
-                )}
-            </CardHeader>
-              
-            <CardContent className="p-3 md:p-4 bg-card/50">
-                {editingKey === key ? (
-                  <Textarea
-                    ref={editTextareaRef}
-                    value={editValue}
-                    onChange={(e) => {
-                      setEditValue(e.target.value);
-                      adjustTextareaHeight(e.target as HTMLTextAreaElement);
-                    }}
-                    onKeyDown={(e) => handleKeyDown(e, () => handleSaveEdit(key, editKeyValue, editValue))}
-                    className="w-full text-sm resize-none"
-                    placeholder={`Add ${key} details...`}
-                    autoFocus
-                    style={{ height: 'auto', minHeight: '100px', overflow: 'hidden', maxWidth: '100%' }}
-                  />
-                ) : (
-                  jsonData[key]?.trim() ? (
-                    <div className="text-sm">
-                      <MarkdownRenderer content={jsonData[key]} />
-                    </div>
+        {gridKeys.map((key, index) => {
+          return (
+            <Card 
+              key={key} 
+              className={cn(
+                "overflow-hidden border shadow-sm hover:shadow-md transition-all duration-200",
+                "group animate-in fade-in slide-in-from-bottom-2",
+                "dark:bg-card/95 dark:backdrop-blur-sm",
+                editingKey === key ? "ring-2 ring-primary" : "",
+                disableHoverEffects && "!shadow-none hover:!shadow-none hover:!border-transparent"
+              )}
+              style={{ 
+                animationDelay: `${index * 50}ms`,
+                animationFillMode: 'backwards'
+              }}
+            >
+                <CardHeader className={cn(
+                  "bg-muted/30 dark:bg-muted/10 border-b group-hover:bg-muted/50 transition-colors duration-200 flex flex-row justify-between items-center",
+                  editingKey === key && !disableKeyEdit ? "p-0" : "py-2 px-3 md:py-3 md:px-4",
+                  disableHoverEffects && "!group-hover:bg-muted/30 dark:!group-hover:bg-muted/10"
+                )}>
+                  {editingKey === key && !disableKeyEdit ? (
+                    <Input
+                      value={editKeyValue}
+                      onChange={(e) => setEditKeyValue(e.target.value)}
+                      className={cn(
+                        "text-sm font-medium w-full",
+                        "border-0 focus:ring-0 shadow-none rounded-none", // Remove input borders
+                        "bg-primary/5", // Light primary background for edit indication
+                        "py-3 px-3 md:py-4 md:px-4 m-0" // Increased vertical padding
+                      )}
+                      style={{
+                        paddingTop: '2rem',    // 10px internal top padding
+                        paddingBottom: '2rem', // 10px internal bottom padding
+                        lineHeight: '1.5',
+                        minHeight: '2.5rem'        // Ensure minimum height
+                      }}
+                      placeholder="Card title..."
+                    />
                   ) : (
-                    <p className="text-muted-foreground italic text-sm">Awaiting content...</p>
-                  )
-                )}
-            </CardContent>
-              
-              {editingKey === key && (
-                <CardFooter className="flex justify-between space-x-2 p-2 bg-muted/10 border-t">
-                  {!disableKeyEdit && (
-                    <Button 
-                      size="icon" 
-                      variant="ghost" 
-                      onClick={() => showDeleteConfirmation(key)}
-                      className="h-8 w-8 hover:bg-destructive/10 hover:text-destructive transition-colors"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    <>
+                      <CardTitle className={cn(
+                        "text-sm font-medium capitalize text-foreground/90 group-hover:text-foreground transition-colors truncate max-w-[80%]",
+                        disableHoverEffects && "!group-hover:text-foreground/90"
+                      )}>
+                    {key}
+                  </CardTitle>
+                      {!readOnly && editingKey !== key && (
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className={cn(
+                            "opacity-0 group-hover:opacity-100 p-1 h-7 w-7 flex-shrink-0",
+                          )}
+                          onClick={() => startEditing(key, jsonData[key] || '')}
+                        >
+                          <Pencil className="h-3 w-3" />
+                        </Button>
+                      )}
+                    </>
                   )}
-                  <div className={cn("flex space-x-2", disableKeyEdit ? "w-full justify-end" : "")}>
-                    <Button 
-                      size="icon" 
-                      variant="ghost" 
-                      onClick={() => setEditingKey(null)}
-                      className="h-8 w-8"
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                    <Button 
-                      size="icon" 
-                      onClick={() => handleSaveEdit(key, editKeyValue, editValue)}
-                      className="h-8 w-8"
-                    >
-                      <Check className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </CardFooter>
-              )}
-
-              {findKey(jsonData, editKeyValue) && editKeyValue !== key && (
-                <p className="text-xs text-red-500 absolute -bottom-5 left-0 right-0 text-center">
-                  This title already exists
-                </p>
-              )}
-          </Card>
-        ))}
+              </CardHeader>
+                
+              <CardContent className={cn(
+                "bg-card/50",
+                editingKey === key ? "p-0" : "p-3 md:p-4" // Remove padding in edit mode
+              )}>
+                  {editingKey === key ? (
+                    <Textarea
+                      ref={editTextareaRef}
+                      value={editValue}
+                      onChange={(e) => {
+                        setEditValue(e.target.value);
+                        adjustTextareaHeight(e.target as HTMLTextAreaElement);
+                      }}
+                      onKeyDown={(e) => handleKeyDown(e, () => handleSaveEdit(key, editKeyValue, editValue))}
+                      className={cn(
+                        "w-full text-sm resize-none",
+                        "border-0 focus:ring-0 shadow-none rounded-none", // Remove textarea borders
+                        "bg-primary/5", // Light primary background for edit indication
+                        "p-3 md:p-4", // Match the padding of display mode
+                        "leading-relaxed" // Add increased line spacing
+                      )}
+                      placeholder={`Add ${key} details...`}
+                      autoFocus
+                      style={{ 
+                        height: 'auto',
+                        minHeight: '100px',
+                        overflow: 'hidden',
+                        maxWidth: '100%',
+                        lineHeight: '1.6', // Increased from 1.5 for more space between lines
+                      }}
+                    />
+                  ) : (
+                    jsonData[key]?.trim() ? (
+                      <div className="text-sm">
+                        <MarkdownRenderer content={jsonData[key]} />
+                      </div>
+                    ) : (
+                      <p className="text-muted-foreground italic text-sm">Awaiting content...</p>
+                    )
+                  )}
+              </CardContent>
+                
+                {editingKey === key && (
+                  <CardFooter className="flex flex-row items-center justify-between p-2 bg-muted/10 border-t">
+                    <div className="flex items-center">
+                      {!disableKeyEdit && (
+                        <Button 
+                          size="icon" 
+                          variant="ghost" 
+                          onClick={() => showDeleteConfirmation(key)}
+                          className="h-8 w-8 hover:bg-destructive/10 hover:text-destructive transition-colors mr-2"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
+                      {/* Error message to the left of buttons */}
+                      {findDuplicateKey(jsonData, editKeyValue, key) && (
+                        <p className="text-xs text-red-500 mr-2">
+                          This title already exists
+                        </p>
+                      )}
+                    </div>
+                    <div className={cn("flex space-x-2")}>
+                      <Button 
+                        size="icon" 
+                        variant="ghost" 
+                        onClick={() => setEditingKey(null)}
+                        className="h-8 w-8"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                      <Button 
+                        size="icon" 
+                        onClick={() => handleSaveEdit(key, editKeyValue, editValue)}
+                        className="h-8 w-8"
+                        disabled={!!findDuplicateKey(jsonData, editKeyValue, key)}
+                      >
+                        <Check className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </CardFooter>
+                )}
+            </Card>
+          );
+        })}
 
           {/* Add Card Button - only display if not in read-only mode and not disabled */}
           {!readOnly && !disableAddCard && (

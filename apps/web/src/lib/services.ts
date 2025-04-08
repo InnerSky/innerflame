@@ -152,7 +152,7 @@ export class MessageSubscriptionService {
           }
         )
         .subscribe((status: 'SUBSCRIBED' | 'CLOSED' | 'CHANNEL_ERROR' | 'TIMED_OUT' | string) => {
-          if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+          if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
             this.logError('Subscription error with status:', status);
             
             // Implement retry logic
@@ -164,6 +164,10 @@ export class MessageSubscriptionService {
               this.subscribeToMessages(contextType, contextId);
             }, this.retryDelay);
             
+            return;
+          } else if (status === 'CLOSED') {
+            // For CLOSED status, just log it without the error label if debug is enabled
+            this.log(`Subscription closed for ${subscriptionId}`);
             return;
           }
           
@@ -401,7 +405,7 @@ export class DocumentSubscriptionService {
           }
         )
         .subscribe((status: 'SUBSCRIBED' | 'CLOSED' | 'CHANNEL_ERROR' | 'TIMED_OUT' | string) => {
-          if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+          if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
             this.logError('Document subscription error with status:', status);
             
             // Implement retry logic
@@ -413,6 +417,10 @@ export class DocumentSubscriptionService {
               this.subscribeToDocument(documentId);
             }, this.retryDelay);
             
+            return;
+          } else if (status === 'CLOSED') {
+            // For CLOSED status, just log it without the error label if debug is enabled
+            this.log(`Document subscription closed for ${subscriptionId}`);
             return;
           }
           

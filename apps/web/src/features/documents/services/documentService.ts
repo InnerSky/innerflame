@@ -22,6 +22,27 @@ export class DocumentService {
   }
   
   /**
+   * Smart auto-save for documents that intelligently handles versioning
+   * - Creates a new version if the current version is AI-generated
+   * - Creates a new version if the last edit was more than 30 minutes ago
+   * - Updates the existing version if within the same editing session
+   * 
+   * @param documentId - The ID of the document to save
+   * @param title - The document title
+   * @param content - The document content
+   * @param sessionTimeoutMinutes - Optional session timeout in minutes (default: 30)
+   * @returns Promise resolving to the updated document
+   */
+  async smartAutoSaveDocument(
+    documentId: string,
+    title: string,
+    content: string,
+    sessionTimeoutMinutes: number = 30
+  ): Promise<Document> {
+    return this.repository.smartAutoSaveDocument(documentId, title, content, sessionTimeoutMinutes);
+  }
+  
+  /**
    * Delete a document and handle related cleanup
    * 
    * @param documentId - The ID of the document to delete

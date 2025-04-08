@@ -133,59 +133,61 @@ export function LeanCanvasDisplay({ jsonData, onDataChange, readOnly = false }: 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Handle data changes 
+  // Handle changes to the data from child components
   const handleDataChange = (updatedData: Record<string, string>) => {
-    if (!onDataChange) return;
-
-    // Start with a copy of the original data
-    const result = { ...jsonData };
-
-    // For Lean Canvas sections, we're passing uppercase keys but storing lowercase
-    // So we need to check both uppercase and original forms
-    const isKeyPresent = (originalKey: string, updatedKeys: string[]) => {
-      const lowerKey = originalKey.toLowerCase();
-      return updatedKeys.some(updatedKey => {
-        const lowerUpdatedKey = updatedKey.toLowerCase();
-        return lowerKey === lowerUpdatedKey || 
-               originalKey === updatedKey ||
-               originalKey.toUpperCase() === updatedKey;
-      });
-    };
-
-    // Get all keys that exist in original data but not in updated data (these were deleted)
-    // Only consider keys that aren't part of the Lean Canvas structure
-    const updatedKeys = Object.keys(updatedData);
-    const deletedKeys = Object.keys(jsonData).filter(k => {
-      // Don't delete Lean Canvas keys
-      const isLeanCanvasKey = LEAN_CANVAS_KEYS.some(canvasKey => 
-        findKey({[k]: ''}, canvasKey)
-      );
+    // If we have an onDataChange function, pass the updated data to it
+    if (onDataChange) {
+      const isFromJSONDisplay = updatedData.__source === 'JSONDisplay';
+      // Delete the marker key after checking
+      if (isFromJSONDisplay) {
+        delete updatedData.__source;
+      }
       
-      // Don't delete special keys
-      const isSpecialKey = k === titleKey || 
-                          k === subtitleKey || 
-                          k === notesKey || 
-                          k === footnotesKey;
-
-      // Only delete if it's not a special key and not present in updated data
-      return !isLeanCanvasKey && 
-             !isSpecialKey && 
-             !isKeyPresent(k, updatedKeys);
-    });
-
-    // Remove deleted keys
-    deletedKeys.forEach(key => {
-      delete result[key];
-    });
-
-    // Update remaining values
-    Object.entries(updatedData).forEach(([key, value]) => {
-      // Find the original key in jsonData that matches this key when uppercased
-      const originalKey = Object.keys(jsonData).find(k => k.toUpperCase() === key) || key;
-      result[originalKey] = value;
-    });
-
-    onDataChange(result);
+      // When JSON Display is used with the full jsonData, it might modify other fields too
+      // Only process if the data has been modified
+      if (JSON.stringify(updatedData) !== JSON.stringify(jsonData)) {
+        // Check which keys changed
+        const updatedKeys = Object.keys(updatedData);
+        const originalKeys = Object.keys(jsonData);
+        
+        // Find keys that were deleted (in original but not in updated)
+        const deletedKeys = originalKeys.filter(key => !updatedKeys.includes(key));
+        
+        // Get special keys we should never delete
+        const specialKeys = ['title', 'subtitle', 'notes', 'footnotes', '__source'];
+        // LeanCanvas keys should also be preserved
+        const keysToPreserve = [...specialKeys, ...LEAN_CANVAS_KEYS];
+        
+        // When passed the full jsonData to JSONDisplay, we need to make sure
+        // we don't allow edits to the preserved keys
+        // Only pass through changes to other keys
+        const updatedOtherData: Record<string, string> = {};
+        const keysToConsider = new Set(originalKeys);
+        updatedKeys.forEach(key => keysToConsider.add(key));
+        
+        // For all keys, either keep the original for preserved keys or use updated value
+        Array.from(keysToConsider).forEach(key => {
+          // Check if this is a key we should preserve (case insensitive check)
+          const isPreserved = keysToPreserve.some(
+            preserveKey => key.toLowerCase() === preserveKey.toLowerCase()
+          );
+          
+          if (isPreserved) {
+            // For preserved keys, keep the original value
+            if (originalKeys.includes(key)) {
+              updatedOtherData[key] = jsonData[key];
+            }
+          } else {
+            // For other keys, use the updated value if available, otherwise consider it deleted
+            if (updatedKeys.includes(key)) {
+              updatedOtherData[key] = updatedData[key];
+            }
+          }
+        });
+        
+        onDataChange(updatedOtherData);
+      }
+    }
   };
 
   return (
@@ -418,9 +420,11 @@ export function LeanCanvasDisplay({ jsonData, onDataChange, readOnly = false }: 
         <h3 className="text-lg font-medium mb-4">Additional Cards</h3>
         {Object.keys(otherData).length > 0 ? (
           <JSONDisplay 
-            jsonData={otherData}
+            jsonData={jsonData}
             onDataChange={handleDataChange}
             readOnly={readOnly}
+            editableKeys={Object.keys(otherData)}
+            hideHeaderFields={true}
           />
         ) : !readOnly && (
           <Card 

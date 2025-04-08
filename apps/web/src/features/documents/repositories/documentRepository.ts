@@ -707,6 +707,140 @@ export class DocumentRepository {
       throw error;
     }
   }
+
+  // Smart auto-save document with session-based versioning
+  async smartAutoSaveDocument(documentId: string, title: string, content: string, sessionTimeoutMinutes: number = 30): Promise<Document> {
+    const now = new Date();
+    const nowISOString = now.toISOString();
+    
+    // Get the existing entity to preserve metadata
+    const { data: existingEntity, error: getError } = await supabase
+      .from('entities')
+      .select('*')
+      .eq('id', documentId)
+      .single();
+      
+    if (getError) throw getError;
+    
+    // Get current version
+    const { data: currentVersions, error: currentVersionError } = await supabase
+      .from('entity_versions')
+      .select('*')
+      .eq('entity_id', documentId)
+      .eq('is_current', true);
+      
+    if (currentVersionError) throw currentVersionError;
+    
+    const currentVersion = currentVersions?.[0];
+    
+    // Determine if we should create a new version or update the existing one
+    const shouldCreateNewVersion = (): boolean => {
+      // If no current version, we must create a new one
+      if (!currentVersion) return true;
+      
+      // Always create a new version if current is AI-generated
+      if (currentVersion.version_type === 'ai_edit') return true;
+      
+      // Check if the last update was more than sessionTimeoutMinutes ago
+      // First try to use created_at since it's guaranteed to exist
+      const lastEditTime = currentVersion.created_at ? new Date(currentVersion.created_at) : now;
+      
+      const timeDiffMinutes = (now.getTime() - lastEditTime.getTime()) / (1000 * 60);
+      return timeDiffMinutes > sessionTimeoutMinutes;
+    };
+    
+    if (shouldCreateNewVersion()) {
+      // Create a new version - similar to existing saveDocument logic
+      const newVersionNumber = currentVersion ? currentVersion.version_number + 1 : 1;
+      
+      try {
+        // Mark previous version as not current
+        if (currentVersion) {
+          await supabase
+            .from('entity_versions')
+            .update({ is_current: false })
+            .eq('id', currentVersion.id);
+        }
+        
+        // Create new version
+        const { data: newVersion, error: newVersionError } = await supabase
+          .from('entity_versions')
+          .insert({
+            entity_id: documentId,
+            entity_type: existingEntity.entity_type,
+            version_number: newVersionNumber,
+            full_content: createFullContent(title, content),
+            version_type: 'update',
+            is_current: true,
+            base_version_id: currentVersion?.id,
+            created_at: nowISOString
+          })
+          .select()
+          .single();
+          
+        if (newVersionError) throw newVersionError;
+        
+        // Update entity with new title and active version
+        const { data: entity, error: entityError } = await supabase
+          .from('entities')
+          .update({
+            title,
+            updated_at: nowISOString,
+            metadata: existingEntity.metadata,
+            active_version_id: newVersion.id
+          })
+          .eq('id', documentId)
+          .select()
+          .single();
+          
+        if (entityError) throw entityError;
+
+        // Clean up old versions after successful save
+        await this.cleanupOldVersions(documentId);
+        
+        // Return updated document
+        return mapEntityToDocument(entity, newVersion);
+      } catch (error) {
+        console.error('Error during version creation:', error);
+        throw new Error(`Failed to save document: ${(error as Error).message}`);
+      }
+    } else {
+      // Update existing version instead of creating a new one
+      try {
+        // Update the content of the current version - note that versions don't have updated_at
+        // so we need to track "last edit" differently, perhaps with a field in metadata
+        const { data: updatedVersion, error: updateVersionError } = await supabase
+          .from('entity_versions')
+          .update({
+            full_content: createFullContent(title, content)
+          })
+          .eq('id', currentVersion.id)
+          .select()
+          .single();
+          
+        if (updateVersionError) throw updateVersionError;
+        
+        // Update entity title and timestamp (entity has updated_at)
+        const { data: entity, error: entityError } = await supabase
+          .from('entities')
+          .update({
+            title,
+            updated_at: nowISOString
+          })
+          .eq('id', documentId)
+          .select()
+          .single();
+          
+        if (entityError) throw entityError;
+        
+        // Return updated document
+        return mapEntityToDocument(entity, updatedVersion);
+      } catch (error) {
+        console.error('Error updating existing version:', error);
+        throw new Error(`Failed to update document: ${(error as Error).message}`);
+      }
+    }
+  }
 }
 
 // Export singleton instance for use throughout the app

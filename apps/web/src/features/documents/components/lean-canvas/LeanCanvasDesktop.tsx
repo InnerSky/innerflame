@@ -155,22 +155,16 @@ export function LeanCanvasDesktop({
   // Check if the current version needs approval
   const isPendingApproval = useMemo(() => {
     if (!selectedDocument) {
-      console.log('No selected document');
       return false;
     }
     
     // Check if the document has versions and if the current one needs approval
     if (selectedDocument.versions && selectedDocument.versions.length > 0) {
       const currentVersion = selectedDocument.versions.find(v => v.isCurrent);
-      console.log('Found versions:', selectedDocument.versions.length, 'Current version:', currentVersion?.id);
-      console.log('Approval status:', currentVersion?.approval_status);
       
       if (currentVersion?.approval_status === 'pending_approval') {
-        console.log('Document needs approval');
         return true;
       }
-    } else {
-      console.log('No versions found on document');
     }
     
     return false;

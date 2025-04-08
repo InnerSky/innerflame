@@ -102,6 +102,37 @@ export class LeanCanvasService {
   }
 
   /**
+   * Smart auto-save for a lean canvas document
+   * - Only creates a new version if needed based on timing and content origin
+   * - Updates existing version if edited within session timeframe
+   * - Always creates new version if current version is AI-generated
+   * 
+   * @param documentId - The ID of the document to update
+   * @param title - The title of the document
+   * @param content - The content as a Record/object (will be stringified to JSON)
+   * @param sessionTimeoutMinutes - Optional timeout in minutes (default: 30)
+   * @returns The updated document
+   */
+  async smartAutoSaveLeanCanvas(
+    documentId: string,
+    title: string,
+    content: Record<string, string>,
+    sessionTimeoutMinutes: number = 30
+  ): Promise<Document> {
+    try {
+      return await this.repository.smartAutoSaveDocument(
+        documentId,
+        title,
+        JSON.stringify(content),
+        sessionTimeoutMinutes
+      );
+    } catch (error) {
+      console.error("Error auto-saving lean canvas:", error);
+      throw new Error(`Failed to auto-save lean canvas: ${(error as Error).message}`);
+    }
+  }
+
+  /**
    * Get a specific lean canvas document by ID
    * 
    * @param documentId - The ID of the document to fetch
