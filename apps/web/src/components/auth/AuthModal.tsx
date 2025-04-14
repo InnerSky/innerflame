@@ -7,17 +7,15 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { SignInForm } from './SignInForm';
-import { SignUpForm } from './SignUpForm';
+import { AuthGoogleButtons } from './AuthGoogleButtons';
 
 interface AuthModalProps {
   defaultTab?: 'sign-in' | 'sign-up';
   trigger?: React.ReactNode;
 }
 
-export function AuthModal({ defaultTab = 'sign-in', trigger }: AuthModalProps) {
+export function AuthModal({ trigger }: AuthModalProps) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -35,24 +33,15 @@ export function AuthModal({ defaultTab = 'sign-in', trigger }: AuthModalProps) {
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle className="text-center text-2xl font-bold">
-            Welcome to InnerFlame
+            Ignite Your InnerFlame
           </DialogTitle>
           <DialogDescription className="text-center">
-            Join our community of founders and access exclusive content
+            Dream big, ship fast, and love the journey
           </DialogDescription>
         </DialogHeader>
-        <Tabs defaultValue={defaultTab} className="mt-4">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="sign-in">Sign In</TabsTrigger>
-            <TabsTrigger value="sign-up">Sign Up</TabsTrigger>
-          </TabsList>
-          <TabsContent value="sign-in" className="mt-4">
-            <SignInForm />
-          </TabsContent>
-          <TabsContent value="sign-up" className="mt-4">
-            <SignUpForm />
-          </TabsContent>
-        </Tabs>
+        <div className="mt-4">
+          <AuthGoogleButtons />
+        </div>
       </DialogContent>
     </Dialog>
   );

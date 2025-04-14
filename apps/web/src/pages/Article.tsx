@@ -232,11 +232,11 @@ export default function Article() {
       {article.image_url && (
         <div className="mx-auto max-w-4xl px-4 sm:px-6">
           <AnimatedSection>
-            <div className="aspect-[16/9] overflow-hidden rounded-lg">
+            <div className="overflow-hidden rounded-lg">
               <img 
                 src={article.image_url} 
                 alt={article.title}
-                className="h-full w-full object-cover"
+                className="w-full"
               />
             </div>
           </AnimatedSection>
@@ -262,14 +262,16 @@ export default function Article() {
                 <BookOpen className="h-5 w-5 text-orange-500" />
                 <h2 className="text-xl sm:text-2xl font-semibold">Related Articles</h2>
               </div>
-              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="columns-1 sm:columns-2 lg:columns-3 gap-6">
                 {relatedArticles.map((relatedArticle) => (
-                  <AnimatedSection key={relatedArticle.id}>
-                    <ArticleCard 
-                      article={relatedArticle} 
-                      variant="compact"
-                    />
-                  </AnimatedSection>
+                  <div key={relatedArticle.id} className="mb-6 break-inside-avoid">
+                    <AnimatedSection>
+                      <ArticleCard 
+                        article={relatedArticle} 
+                        variant="compact"
+                      />
+                    </AnimatedSection>
+                  </div>
                 ))}
               </div>
             </AnimatedSection>

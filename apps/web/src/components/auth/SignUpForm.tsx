@@ -4,6 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, CheckCircle, Info } from 'lucide-react';
 import { DocumentRepository } from '@/features/documents/repositories/documentRepository';
+import { supabase } from '@/lib/supabase.js';
+import { anonymousAuthService } from '@/features/auth/services/anonymousAuthService.js';
 
 export function SignUpForm() {
   const { signInWithGoogle, isAnonymous, user } = useAuth();
@@ -32,11 +34,42 @@ export function SignUpForm() {
     setError(null);
 
     try {
-      // For anonymous users, this will link the Google account rather than creating a new one
-      const { error } = await signInWithGoogle(isAnonymous);
-      
-      if (error) {
-        setError(error.message);
+      if (isAnonymous) {
+        // For anonymous users, use the enhanced conversion method
+        // Store the user ID before conversion to ensure we update the right profile
+        if (user?.id) {
+          localStorage.setItem('profileUpdateUserId', user.id);
+          localStorage.setItem('pendingProfileUpdate', 'true');
+        }
+        
+        // Use the dedicated conversion method if available, otherwise fall back
+        if (anonymousAuthService.convertAnonymousToRegisteredUser) {
+          const { success, error } = await anonymousAuthService.convertAnonymousToRegisteredUser('google');
+          
+          if (error) {
+            setError(error.message);
+          }
+        } else {
+          // Legacy fallback to signInWithGoogle
+          const { error } = await signInWithGoogle(true);
+          
+          if (error) {
+            setError(error.message);
+          }
+        }
+      } else {
+        // For new sign-ups (not anonymous), clear any existing sessions first
+        // This helps prevent conflicts with any lingering anonymous sessions
+        await supabase.auth.signOut({ scope: 'global' });
+        localStorage.removeItem('supabase.auth.token');
+        localStorage.removeItem('sb-lpxnyybizytwcqdqasll-auth-token');
+        
+        // Then proceed with the regular sign-in
+        const { error } = await signInWithGoogle(false);
+        
+        if (error) {
+          setError(error.message);
+        }
       }
     } catch (err) {
       setError('An unexpected error occurred. Please try again.');

@@ -35,7 +35,10 @@ interface ExtendedQuestionOption {
 
 export type TransitionState = 'none' | 'fade-out' | 'fade-in';
 
-export function useQuestionnaireProcess(questionnaireType: string = 'onboarding') {
+export function useQuestionnaireProcess(
+  questionnaireType: string = 'onboarding',
+  onCompleted?: () => void
+) {
   // Auth context for getting the current user
   const { user } = useAuth();
   
@@ -334,25 +337,37 @@ export function useQuestionnaireProcess(questionnaireType: string = 'onboarding'
     }
   }, [responses, questionnaireResponse, questionnaireId, user, status, saveUserResponse]);
   
-  // Complete the questionnaire
+  // Submit responses
   const completeQuestionnaire = useCallback(async () => {
-    if (!questionnaireResponse || !questionnaireId || !user) return;
+    if (!questionnaireId || !user) {
+      return;
+    }
     
     try {
+      setIsLoading(true);
+      
+      // Save all responses with completed status
       await saveUserResponse(
         questionnaireId,
         user.id,
-        questionnaireResponse.id,
+        questionnaireResponse?.id || null,
         responses,
         'completed'
       );
       
       setStatus('completed');
+      
+      // Notify about completion if callback provided
+      if (onCompleted) {
+        onCompleted();
+      }
     } catch (err) {
       console.error('Error completing questionnaire:', err);
       setError('Failed to complete questionnaire');
+    } finally {
+      setIsLoading(false);
     }
-  }, [questionnaireResponse, questionnaireId, user, responses, saveUserResponse]);
+  }, [questionnaireId, user, questionnaireResponse, responses, saveUserResponse, onCompleted]);
   
   // Reset a completed questionnaire
   const resetQuestionnaire = useCallback(() => {
@@ -369,12 +384,12 @@ export function useQuestionnaireProcess(questionnaireType: string = 'onboarding'
       },
       // Save the updated status if needed
       async () => {
-        if (status === 'completed' && questionnaireResponse && questionnaireId && user) {
+        if (status === 'completed' && questionnaireId && user) {
           try {
             await saveUserResponse(
               questionnaireId,
               user.id,
-              questionnaireResponse.id,
+              questionnaireResponse?.id || null,
               responses,
               'in_progress'
             );
@@ -387,13 +402,13 @@ export function useQuestionnaireProcess(questionnaireType: string = 'onboarding'
     );
   }, [
     status, 
-    questionnaireResponse, 
     questionnaireId, 
     user, 
     responses, 
     saveUserResponse, 
     transitionState, 
-    performTransition
+    performTransition,
+    questionnaireResponse
   ]);
   
   // Initialize on mount and when user changes

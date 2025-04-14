@@ -1,4 +1,4 @@
-import { useState, useEffect, lazy, Suspense } from "react";
+import { useState, useEffect, lazy, Suspense, useRef } from "react";
 import { BrowserRouter, Routes, Route, Link, useLocation, useNavigate } from "react-router-dom";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -38,6 +38,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { supabase } from "@/lib/supabase";
 import { anonymousAuthService } from "@/features/auth/services/anonymousAuthService.js";
+import { OnboardingModal } from "@/components/OnboardingModal.js";
 const OfflinePage = lazy(() => import("./pages/OfflinePage.js"));
 const LeanCanvas = lazy(() => import("./pages/LeanCanvas.js"));
 
@@ -62,23 +63,12 @@ function ProfileMenu({ onOpenChange, isMobile = false }: ProfileMenuProps) {
   const { user, loading, signOut, isAnonymous } = useAuth();
   const [isAdmin, setIsAdmin] = useState(false);
   const navigate = useNavigate();
-  
-  // Add debug logging
-  console.log('Auth State:', {
-    user: user ? {
-      id: user.id,
-      email: user.email,
-      metadata: user.user_metadata,
-    } : null,
-    loading,
-    isAnonymous,
-    isAdmin
-  });
+  const [dropdownOpen, setDropdownOpen] = useState(false);
   
   // Check admin status when user changes
   useEffect(() => {
     const checkAdminStatus = async () => {
-      if (!user) {
+      if (!user || isAnonymous) {
         setIsAdmin(false);
         return;
       }
@@ -90,16 +80,15 @@ function ProfileMenu({ onOpenChange, isMobile = false }: ProfileMenuProps) {
           .eq('id', user.id)
           .single();
           
-        if (!error && data && data.is_admin) {
-          setIsAdmin(true);
-        }
+        // Set admin status based on result or false if error
+        setIsAdmin(error ? false : !!data?.is_admin);
       } catch (err) {
-        console.error('Error checking admin status:', err);
+        setIsAdmin(false); 
       }
     };
     
     checkAdminStatus();
-  }, [user]);
+  }, [user, isAnonymous, signOut]);
   
   const handleSignOut = async () => {
     if (signOut) {
@@ -109,6 +98,7 @@ function ProfileMenu({ onOpenChange, isMobile = false }: ProfileMenuProps) {
     }
   };
   
+  // Show loading state
   if (loading) {
     return (
       <Button disabled className={isMobile ? "w-full text-sm sm:text-base" : ""}>
@@ -118,33 +108,37 @@ function ProfileMenu({ onOpenChange, isMobile = false }: ProfileMenuProps) {
   }
   
   // Show Sign In button for both non-logged in and anonymous users
-  if (!user || isAnonymous) {
+  const isPermanentUser = user && !isAnonymous;
+  
+  if (!isPermanentUser) {
     return (
       <AuthModal 
         defaultTab={isAnonymous ? "sign-up" : "sign-in"}
         trigger={
           <Button className={isMobile ? "w-full text-sm sm:text-base" : ""}>
-            {isAnonymous ? "Sign Up to Save" : "Sign In"}
+            Sign In
           </Button>
         }
       />
     );
   }
   
-  // From here on, we only show profile UI for authenticated non-anonymous users
+  // From here on, we only show profile UI for authenticated permanent users
   if (isMobile) {
     return (
       <>
         <div className="flex items-center space-x-3 mb-3 px-4 py-2 border rounded-md bg-background/50">
-          <Avatar className="h-10 w-10">
+          <Avatar className="h-10 w-10 flex-shrink-0">
             <AvatarImage src={user?.user_metadata?.avatar_url} alt={user?.email || 'User'} />
             <AvatarFallback>
               {user?.email ? user.email.substring(0, 2).toUpperCase() : '?'}
             </AvatarFallback>
           </Avatar>
-          <div className="flex flex-col">
-            <p className="text-sm font-medium leading-none">{user?.user_metadata?.name || user?.email}</p>
-            <p className="text-xs mt-1 leading-none text-muted-foreground">
+          <div className="flex flex-col min-w-0 flex-1">
+            <p className="text-sm font-medium break-words leading-tight">
+              {user?.user_metadata?.name || user?.user_metadata?.full_name || user?.email}
+            </p>
+            <p className="text-xs mt-1 text-muted-foreground break-all leading-tight">
               {user?.email}
             </p>
           </div>
@@ -181,11 +175,14 @@ function ProfileMenu({ onOpenChange, isMobile = false }: ProfileMenuProps) {
     );
   }
   
-  // Desktop dropdown for authenticated non-anonymous users
+  // Desktop dropdown for authenticated permanent users
   return (
-    <DropdownMenu>
+    <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+        <Button 
+          variant="ghost" 
+          className="relative h-8 w-8 rounded-full focus-visible:ring-0 focus-visible:ring-offset-0 focus:outline-none"
+        >
           <Avatar className="h-8 w-8">
             <AvatarImage src={user?.user_metadata?.avatar_url} alt={user?.email || 'User'} />
             <AvatarFallback>
@@ -194,17 +191,19 @@ function ProfileMenu({ onOpenChange, isMobile = false }: ProfileMenuProps) {
           </Avatar>
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-56 p-2" align="end">
+      <DropdownMenuContent className="w-96 p-2" align="end">
         <div className="flex items-center space-x-3 mb-2 px-4 py-2">
-          <Avatar className="h-10 w-10">
+          <Avatar className="h-10 w-10 flex-shrink-0">
             <AvatarImage src={user?.user_metadata?.avatar_url} alt={user?.email || 'User'} />
             <AvatarFallback>
               {user?.email ? user.email.substring(0, 2).toUpperCase() : '?'}
             </AvatarFallback>
           </Avatar>
-          <div className="flex flex-col">
-            <p className="text-sm font-medium leading-none">{user?.user_metadata?.name || user?.email}</p>
-            <p className="text-xs mt-1 leading-none text-muted-foreground">
+          <div className="flex flex-col min-w-0 flex-1">
+            <p className="text-sm font-medium break-words leading-tight">
+              {user?.user_metadata?.name || user?.user_metadata?.full_name || user?.email}
+            </p>
+            <p className="text-xs mt-1 text-muted-foreground break-all leading-tight">
               {user?.email}
             </p>
           </div>
@@ -213,7 +212,10 @@ function ProfileMenu({ onOpenChange, isMobile = false }: ProfileMenuProps) {
         <Separator className="my-1" />
         
         <div className="py-1">
-          <Link to="/settings" className="w-full block">
+          <Link to="/settings" className="w-full block" onClick={() => {
+            setDropdownOpen(false);
+            onOpenChange && onOpenChange(false);
+          }}>
             <Button variant="ghost" className="w-full justify-start text-sm">
               Settings
               <SettingsIcon className="ml-auto h-4 w-4" />
@@ -221,7 +223,10 @@ function ProfileMenu({ onOpenChange, isMobile = false }: ProfileMenuProps) {
           </Link>
           
           {isAdmin && (
-            <Link to="/admin" className="w-full block">
+            <Link to="/admin" className="w-full block" onClick={() => {
+              setDropdownOpen(false);
+              onOpenChange && onOpenChange(false);
+            }}>
               <Button variant="ghost" className="w-full justify-start text-sm">
                 Admin Dashboard
                 <Shield className="ml-auto h-4 w-4" />
@@ -244,77 +249,86 @@ function AppContent() {
   const [scrolled, setScrolled] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const location = useLocation();
-  const { user, loading, signOut } = useAuth();
+  const { user, loading, signOut, isAnonymous } = useAuth();
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [anonSignInAttempted, setAnonSignInAttempted] = useState(false);
+  const [showOnboardingModal, setShowOnboardingModal] = useState(false);
+  const [checkingOnboarding, setCheckingOnboarding] = useState(false);
+  // Define ref at component level, not inside useEffect
+  const isFirstAuthRender = useRef(true);
   
   // Check if we're on the documents page or lean-canvas page
   const isDocumentsPage = location.pathname === '/documents';
   const isLeanCanvasPage = location.pathname === '/lean-canvas';
   const hideNavAndFooter = isDocumentsPage || isLeanCanvasPage;
 
+  // Only log auth status check in development and only on 
+  // significant changes (user ID change or anonymous status change)
+  useEffect(() => {
+    // Skip excessive logging in production
+    if (process.env.NODE_ENV !== 'development') return;
+    
+    // Use the ref defined at component level
+    if (user) {
+      // Only log on first render or when important values change
+      if (isFirstAuthRender.current) {
+        console.log('Auth Status Check (Initial):', {
+          user_id: user.id,
+          email: user.email,
+          isAnonymous,
+          metadata: user.app_metadata,
+          is_anonymous_flag: user.app_metadata?.is_anonymous
+        });
+        isFirstAuthRender.current = false;
+      }
+    } else {
+      if (isFirstAuthRender.current) {
+        console.log('Auth Status Check (Initial): No user logged in');
+        isFirstAuthRender.current = false;
+      }
+    }
+  }, [user?.id, isAnonymous]); // Only re-run if user ID or anonymous status changes
+
   // Automatically sign in anonymously if no user is present
   useEffect(() => {
     const autoSignInAnonymously = async () => {
       // Only proceed if:
-      // 1. We're done loading auth state
+      // 1. Auth context is not loading
       // 2. There's no user logged in
-      // 3. We're not on the auth callback page (to prevent interference with OAuth flow)
-      if (!loading && !user && !location.pathname.includes('/auth/callback')) {
-        console.log('No user detected, attempting anonymous sign in after database fixes...');
-        try {
-          // Add a loading indicator or state here if needed
-          const anonymousUser = await anonymousAuthService.getOrCreateAnonymousUser();
-          
-          if (anonymousUser) {
-            console.log('Anonymous sign in SUCCESSFUL after database fixes! User details:', {
-              id: anonymousUser.id,
-              isAnonymous: anonymousUser.app_metadata?.is_anonymous,
-              created_at: anonymousUser.created_at,
-              app_metadata: anonymousUser.app_metadata
-            });
-          } else {
-            console.log('Anonymous sign in not needed or not available - proceeding as unauthenticated user');
+      // 3. We haven't already attempted anonymous sign-in in this component lifecycle/state
+      // 4. We're not on the auth callback page
+      // 5. Add a slight delay to avoid race conditions with AuthContext
+      if (!loading && !user && !anonSignInAttempted && !location.pathname.includes('/auth/callback')) {
+        setAnonSignInAttempted(true); // Mark that we are attempting
+        
+        // Add a small delay to let any pending auth operations complete
+        // This avoids race conditions with token refreshes and AuthContext operations
+        await new Promise(resolve => setTimeout(resolve, 300));
+        
+        // Check again after the delay to make sure we still need to sign in
+        if (!user) {
+          try {
+            const anonymousUser = await anonymousAuthService.getOrCreateAnonymousUser();
             
-            // The app can still function without anonymous auth
-            // You can implement fallback behavior here if needed
+            if (!anonymousUser) {
+              // Keep anonSignInAttempted as true so we don't immediately retry on failure
+            }
+          } catch (error) {
+            // Also keep anonSignInAttempted as true to prevent looping on errors (like rate limit)
           }
-        } catch (error) {
-          console.error('Error during automatic anonymous sign in:', error);
-          // We don't want this error to break the application
-          // The user can still use the app unauthenticated
         }
+      } else if (user) {
+         // If a user becomes available (either anonymous or registered), reset the attempt flag
+         // This allows a new attempt if the user signs out later.
+         if (anonSignInAttempted) {
+             setAnonSignInAttempted(false);
+         }
       }
     };
 
     autoSignInAnonymously();
-  }, [loading, user, location.pathname]);
-
-  // Check admin status when user changes
-  useEffect(() => {
-    const checkAdminStatus = async () => {
-      if (!user) {
-        setIsAdmin(false);
-        return;
-      }
-      
-      try {
-        const { data, error } = await supabase
-          .from('users')
-          .select('is_admin')
-          .eq('id', user.id)
-          .single();
-          
-        if (!error && data && data.is_admin) {
-          setIsAdmin(true);
-        }
-      } catch (err) {
-        console.error('Error checking admin status:', err);
-      }
-    };
-    
-    checkAdminStatus();
-  }, [user]);
+    // Dependency array: includes user and loading from AuthContext, and the local attempt flag
+  }, [loading, user, location.pathname, anonSignInAttempted]);
 
   // Check online status
   useEffect(() => {
@@ -366,6 +380,49 @@ function AppContent() {
   useEffect(() => {
     setIsMenuOpen(false);
   }, [location]);
+
+  // Check if user has completed onboarding
+  useEffect(() => {
+    // Only check for permanent users
+    if (!loading && user && !isAnonymous) {
+      const checkOnboardingStatus = async () => {
+        try {
+          setCheckingOnboarding(true);
+          
+          const { data, error } = await supabase
+            .from('questionnaire_responses')
+            .select('id')
+            .eq('user_id', user.id)
+            .eq('status', 'completed')
+            .not('completed_at', 'is', null)
+            .limit(1)
+            .maybeSingle();
+          
+          if (error) {
+            console.error('Error checking onboarding status:', error);
+            return;
+          }
+          
+          // Show onboarding modal if no completed questionnaire
+          setShowOnboardingModal(!data);
+        } catch (err) {
+          console.error('Error checking onboarding status:', err);
+        } finally {
+          setCheckingOnboarding(false);
+        }
+      };
+      
+      checkOnboardingStatus();
+    } else {
+      // Reset for non-permanent users
+      setShowOnboardingModal(false);
+    }
+  }, [user, isAnonymous, loading]);
+  
+  // Handler for when onboarding is completed
+  const handleOnboardingComplete = () => {
+    setShowOnboardingModal(false);
+  };
 
   return (
     <>
@@ -565,6 +622,9 @@ function AppContent() {
           </div>
         </footer>
       )}
+      
+      {/* Show onboarding modal when needed */}
+      {showOnboardingModal && <OnboardingModal onComplete={handleOnboardingComplete} />}
     </>
   );
 }

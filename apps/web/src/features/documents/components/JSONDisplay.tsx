@@ -24,9 +24,10 @@ interface JSONDisplayProps {
   disableHoverEffects?: boolean;
   editableKeys?: string[];
   hideHeaderFields?: boolean;
+  emptyPlaceholder?: string;
 }
 
-export function JSONDisplay({ jsonData, onDataChange, readOnly = false, disableAddCard = false, disableKeyEdit = false, disableHoverEffects = false, editableKeys, hideHeaderFields = false }: JSONDisplayProps) {
+export function JSONDisplay({ jsonData, onDataChange, readOnly = false, disableAddCard = false, disableKeyEdit = false, disableHoverEffects = false, editableKeys, hideHeaderFields = false, emptyPlaceholder }: JSONDisplayProps) {
   const [editingKey, setEditingKey] = useState<string | null>(null);
   const [editValue, setEditValue] = useState<string>('');
   const [editKeyValue, setEditKeyValue] = useState<string>('');
@@ -416,8 +417,10 @@ export function JSONDisplay({ jsonData, onDataChange, readOnly = false, disableA
                     "text-2xl md:text-3xl font-bold text-center max-w-full",
                     "border-0 focus:ring-0 shadow-none rounded-none", // Remove input borders
                     "bg-primary/5", // Light primary background for edit indication
-                    "py-2 px-0 m-0" // Remove horizontal padding but keep vertical padding
+                    "py-2 px-0 m-0", // Remove horizontal padding but keep vertical padding
+                    "placeholder:text-muted-foreground/40 placeholder:font-normal" // Lighter placeholder text
                   )}
+                  placeholder="Write here..."
                   autoFocus
                   onKeyDown={(e) => handleKeyDown(e, () => handleSaveSpecialField(titleKey, specialFieldValue))}
                 />
@@ -439,7 +442,7 @@ export function JSONDisplay({ jsonData, onDataChange, readOnly = false, disableA
               </div>
             ) : (
               <h2 className="text-2xl md:text-3xl font-bold tracking-tight break-words truncate max-w-full pr-8 relative">
-                {jsonData[titleKey]?.trim() || <span className="text-muted-foreground italic">Add title...</span>}
+                {jsonData[titleKey]?.trim() || <span className="text-muted-foreground italic">Your startup</span>}
                 {!readOnly && (
                   <Button
                     variant="ghost"
@@ -467,8 +470,10 @@ export function JSONDisplay({ jsonData, onDataChange, readOnly = false, disableA
                     "text-lg md:text-xl font-medium text-center text-muted-foreground/80 max-w-full",
                     "border-0 focus:ring-0 shadow-none rounded-none", // Remove input borders
                     "bg-primary/5", // Light primary background for edit indication
-                    "py-2 px-0 m-0" // Remove horizontal padding but keep vertical padding
+                    "py-2 px-0 m-0", // Remove horizontal padding but keep vertical padding
+                    "placeholder:text-muted-foreground/40 placeholder:font-normal" // Lighter placeholder text
                   )}
+                  placeholder="Write here..."
                   autoFocus
                   onKeyDown={(e) => handleKeyDown(e, () => handleSaveSpecialField(subtitleKey, specialFieldValue))}
                 />
@@ -490,7 +495,7 @@ export function JSONDisplay({ jsonData, onDataChange, readOnly = false, disableA
               </div>
             ) : (
               <h3 className="text-lg md:text-xl text-muted-foreground/80 font-medium break-words truncate max-w-full pr-8 relative">
-                {jsonData[subtitleKey]?.trim() || <span className="text-muted-foreground/50 italic">Add subtitle...</span>}
+                {jsonData[subtitleKey]?.trim() || <span className="text-muted-foreground/50 italic">Your mission</span>}
                 {!readOnly && (
                   <Button
                     variant="ghost"
@@ -599,7 +604,7 @@ export function JSONDisplay({ jsonData, onDataChange, readOnly = false, disableA
                         "p-3 md:p-4", // Match the padding of display mode
                         "leading-relaxed" // Add increased line spacing
                       )}
-                      placeholder={`Add ${key} details...`}
+                      placeholder="Write here..."
                       autoFocus
                       style={{ 
                         height: 'auto',
@@ -615,7 +620,18 @@ export function JSONDisplay({ jsonData, onDataChange, readOnly = false, disableA
                         <MarkdownRenderer content={jsonData[key]} />
                       </div>
                     ) : (
-                      <p className="text-muted-foreground italic text-sm">Awaiting content...</p>
+                      emptyPlaceholder ? (
+                        <div className="text-muted-foreground/60 text-sm">
+                          <MarkdownRenderer 
+                            content={emptyPlaceholder}
+                            className="[&_p]:text-muted-foreground/60 [&_p]:italic [&_strong]:text-muted-foreground/90 dark:[&_strong]:text-muted-foreground/80 [&_strong]:font-medium [&_strong]:not-italic"
+                          />
+                        </div>
+                      ) : (
+                        <p className="text-muted-foreground italic text-sm">
+                          This card is empty...
+                        </p>
+                      )
                     )
                   )}
               </CardContent>
@@ -708,7 +724,7 @@ export function JSONDisplay({ jsonData, onDataChange, readOnly = false, disableA
                   }}
                   onKeyDown={(e) => handleKeyDown(e, () => handleSaveSpecialField(notesKey, specialFieldValue))}
                   className="w-full text-sm resize-none"
-                  placeholder="Add thoughts here..."
+                  placeholder="Write here..."
                   autoFocus
                   style={{ height: 'auto', minHeight: '100px', overflow: 'hidden', maxWidth: '100%' }}
                 />
@@ -734,7 +750,7 @@ export function JSONDisplay({ jsonData, onDataChange, readOnly = false, disableA
               jsonData[notesKey]?.trim() ? (
                 <MarkdownRenderer content={jsonData[notesKey]} className="text-sm" />
               ) : (
-                <p className="text-muted-foreground italic">Your notes here...</p>
+                <p className="text-muted-foreground italic">This card is empty...</p>
               )
             )}
           </div>
@@ -754,7 +770,7 @@ export function JSONDisplay({ jsonData, onDataChange, readOnly = false, disableA
                   }}
                   onKeyDown={(e) => handleKeyDown(e, () => handleSaveSpecialField(footnotesKey, specialFieldValue))}
                   className="w-full text-sm resize-none"
-                  placeholder="Add references here..."
+                  placeholder="Write here..."
                   autoFocus
                   style={{ height: 'auto', minHeight: '80px', overflow: 'hidden', maxWidth: '100%' }}
                 />
@@ -783,7 +799,7 @@ export function JSONDisplay({ jsonData, onDataChange, readOnly = false, disableA
                     <MarkdownRenderer content={jsonData[footnotesKey]} className="text-sm" />
                   </div>
                 ) : (
-                  <p className="italic opacity-70">Your footnotes here...</p>
+                  <p className="italic opacity-70">This card is empty...</p>
                 )}
                 {!readOnly && (
                   <Button 

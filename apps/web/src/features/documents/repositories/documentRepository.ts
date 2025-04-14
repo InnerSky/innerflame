@@ -5,6 +5,7 @@ import {
   mapEntityVersionToDocumentVersion,
   createFullContent
 } from "../models/mappers";
+import { handleUserConstraintError } from "@/lib/auth";
 
 // Define document types that should be treated as documents in listings
 export const DOCUMENT_TYPES = [
@@ -87,47 +88,60 @@ export class DocumentRepository {
     documentType: DocumentType = DocumentType.UserDocument,
     metadata?: DocumentMetadata
   ): Promise<Document> {
-    // Create entity
-    const { data: entity, error: entityError } = await supabase
-      .from('entities')
-      .insert({
-        user_id: userId,
-        title: title,
-        content: null, // Content will be in version
-        entity_type: documentType,
-        metadata: metadata || {} // Add metadata to the entity
-      })
-      .select()
-      .single();
+    try {
+      // Create entity
+      const { data: entity, error: entityError } = await supabase
+        .from('entities')
+        .insert({
+          user_id: userId,
+          title: title,
+          content: null, // Content will be in version
+          entity_type: documentType,
+          metadata: metadata || {} // Add metadata to the entity
+        })
+        .select()
+        .single();
+        
+      if (entityError) {
+        // Check if this is a user constraint error and attempt to fix
+        const handled = await handleUserConstraintError(entityError);
+        if (handled) {
+          throw new Error("User profile issue detected and handled. Please refresh and try again.");
+        }
+        throw entityError;
+      }
       
-    if (entityError) throw entityError;
-    
-    // Create initial version
-    const { data: version, error: versionError } = await supabase
-      .from('entity_versions')
-      .insert({
-        entity_id: entity.id,
-        entity_type: documentType,
-        version_number: 1,
-        full_content: createFullContent(title, content),
-        version_type: 'initial',
-        is_current: true,
-      })
-      .select()
-      .single();
+      // Create initial version
+      const { data: version, error: versionError } = await supabase
+        .from('entity_versions')
+        .insert({
+          entity_id: entity.id,
+          entity_type: documentType,
+          version_number: 1,
+          full_content: createFullContent(title, content),
+          version_type: 'initial',
+          is_current: true,
+        })
+        .select()
+        .single();
+        
+      if (versionError) throw versionError;
+
+      // Update entity with active_version_id
+      const { error: updateError } = await supabase
+        .from('entities')
+        .update({ active_version_id: version.id })
+        .eq('id', entity.id);
+
+      if (updateError) throw updateError;
       
-    if (versionError) throw versionError;
-
-    // Update entity with active_version_id
-    const { error: updateError } = await supabase
-      .from('entities')
-      .update({ active_version_id: version.id })
-      .eq('id', entity.id);
-
-    if (updateError) throw updateError;
-    
-    // Return document domain model
-    return mapEntityToDocument({ ...entity, active_version_id: version.id }, version);
+      // Return document domain model
+      return mapEntityToDocument({ ...entity, active_version_id: version.id }, version);
+    } catch (error) {
+      // Add better error handling with detailed information
+      console.error("Error creating document:", error);
+      throw error;
+    }
   }
   
   private async cleanupOldVersions(documentId: string, maxVersions: number = 20): Promise<void> {

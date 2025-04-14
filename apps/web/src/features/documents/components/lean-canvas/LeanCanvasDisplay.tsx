@@ -25,6 +25,22 @@ const LEAN_CANVAS_KEYS = [
   'revenue_streams'
 ];
 
+// Define custom prompts for each Lean Canvas section
+const sectionPrompts: Record<string, string> = {
+  problem: "**What customer problems are you solving?**\n\nList the top 1-3 specific, high-value problems your target customers face.",
+  existing_alternatives: "**How are these problems solved today?**\n\nList how your early adopters currently address the problems you've identified (this is your real competition).",
+  solution: "**What are the key features of your solution?**\n\nOutline the top 3-5 key features or capabilities that directly address the customer problems.",
+  key_metrics: "**How will you measure success?**\n\nList the key activities/numbers you will measure to track progress and business health.",
+  unique_value_proposition: "**Why should customers choose you?**\n\nState the single, clear, compelling benefit that makes you different and worth their attention.",
+  high_level_concept: "**Can you explain it simply?**\n\nProvide a very short, easy-to-understand analogy (e.g., X for Y).",
+  unfair_advantage: "**What is your secret sauce or sustainable advantage?**\n\nDefine what makes your business difficult for competitors to copy or buy long-term.",
+  channels: "**How will you reach your customers?**\n\nList the primary pathways you will use to reach and acquire your customer segments.",
+  customer_segments: "**Who are your target customers?**\n\nDefine the specific group(s) of people or organizations you aim to create value for.",
+  early_adopters: "**Who are your ideal first customers?**\n\nDescribe the characteristics of the specific subset of customers you will target first.",
+  cost_structure: "**What are your major costs?**\n\nList the most significant costs incurred to operate your business model.",
+  revenue_streams: "**How will you make money?**\n\nDescribe how your business will earn money from each customer segment."
+};
+
 export function LeanCanvasDisplay({ jsonData, onDataChange, readOnly = false }: LeanCanvasDisplayProps) {
   if (!jsonData) {
     return (
@@ -137,57 +153,97 @@ export function LeanCanvasDisplay({ jsonData, onDataChange, readOnly = false }: 
   const handleDataChange = (updatedData: Record<string, string>) => {
     // If we have an onDataChange function, pass the updated data to it
     if (onDataChange) {
+      // Check if this is a deletion operation from JSONDisplay
       const isFromJSONDisplay = updatedData.__source === 'JSONDisplay';
-      // Delete the marker key after checking
       if (isFromJSONDisplay) {
         delete updatedData.__source;
       }
       
-      // When JSON Display is used with the full jsonData, it might modify other fields too
-      // Only process if the data has been modified
+      // Check if data was modified
       if (JSON.stringify(updatedData) !== JSON.stringify(jsonData)) {
-        // Check which keys changed
         const updatedKeys = Object.keys(updatedData);
         const originalKeys = Object.keys(jsonData);
         
-        // Find keys that were deleted (in original but not in updated)
-        const deletedKeys = originalKeys.filter(key => !updatedKeys.includes(key));
+        // IMPORTANT: Detect if this is a single field update from a Lean Canvas section
+        // A single field update will have exactly one key that matches a Lean Canvas key
+        // or will be a special field (title, subtitle, notes, footnotes)
+        const specialKeys = ['title', 'subtitle', 'notes', 'footnotes'];
+        const isSingleFieldUpdate = updatedKeys.length === 1 && 
+          (LEAN_CANVAS_KEYS.some(key => 
+            findKey(updatedData, key) !== null) || 
+            specialKeys.some(key => 
+              findKey(updatedData, key) !== null));
         
-        // Get special keys we should never delete
-        const specialKeys = ['title', 'subtitle', 'notes', 'footnotes', '__source'];
-        // LeanCanvas keys should also be preserved
-        const keysToPreserve = [...specialKeys, ...LEAN_CANVAS_KEYS];
-        
-        // When passed the full jsonData to JSONDisplay, we need to make sure
-        // we don't allow edits to the preserved keys
-        // Only pass through changes to other keys
-        const updatedOtherData: Record<string, string> = {};
-        const keysToConsider = new Set(originalKeys);
-        updatedKeys.forEach(key => keysToConsider.add(key));
-        
-        // For all keys, either keep the original for preserved keys or use updated value
-        Array.from(keysToConsider).forEach(key => {
-          // Check if this is a key we should preserve (case insensitive check)
-          const isPreserved = keysToPreserve.some(
-            preserveKey => key.toLowerCase() === preserveKey.toLowerCase()
-          );
+        if (isSingleFieldUpdate) {
+          // This is a single field update from a Lean Canvas section
+          // We need to merge it with the existing data
+          const singleKey = updatedKeys[0];
+          const singleValue = updatedData[singleKey];
           
-          if (isPreserved) {
-            // For preserved keys, keep the original value
-            if (originalKeys.includes(key)) {
-              updatedOtherData[key] = jsonData[key];
+          // Create a merged object with all original data
+          const mergedData = { ...jsonData };
+          
+          // Find the equivalent key in the original data (case-insensitive)
+          const originalKey = findKey(jsonData, singleKey) || singleKey;
+          
+          // Update the value
+          mergedData[originalKey] = singleValue;
+          
+          // Pass the fully merged data to the parent
+          onDataChange(mergedData);
+        } else if (isFromJSONDisplay) {
+          // This is a deletion operation, just pass it through
+          onDataChange(updatedData);
+        } else {
+          // This could be from the Additional Cards section or another source
+          // Handle the general case, preserving essential keys
+          
+          // Find keys that were deleted (in original but not in updated)
+          const deletedKeys = originalKeys.filter(key => !updatedKeys.includes(key));
+          
+          // Get special keys we should never delete
+          const keysToPreserve = [...specialKeys, ...LEAN_CANVAS_KEYS];
+          
+          // Start with a copy of the original data
+          const updatedOtherData: Record<string, string> = { ...jsonData };
+          
+          // Update any changed keys
+          updatedKeys.forEach(key => {
+            updatedOtherData[key] = updatedData[key];
+          });
+          
+          // Remove any keys that were deleted, unless they're in keysToPreserve
+          deletedKeys.forEach(key => {
+            const isPreserved = keysToPreserve.some(
+              preserveKey => key.toLowerCase() === preserveKey.toLowerCase() ||
+                findKey({ [key]: '' }, preserveKey) !== null
+            );
+            
+            if (!isPreserved) {
+              delete updatedOtherData[key];
             }
-          } else {
-            // For other keys, use the updated value if available, otherwise consider it deleted
-            if (updatedKeys.includes(key)) {
-              updatedOtherData[key] = updatedData[key];
-            }
-          }
-        });
-        
-        onDataChange(updatedOtherData);
+          });
+          
+          onDataChange(updatedOtherData);
+        }
       }
     }
+  };
+
+  // Helper function to get the appropriate prompt for a given key
+  const getPromptForKey = (key: string): string => {
+    // First normalize the key to match our prompt keys format
+    const normalizedKey = key.toLowerCase().replace(/\s+/g, '_');
+    
+    // Try to find a matching prompt
+    for (const promptKey of Object.keys(sectionPrompts)) {
+      if (normalizedKey.includes(promptKey) || promptKey.includes(normalizedKey)) {
+        return sectionPrompts[promptKey];
+      }
+    }
+    
+    // If no specific prompt is found, return a generic one
+    return "Add details here...";
   };
 
   return (
@@ -202,6 +258,9 @@ export function LeanCanvasDisplay({ jsonData, onDataChange, readOnly = false }: 
         readOnly={readOnly}
         disableAddCard={true}
         disableHoverEffects={true}
+        emptyPlaceholder={titleKey && !subtitleKey ? "Your startup" : 
+                         subtitleKey && !titleKey ? "Your mission" : 
+                         "Your startup\n\nYour mission"}
       />
 
       {/* Lean Canvas section */}
@@ -222,6 +281,7 @@ export function LeanCanvasDisplay({ jsonData, onDataChange, readOnly = false }: 
                         disableAddCard={true}
                         disableKeyEdit={true}
                         disableHoverEffects={true}
+                        emptyPlaceholder={getPromptForKey('problem')}
                       />
                     </div>
                   )}
@@ -236,6 +296,7 @@ export function LeanCanvasDisplay({ jsonData, onDataChange, readOnly = false }: 
                         disableAddCard={true}
                         disableKeyEdit={true}
                         disableHoverEffects={true}
+                        emptyPlaceholder={getPromptForKey('existing_alternatives')}
                       />
                     </div>
                   )}
@@ -253,6 +314,7 @@ export function LeanCanvasDisplay({ jsonData, onDataChange, readOnly = false }: 
                       disableAddCard={true}
                       disableKeyEdit={true}
                       disableHoverEffects={true}
+                      emptyPlaceholder={getPromptForKey('solution')}
                     />
                   </div>
                 )}
@@ -270,6 +332,7 @@ export function LeanCanvasDisplay({ jsonData, onDataChange, readOnly = false }: 
                         disableAddCard={true}
                         disableKeyEdit={true}
                         disableHoverEffects={true}
+                        emptyPlaceholder={getPromptForKey('unique_value_proposition')}
                       />
                     </div>
                   )}
@@ -284,6 +347,7 @@ export function LeanCanvasDisplay({ jsonData, onDataChange, readOnly = false }: 
                         disableAddCard={true}
                         disableKeyEdit={true}
                         disableHoverEffects={true}
+                        emptyPlaceholder={getPromptForKey('high_level_concept')}
                       />
                     </div>
                   )}
@@ -301,6 +365,7 @@ export function LeanCanvasDisplay({ jsonData, onDataChange, readOnly = false }: 
                       disableAddCard={true}
                       disableKeyEdit={true}
                       disableHoverEffects={true}
+                      emptyPlaceholder={getPromptForKey('unfair_advantage')}
                     />
                   </div>
                 )}
@@ -318,6 +383,7 @@ export function LeanCanvasDisplay({ jsonData, onDataChange, readOnly = false }: 
                         disableAddCard={true}
                         disableKeyEdit={true}
                         disableHoverEffects={true}
+                        emptyPlaceholder={getPromptForKey('customer_segments')}
                       />
                     </div>
                   )}
@@ -332,6 +398,7 @@ export function LeanCanvasDisplay({ jsonData, onDataChange, readOnly = false }: 
                         disableAddCard={true}
                         disableKeyEdit={true}
                         disableHoverEffects={true}
+                        emptyPlaceholder={getPromptForKey('early_adopters')}
                       />
                     </div>
                   )}
@@ -349,6 +416,7 @@ export function LeanCanvasDisplay({ jsonData, onDataChange, readOnly = false }: 
                       disableAddCard={true}
                       disableKeyEdit={true}
                       disableHoverEffects={true}
+                      emptyPlaceholder={getPromptForKey('key_metrics')}
                     />
                   </div>
                 )}
@@ -365,6 +433,7 @@ export function LeanCanvasDisplay({ jsonData, onDataChange, readOnly = false }: 
                       disableAddCard={true}
                       disableKeyEdit={true}
                       disableHoverEffects={true}
+                      emptyPlaceholder={getPromptForKey('channels')}
                     />
                   </div>
                 )}
@@ -382,6 +451,7 @@ export function LeanCanvasDisplay({ jsonData, onDataChange, readOnly = false }: 
                         disableAddCard={true}
                         disableKeyEdit={true}
                         disableHoverEffects={true}
+                        emptyPlaceholder={getPromptForKey('cost_structure')}
                       />
                     </div>
                   )}
@@ -396,6 +466,7 @@ export function LeanCanvasDisplay({ jsonData, onDataChange, readOnly = false }: 
                         disableAddCard={true}
                         disableKeyEdit={true}
                         disableHoverEffects={true}
+                        emptyPlaceholder={getPromptForKey('revenue_streams')}
                       />
                     </div>
                   )}
@@ -420,7 +491,7 @@ export function LeanCanvasDisplay({ jsonData, onDataChange, readOnly = false }: 
         <h3 className="text-lg font-medium mb-4">Additional Cards</h3>
         {Object.keys(otherData).length > 0 ? (
           <JSONDisplay 
-            jsonData={jsonData}
+            jsonData={otherData}
             onDataChange={handleDataChange}
             readOnly={readOnly}
             editableKeys={Object.keys(otherData)}

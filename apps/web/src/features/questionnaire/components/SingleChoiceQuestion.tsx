@@ -117,10 +117,10 @@ export const SingleChoiceQuestion: React.FC<SingleChoiceQuestionProps> = ({
   };
   
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 flex flex-col h-full">
       {useListLayout ? (
         // List layout for 5+ options
-        <div className="flex flex-col gap-2 mt-4">
+        <div className="flex flex-col gap-1 mt-2 flex-grow overflow-y-auto pr-2">
           {step.options.map((option) => {
             // Treat option as the extended type that may have an icon
             const extendedOption = option as ExtendedQuestionOption;
@@ -224,7 +224,7 @@ export const SingleChoiceQuestion: React.FC<SingleChoiceQuestionProps> = ({
       ) : (
         // Grid layout for fewer options
         <div className={cn(
-          "grid gap-4 mt-4",
+          "grid gap-3 mt-2 pr-2 overflow-y-auto content-start",
           useGridLayout ? "grid-cols-2" : "grid-cols-1"
         )}>
           {step.options.map((option) => {
@@ -313,7 +313,7 @@ export const SingleChoiceQuestion: React.FC<SingleChoiceQuestionProps> = ({
       
       {/* Only show the Continue button if there's a conditional input for the selected option */}
       {selectedOptionHasConditionalInput && (
-        <div className="mt-4">
+        <div className="mt-3 flex-shrink-0">
           <Button
             onClick={handleContinue}
             className="w-full"

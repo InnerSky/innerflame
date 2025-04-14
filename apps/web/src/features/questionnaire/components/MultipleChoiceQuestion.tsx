@@ -180,10 +180,10 @@ export const MultipleChoiceQuestion: React.FC<MultipleChoiceQuestionProps> = ({
   });
   
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col h-full">
       {useListLayout ? (
         // List layout for 5+ options
-        <div className="flex flex-col gap-2 mt-4">
+        <div className="flex flex-col gap-1 mt-2 flex-grow overflow-y-auto pr-2">
           {step.options.map((option) => {
             // Treat option as the extended type that may have an icon
             const extendedOption = option as ExtendedQuestionOption;
@@ -197,7 +197,7 @@ export const MultipleChoiceQuestion: React.FC<MultipleChoiceQuestionProps> = ({
                 key={option.value}
                 className={cn(
                   "transition-all duration-300",
-                  isSelected && extendedOption.conditionalInput && "pb-2"
+                  isSelected && extendedOption.conditionalInput && "pb-1"
                 )}
               >
                 <button
@@ -306,7 +306,7 @@ export const MultipleChoiceQuestion: React.FC<MultipleChoiceQuestionProps> = ({
       ) : (
         // Grid layout for fewer options
         <div className={cn(
-          "grid gap-4 mt-4",
+          "grid gap-3 mt-2 pr-2 overflow-y-auto content-start",
           useGridLayout ? "grid-cols-2" : "grid-cols-1"
         )}>
           {step.options.map((option) => {
@@ -322,7 +322,7 @@ export const MultipleChoiceQuestion: React.FC<MultipleChoiceQuestionProps> = ({
                 key={option.value}
                 className={cn(
                   "transition-all duration-300",
-                  isSelected && extendedOption.conditionalInput && "pb-2"
+                  isSelected && extendedOption.conditionalInput && "pb-1"
                 )}
               >
                 <button
@@ -418,8 +418,8 @@ export const MultipleChoiceQuestion: React.FC<MultipleChoiceQuestionProps> = ({
       )}
       
       {/* Continue button */}
-      <div className="mt-6">
-        <p className="text-sm text-muted-foreground mb-2">
+      <div className="mt-3 flex-shrink-0">
+        <p className="text-xs text-muted-foreground mb-1">
           {getSelectionCountText()}
         </p>
         <Button

@@ -6,7 +6,6 @@ import { Separator } from "@/components/ui/separator";
 import {
   BookOpen,
   Search,
-  TrendingUp,
   Filter,
   ChevronDown,
   X
@@ -54,8 +53,6 @@ export default function Articles() {
                          (article.excerpt?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false);
     return matchesCategory && matchesSearch;
   });
-
-  const trendingArticles = filteredArticles.slice(0, 3);
 
   return (
     <div className="min-h-screen bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-orange-50 via-white to-white dark:from-neutral-950 dark:via-neutral-900 dark:to-neutral-900">
@@ -127,23 +124,6 @@ export default function Articles() {
       {/* Articles Grid */}
       <section className="py-6 sm:py-8">
         <div className="mx-auto max-w-7xl px-4 sm:px-6">
-          {/* Trending Articles */}
-          <AnimatedSection className="mb-8">
-            <div className="flex items-center gap-2 mb-4">
-              <TrendingUp className="h-5 w-5 text-orange-500" />
-              <h2 className="text-xl sm:text-2xl font-semibold">Trending Now</h2>
-            </div>
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {trendingArticles.map(article => (
-                <AnimatedSection key={article.id}>
-                  <ArticleCard article={article} />
-                </AnimatedSection>
-              ))}
-            </div>
-          </AnimatedSection>
-
-          <Separator className="my-8" />
-
           {/* All Articles */}
           <AnimatedSection>
             <div className="flex items-center justify-between mb-6">
@@ -158,11 +138,13 @@ export default function Articles() {
             {loading ? (
               <div className="text-center py-12">Loading articles...</div>
             ) : (
-              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="columns-1 sm:columns-2 lg:columns-3 gap-6">
                 {filteredArticles.map(article => (
-                  <AnimatedSection key={article.id}>
-                    <ArticleCard article={article} />
-                  </AnimatedSection>
+                  <div key={article.id} className="mb-6 break-inside-avoid">
+                    <AnimatedSection>
+                      <ArticleCard article={article} />
+                    </AnimatedSection>
+                  </div>
                 ))}
               </div>
             )}

@@ -11,6 +11,10 @@ npm run reset-dev
 npm run build
 npx netlify deploy --prod
 
+SQL created function:
+SELECT delete_user_by_id('user_id');
+SELECT delete_anonymous_users();
+
 ---
 
 # PROMPTS

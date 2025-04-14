@@ -13,8 +13,8 @@ export const InfoStep: React.FC<InfoStepProps> = ({ step, onContinue }) => {
   const hasContent = step.title || step.subtitle || step.body || step.description;
   
   return (
-    <div className="p-6 bg-card rounded-lg shadow-sm border border-border/40">
-      <header className="mb-6">
+    <div className="p-4 flex flex-col h-full">
+      <header className="mb-3 flex-shrink-0">
         {/* Title (if available) */}
         {step.title && (
           <h2 className="text-2xl font-semibold leading-tight">{step.title}</h2>
@@ -22,11 +22,11 @@ export const InfoStep: React.FC<InfoStepProps> = ({ step, onContinue }) => {
         
         {/* Subtitle (if available) */}
         {step.subtitle && (
-          <h3 className="text-xl text-muted-foreground mt-2">{step.subtitle}</h3>
+          <h3 className="text-xl text-muted-foreground mt-1">{step.subtitle}</h3>
         )}
       </header>
       
-      <div className="space-y-4">
+      <div className="space-y-3 flex-grow overflow-y-auto">
         {/* For backwards compatibility, check if description exists */}
         {step.description && (
           <p className="text-muted-foreground">{step.description}</p>
@@ -34,11 +34,11 @@ export const InfoStep: React.FC<InfoStepProps> = ({ step, onContinue }) => {
         
         {/* Image (if available) - moved above body text */}
         {step.imageUrl && (
-          <div className={cn("my-4")}>
+          <div className={cn("my-3")}>
             <img 
               src={step.imageUrl} 
               alt="Informational graphic" 
-              className="mx-auto max-w-full h-auto rounded-md"
+              className="mx-auto max-w-full h-auto max-h-[50vh] rounded-md object-contain"
             />
           </div>
         )}
@@ -58,7 +58,7 @@ export const InfoStep: React.FC<InfoStepProps> = ({ step, onContinue }) => {
       
       <Button
         onClick={onContinue}
-        className="w-full mt-6"
+        className="w-full mt-4 flex-shrink-0"
       >
         {step.buttonText}
       </Button>

@@ -19,57 +19,54 @@ export class AnonymousAuthService {
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
       
       if (!sessionError && session?.user) {
-        console.log('Existing session found');
         // If user exists and is anonymous, return it
         if (this.isAnonymousUser(session.user)) {
-          console.log('User is already anonymous');
           return session.user;
         }
         
         // If user exists but isn't anonymous, we don't want to replace their session
-        console.log('User is signed in but not anonymous');
         return null;
       }
       
-      // First we'll check if anonymous auth is properly configured by calling an admin endpoint
-      // try {
-      //   const { data: configData, error: configError } = await supabase.functions.invoke('check-anonymous-auth', {
-      //     method: 'GET'
-      //   });
-      //   
-      //   if (configError) {
-      //     console.warn('Anonymous auth check failed, attempting direct sign in:', configError);
-      //   } else {
-      //     console.log('Anonymous auth configuration status:', configData);
-      //   }
-      // } catch (e) {
-      //   console.warn('Could not verify anonymous auth configuration:', e);
-      // }
+      // Check if we have any auth tokens in localStorage before attempting to sign in
+      // This helps prevent race conditions where sign-out is happening simultaneously
+      const hasLocalStorageTokens = this.hasAuthTokensInLocalStorage();
+      if (hasLocalStorageTokens) {
+        // Wait a moment to let potential sign-out operations complete
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        // Re-check session after brief delay
+        const { data: { session: recheckedSession } } = await supabase.auth.getSession();
+        if (recheckedSession?.user) {
+          if (this.isAnonymousUser(recheckedSession.user)) {
+            return recheckedSession.user;
+          }
+          return null;
+        }
+      }
       
-      console.log('No existing session, creating anonymous user');
       // No existing session, create anonymous user
       const { data, error } = await supabase.auth.signInAnonymously();
       
       if (error) {
-        console.error('Error signing in anonymously:', error);
-        
-        // If we get a database error, it might be a configuration issue
-        if (error.message.includes('Database error')) {
-          console.error('Supabase database error - please verify anonymous auth is fully configured.');
-          console.info('Check if you need to run migrations or have proper database tables for anonymous users.');
-        }
-        
         throw error;
       }
       
-      console.log('Anonymous user created successfully:', data.user?.id);
       return data.user;
     } catch (error) {
-      console.error('Error in getOrCreateAnonymousUser:', error);
-      
       // Return null but don't fail completely - this allows the app to function even if anonymous auth fails
       return null;
     }
+  }
+
+  /**
+   * Helper function to check if auth tokens exist in localStorage
+   */
+  private hasAuthTokensInLocalStorage(): boolean {
+    return !!(
+      localStorage.getItem('supabase.auth.token') || 
+      localStorage.getItem('sb-lpxnyybizytwcqdqasll-auth-token')
+    );
   }
 
   /**
@@ -96,7 +93,6 @@ export class AnonymousAuthService {
       
       return { user: data.user, error: null };
     } catch (error) {
-      console.error('Error converting to email user:', error);
       return { 
         user: null, 
         error: error instanceof Error ? error : new Error('Unknown error')
@@ -117,10 +113,75 @@ export class AnonymousAuthService {
       
       return { user: data.user, error: null };
     } catch (error) {
-      console.error('Error setting password:', error);
       return { 
         user: null, 
         error: error instanceof Error ? error : new Error('Unknown error')
+      };
+    }
+  }
+
+  /**
+   * Convert anonymous user to registered user by linking with Google
+   * This is a higher-level method that wraps the linkIdentity functionality
+   * with better error handling and verification
+   */
+  async convertAnonymousToRegisteredUser(provider: 'google'): Promise<{ success: boolean, error: Error | null }> {
+    try {
+      // Verify current user is anonymous
+      const { data: { user: currentUser }, error: userError } = await supabase.auth.getUser();
+      
+      if (userError) {
+        return { 
+          success: false, 
+          error: new Error(`Failed to get current user: ${userError.message}`) 
+        };
+      }
+      
+      if (!currentUser) {
+        return { 
+          success: false, 
+          error: new Error('No user is currently signed in')
+        };
+      }
+      
+      if (!this.isAnonymousUser(currentUser)) {
+        return {
+          success: false,
+          error: new Error('Current user is already a registered user')
+        };
+      }
+      
+      // Proceed with linking
+      if (provider === 'google') {
+        const { error } = await supabase.auth.linkIdentity({
+          provider: 'google',
+          options: {
+            redirectTo: `${window.location.origin}/auth/callback`,
+            queryParams: {
+              access_type: 'offline',
+              prompt: 'select_account'
+            }
+          }
+        });
+        
+        if (error) {
+          return {
+            success: false,
+            error: new Error(`Failed to link with ${provider}: ${error.message}`)
+          };
+        }
+        
+        return { success: true, error: null };
+      }
+      
+      return {
+        success: false,
+        error: new Error(`Unsupported provider: ${provider}`)
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error : new Error('Unknown error during conversion')
       };
     }
   }

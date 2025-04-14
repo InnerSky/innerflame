@@ -42,12 +42,6 @@ function LeanCanvasContent({
           // Mark that we've triggered the AI to avoid duplicate messages
           setHasTriggeredAI(true);
           
-          // Show toast notification
-          toast({
-            title: "AI Assistant",
-            description: "I'll help you fill out your Lean Canvas based on your idea.",
-          });
-          
           // Send message using the chat interface ref
           if (chatInterfaceRef.current) {
             await chatInterfaceRef.current.sendMessage(
@@ -68,7 +62,7 @@ function LeanCanvasContent({
       
       return () => clearTimeout(timer);
     }
-  }, [initialIdea, selectedDocument, hasTriggeredAI, loading, chatInterfaceRef, toast, onIdeaProcessed]);
+  }, [initialIdea, selectedDocument, hasTriggeredAI, loading, chatInterfaceRef, onIdeaProcessed]);
 
   return (
     <div className="absolute inset-0">
@@ -493,8 +487,8 @@ export default function LeanCanvas() {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen gap-4 p-4">
         <div className="text-lg text-red-500">{error}</div>
-        <Link to="/documents">
-          <Button variant="outline">Back to Documents</Button>
+        <Link to="/">
+          <Button variant="outline">Back to Home</Button>
         </Link>
       </div>
     );
@@ -508,8 +502,8 @@ export default function LeanCanvas() {
         <p className="text-gray-600 dark:text-gray-400 mb-6">
           Mobile layout coming soon. Please use a desktop device to view and edit your Lean Canvas.
         </p>
-        <Link to="/documents">
-          <Button>Return to Documents</Button>
+        <Link to="/">
+          <Button>Return to Home</Button>
         </Link>
       </div>
     );

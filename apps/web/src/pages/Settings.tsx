@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -24,25 +24,92 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { deleteAccount } from "@/lib/auth";
+import { userService } from "@/features/auth/services/userService";
 
 export default function Settings() {
   const { user, signOut } = useAuth();
   const { theme, setTheme } = useTheme();
   const navigate = useNavigate();
   const [profileForm, setProfileForm] = useState({
-    name: user?.user_metadata?.full_name || "",
+    name: user?.user_metadata?.full_name || user?.user_metadata?.name || "",
     email: user?.email || "",
-    bio: ""
+    bio: user?.user_metadata?.bio || ""
   });
   const [deleteConfirm, setDeleteConfirm] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // Update form data immediately when user changes
+  useEffect(() => {
+    if (user) {
+      setProfileForm({
+        name: user.user_metadata?.full_name || user.user_metadata?.name || "",
+        email: user.email || "",
+        bio: user.user_metadata?.bio || ""
+      });
+    }
+  }, [user]);
+
+  // Refresh JWT in background - don't block UI
+  useEffect(() => {
+    let isMounted = true;
+    
+    // Only refresh if we have a user
+    if (user?.id) {
+      setIsRefreshing(true);
+      
+      // Perform background refresh without blocking UI
+      userService.refreshUserSession()
+        .then(() => {
+          // Only update state if component is still mounted
+          if (isMounted) setIsRefreshing(false);
+        })
+        .catch((err: Error) => {
+          console.error('Error refreshing session:', err);
+          if (isMounted) setIsRefreshing(false);
+        });
+    }
+    
+    return () => { isMounted = false; };
+  }, [user?.id]); // Only depend on user ID to avoid unnecessary refreshes
 
   const handleProfileChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setProfileForm({
       ...profileForm,
       [e.target.name]: e.target.value
     });
+  };
+
+  const handleSaveProfile = async () => {
+    if (!user) return;
+    
+    setIsSaving(true);
+    setSaveSuccess(false);
+    setError(null);
+    
+    try {
+      const { error } = await userService.updateProfile(user.id, {
+        fullName: profileForm.name,
+        bio: profileForm.bio
+      });
+      
+      if (error) {
+        setError(error);
+      } else {
+        setSaveSuccess(true);
+        // Reset after 3 seconds
+        setTimeout(() => {
+          setSaveSuccess(false);
+        }, 3000);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred while saving your profile');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleDeleteAccount = async () => {
@@ -157,8 +224,24 @@ export default function Settings() {
               </div>
               
               <div className="flex justify-end">
-                <Button>Save Changes</Button>
+                <Button onClick={handleSaveProfile} disabled={isSaving}>
+                  {isSaving ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Saving...
+                    </>
+                  ) : saveSuccess ? (
+                    "Saved!"
+                  ) : (
+                    "Save Changes"
+                  )}
+                </Button>
               </div>
+              {error && (
+                <Alert variant="destructive" className="mt-4">
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -349,38 +432,6 @@ export default function Settings() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="space-y-4">
-                <h3 className="font-medium">Documents</h3>
-                <div className="rounded-lg border p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium">Manage Documents</p>
-                      <p className="text-sm text-muted-foreground">Access your documents and projects</p>
-                    </div>
-                    <Button onClick={() => navigate('/documents')}>
-                      <FileText className="h-4 w-4 mr-2" />
-                      Documents
-                    </Button>
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <h3 className="font-medium">Security</h3>
-                
-                <div className="rounded-lg border p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium">Password</p>
-                      <p className="text-sm text-muted-foreground">Change your password</p>
-                    </div>
-                    <Button variant="outline" size="sm">Change</Button>
-                  </div>
-                </div>
-              </div>
-
-              <Separator />
-
               <div className="pt-4">
                 <Dialog>
                   <DialogTrigger asChild>
