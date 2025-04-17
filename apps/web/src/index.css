@@ -1,5 +1,8 @@
+/* postcss-ignore-next-line */
 @tailwind base;
+/* postcss-ignore-next-line */
 @tailwind components;
+/* postcss-ignore-next-line */
 @tailwind utilities;
 
 @layer base {
@@ -50,15 +53,18 @@
 }
 
 @layer base {
+  /* postcss-ignore-next-line */
   * {
     @apply border-border;
   }
+  /* postcss-ignore-next-line */
   body {
     @apply bg-background text-foreground;
     font-feature-settings: "rlig" 1, "calt" 1;
   }
   
   /* Prevent zoom on iOS by ensuring minimum 16px font size on all text inputs */
+  /* postcss-ignore-next-line */
   input, 
   textarea, 
   select,
@@ -183,5 +189,26 @@ html {
   
   .dark * {
     scrollbar-color: hsl(var(--primary) / 0.7) hsl(var(--secondary) / 0.2);
+  }
+
+  /* Highlight animation for Lean Canvas sections */
+  .highlight-animation {
+    transform-origin: center;
+    animation: delayed-scale 1.5s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+}
+
+@keyframes delayed-scale {
+  0%, 30% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.03);
+  }
+  70% {
+    transform: scale(1.03);
+  }
+  100% {
+    transform: scale(1);
   }
 }

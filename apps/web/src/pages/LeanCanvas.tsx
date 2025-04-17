@@ -4,7 +4,7 @@ import { Document } from '@/features/documents/models/document.js';
 import { Button } from '@/components/ui/button';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Laptop } from 'lucide-react';
-import { LeanCanvasDesktop } from '@/features/documents/components/lean-canvas/index.js';
+import { LeanCanvasLayout } from '@/features/documents/components/lean-canvas/LeanCanvasLayout.js';
 import leanCanvasService from '@/features/documents/services/leanCanvasService.js';
 import { useToast } from '@/hooks/use-toast.ts';
 import { DocumentsProvider, useDocumentsContext } from '@/features/documents/contexts/DocumentsContext.js';
@@ -66,7 +66,7 @@ function LeanCanvasContent({
 
   return (
     <div className="absolute inset-0">
-      <LeanCanvasDesktop 
+      <LeanCanvasLayout 
         jsonData={jsonData}
         onDataChange={onDataChange}
         chatInterfaceRef={chatInterfaceRef}
@@ -100,7 +100,6 @@ export default function LeanCanvas() {
   // UI state
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isMobile, setIsMobile] = useState(false);
   
   // Project state (needed for context but not used in LeanCanvas)
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
@@ -113,22 +112,6 @@ export default function LeanCanvas() {
       navigate(location.pathname, { replace: true });
     }
   }, [location.pathname, location.state?.initialIdea, navigate]);
-
-  // Check if the device is mobile
-  useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-    
-    // Initial check
-    checkMobile();
-    
-    // Add event listener for window resize
-    window.addEventListener('resize', checkMobile);
-    
-    // Cleanup
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
 
   // Load the lean canvas document
   useEffect(() => {
@@ -489,21 +472,6 @@ export default function LeanCanvas() {
         <div className="text-lg text-red-500">{error}</div>
         <Link to="/">
           <Button variant="outline">Back to Home</Button>
-        </Link>
-      </div>
-    );
-  }
-
-  if (isMobile) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen p-6 text-center">
-        <Laptop className="h-16 w-16 mb-4 text-gray-400" />
-        <h2 className="text-2xl font-bold mb-2">Desktop View Recommended</h2>
-        <p className="text-gray-600 dark:text-gray-400 mb-6">
-          Mobile layout coming soon. Please use a desktop device to view and edit your Lean Canvas.
-        </p>
-        <Link to="/">
-          <Button>Return to Home</Button>
         </Link>
       </div>
     );

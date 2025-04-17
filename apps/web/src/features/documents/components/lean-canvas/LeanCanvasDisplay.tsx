@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
 import { JSONDisplay } from '../JSONDisplay';
 import { Card } from '@/components/ui/card';
-import { Plus } from 'lucide-react';
+import { Plus, ChevronRight } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface LeanCanvasDisplayProps {
   jsonData: Record<string, string> | null;
@@ -41,7 +42,76 @@ const sectionPrompts: Record<string, string> = {
   revenue_streams: "**How will you make money?**\n\nDescribe how your business will earn money from each customer segment."
 };
 
+// Define display names for the navigation buttons
+const sectionDisplayNames: Record<string, string> = {
+  customer_segments: "Customers",
+  early_adopters: "Adopters",
+  problem: "Problem",
+  existing_alternatives: "Alternatives",
+  unique_value_proposition: "Value Prop",
+  high_level_concept: "Concept",
+  solution: "Solution",
+  channels: "Channels",
+  revenue_streams: "Revenue",
+  cost_structure: "Costs",
+  key_metrics: "Metrics",
+  unfair_advantage: "Advantage"
+};
+
 export function LeanCanvasDisplay({ jsonData, onDataChange, readOnly = false }: LeanCanvasDisplayProps) {
+  // Create refs for each section
+  const sectionRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const headerRef = useRef<HTMLDivElement | null>(null);
+  const [headerHeight, setHeaderHeight] = React.useState(0);
+  
+  // Measure the header height when component mounts and on window resize
+  useEffect(() => {
+    const measureHeaderHeight = () => {
+      if (headerRef.current) {
+        const height = headerRef.current.offsetHeight;
+        setHeaderHeight(height);
+        
+        // Set the CSS variable with the measured height plus some padding
+        const scrollMargin = height + 16; // Add 16px padding (4px rem)
+        document.documentElement.style.setProperty('--header-scroll-margin', `${scrollMargin}px`);
+      }
+    };
+    
+    // Measure immediately
+    measureHeaderHeight();
+    
+    // Also measure on resize
+    window.addEventListener('resize', measureHeaderHeight);
+    
+    return () => {
+      window.removeEventListener('resize', measureHeaderHeight);
+    };
+  }, []);
+  
+  // Function to scroll to a section with correct offset
+  const scrollToSection = (sectionName: string) => {
+    const element = document.getElementById(`section-${sectionName}`);
+    
+    if (element) {
+      // Apply the calculated header height plus padding as scroll-margin-top
+      element.style.scrollMarginTop = `${headerHeight + 16}px`;
+      
+      // Scroll to the element
+      element.scrollIntoView({ 
+        behavior: 'smooth',
+        block: 'start'
+      });
+      
+      // Apply highlight animation classes
+      element.classList.add('highlight-animation');
+      
+      // Remove the highlight classes after animation completes
+      setTimeout(() => {
+        element.classList.remove('highlight-animation');
+      }, 1500);
+    }
+  };
+  
   if (!jsonData) {
     return (
       <div className="flex items-center justify-center h-full text-muted-foreground">
@@ -246,6 +316,88 @@ export function LeanCanvasDisplay({ jsonData, onDataChange, readOnly = false }: 
     return "Add details here...";
   };
 
+  // Create a list of all lean canvas sections for mobile view
+  const renderMobileCards = () => {
+    // Define the exact order of sections to display
+    const orderedSections = [
+      'customer_segments',
+      'early_adopters',
+      'problem',
+      'existing_alternatives',
+      'unique_value_proposition',
+      'high_level_concept',
+      'solution',
+      'channels',
+      'revenue_streams',
+      'cost_structure',
+      'key_metrics',
+      'unfair_advantage'
+    ];
+    
+    return (
+      <div className="md:hidden">
+        {/* Navigation Panel */}
+        <div 
+          ref={headerRef}
+          className="sticky top-0 z-10 bg-background/95 backdrop-blur shadow-sm border-b pb-2 pt-2" 
+        >
+          <div className="flex flex-wrap gap-1 justify-center px-2">
+            {orderedSections.map(sectionName => {
+              const key = findKey(jsonData, sectionName);
+              if (key) {
+                return (
+                  <Button 
+                    key={`nav-${sectionName}`} 
+                    variant="outline" 
+                    size="sm" 
+                    className="text-xs py-1 h-7"
+                    onClick={() => scrollToSection(sectionName)}
+                  >
+                    {sectionDisplayNames[sectionName]}
+                  </Button>
+                );
+              }
+              return null;
+            })}
+          </div>
+        </div>
+
+        {/* Cards with scroll-margin-top to prevent header overlap */}
+        <div className="pt-4">
+          <div className="grid grid-cols-1 gap-4">
+            {orderedSections.map((sectionName, index) => {
+              const key = findKey(jsonData, sectionName);
+              if (key) {
+                // Use different styling for main vs secondary sections
+                const isSecondary = ['existing_alternatives', 'high_level_concept', 'early_adopters'].includes(sectionName);
+                
+                return (
+                  <div 
+                    key={key} 
+                    className={`rounded-xl ${isSecondary ? 'bg-muted/5' : ''}`}
+                    id={`section-${sectionName}`}
+                    style={{ scrollMarginTop: `${headerHeight + 16}px` }}
+                  >
+                    <JSONDisplay 
+                      jsonData={{ [key.toUpperCase()]: jsonData[key] }}
+                      onDataChange={handleDataChange}
+                      readOnly={readOnly}
+                      disableAddCard={true}
+                      disableKeyEdit={true}
+                      disableHoverEffects={false}
+                      emptyPlaceholder={getPromptForKey(key)}
+                    />
+                  </div>
+                );
+              }
+              return null;
+            })}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="w-full max-w-full py-5">
       {/* Title and subtitle section */}
@@ -266,7 +418,10 @@ export function LeanCanvasDisplay({ jsonData, onDataChange, readOnly = false }: 
       {/* Lean Canvas section */}
       {Object.keys(leanCanvasData).length > 0 && (
         <div className="mb-6">
-          {/* Lean Canvas Visual Framework */}
+          {/* Mobile Cards View */}
+          {renderMobileCards()}
+          
+          {/* Desktop Lean Canvas Visual Framework */}
           <div className="w-full rounded-lg border-2 border-gray-300 dark:border-gray-600 mb-6 hidden md:block overflow-hidden [&_.lean-canvas-card]:w-full [&_.lean-canvas-card>div]:w-full [&_.lean-canvas-card>div_.card]:!border-0 [&_.lean-canvas-card>div_.card]:!shadow-none [&_.lean-canvas-card>div_.card]:!bg-transparent [&_.lean-canvas-card>div_.card]:flex [&_.lean-canvas-card>div_.card]:flex-col [&_.lean-canvas-card>div_.card-header]:!p-3 [&_.lean-canvas-card>div_.card-content]:flex-1 [&_.lean-canvas-card>div_.card-content]:!p-3 [&_.lean-canvas-card>div_.grid]:!grid-cols-1 [&_div.overflow-hidden.border]:!rounded-none [&_div.overflow-hidden.border]:!border-0 [&_div.overflow-hidden]:!border-0 [&_div.overflow-hidden]:!ring-0 [&_div.overflow-hidden.group]:!border-0 [&_div.overflow-hidden.group]:hover:!border-0 [&_.card-title]:!uppercase [&_.card-title]:!normal-case [--divider-color:theme(colors.gray.300)] dark:[--divider-color:theme(colors.gray.600)] [&_*]:!box-border">
             <div className="grid grid-cols-5 text-sm text-muted-foreground min-h-[16rem] divide-y divide-muted relative">
               {/* Problem cell spans two rows */}
