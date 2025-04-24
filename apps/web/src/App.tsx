@@ -22,6 +22,7 @@ import Home from "./pages/Home";
 import Articles from "./pages/Articles";
 import Article from "./pages/Article";
 import FoundersLab from "./pages/FoundersLab";
+import FoundersLabV2 from "./pages/FoundersLabV2";
 import AuthCallback from "./pages/AuthCallback";
 import AdminPage from "./pages/Admin";
 import Settings from "./pages/Settings";
@@ -461,6 +462,7 @@ function AppContent() {
             </Button>
 
             <div className="hidden lg:flex items-center gap-6">
+              {/* Navigation links temporarily hidden
               <Link to="/articles">
                 <Button variant="ghost" className="group">
                   Articles
@@ -480,6 +482,7 @@ function AppContent() {
                 </Button>
               </Link>
               <Separator orientation="vertical" className="h-6" />
+              */}
               <ThemeToggle />
               <ProfileMenu />
             </div>
@@ -490,6 +493,7 @@ function AppContent() {
             className={`lg:hidden ${isMenuOpen ? 'block' : 'hidden'} border-t bg-white/95 dark:bg-neutral-900/95 backdrop-blur-xl`}
           >
             <div className="space-y-2 p-4">
+              {/* Mobile navigation links temporarily hidden
               <Link to="/articles">
                 <Button variant="ghost" className="w-full justify-start text-sm sm:text-base">
                   Articles
@@ -509,6 +513,7 @@ function AppContent() {
                 </Button>
               </Link>
               <Separator className="my-3" />
+              */}
               <ThemeButtonMobile />
               <Separator className="my-3" />
               <ProfileMenu isMobile={true} onOpenChange={setIsMenuOpen} />
@@ -519,11 +524,12 @@ function AppContent() {
 
       <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Loading...</div>}>
         <Routes>
-          <Route path="/" element={<FoundersLab />} />
+          <Route path="/" element={<FoundersLabV2 />} />
           <Route path="/home" element={<Home />} />
           <Route path="/articles" element={<Articles />} />
           <Route path="/article/:slug" element={<Article />} />
           <Route path="/founders-lab" element={<FoundersLab />} />
+          <Route path="/founders-lab-v2" element={<FoundersLabV2 />} />
           <Route path="/auth/callback" element={<AuthCallback />} />
           <Route path="/admin" element={<AdminPage />} />
           <Route path="/documents" element={<Documents />} />
@@ -539,7 +545,7 @@ function AppContent() {
       {!hideNavAndFooter && (
         <footer className="border-t bg-gradient-to-b from-white to-orange-50/30 py-12 sm:py-16 dark:from-neutral-900 dark:to-neutral-900/80">
           <div className="mx-auto max-w-7xl px-4 sm:px-6">
-            <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-3">
               <div className="text-center sm:text-left">
                 <div className="flex items-center justify-center sm:justify-start gap-2">
                   <div className="relative">
@@ -553,7 +559,7 @@ function AppContent() {
                   <span className="text-lg sm:text-xl font-semibold">InnerFlame</span>
                 </div>
                 <p className="mt-4 sm:mt-5 text-xs sm:text-sm text-muted-foreground">
-                  Empowering founders with the mental tools and insights they need to thrive.
+                Empowering founders with an intelligent game-plan that grows alongside their vision.
                 </p>
               </div>
               
@@ -562,12 +568,6 @@ function AppContent() {
                 <div className="mt-4 sm:mt-5 flex flex-col gap-3 items-center sm:items-start">
                   <Link to="/articles">
                     <Button variant="link" className="h-auto p-0 text-xs sm:text-sm hover:text-orange-500 transition-colors">Articles</Button>
-                  </Link>
-                  <Link to="/founders-lab">
-                    <Button variant="link" className="h-auto p-0 text-xs sm:text-sm hover:text-orange-500 transition-colors">Founder's Lab</Button>
-                  </Link>
-                  <Link to="/documents">
-                    <Button variant="link" className="h-auto p-0 text-xs sm:text-sm hover:text-orange-500 transition-colors">Documents</Button>
                   </Link>
                 </div>
               </div>
@@ -582,25 +582,6 @@ function AppContent() {
                     <Button variant="link" className="h-auto p-0 text-xs sm:text-sm hover:text-orange-500 transition-colors">Usage Policy</Button>
                   </Link>
                 </div>
-              </div>
-
-              <div className="text-center sm:text-left">
-                <h4 className="text-sm sm:text-base font-semibold bg-gradient-to-r from-orange-500 to-red-500 bg-clip-text text-transparent">Newsletter</h4>
-                <p className="mt-4 sm:mt-5 text-xs sm:text-sm text-muted-foreground text-center sm:text-left">
-                  Subscribe to get the latest insights and updates.
-                </p>
-                <form onSubmit={(e) => e.preventDefault()} className="mt-4 sm:mt-5">
-                  <div className="flex gap-2">
-                    <Input
-                      type="email"
-                      placeholder="Enter your email"
-                      className="h-9 sm:h-10 text-xs sm:text-sm border-orange-200 focus:border-orange-400 focus:ring-orange-400 transition-colors"
-                    />
-                    <Button type="submit" size="sm" className="text-xs sm:text-sm bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 transition-all duration-300 border-0">
-                      Subscribe
-                    </Button>
-                  </div>
-                </form>
               </div>
             </div>
             
