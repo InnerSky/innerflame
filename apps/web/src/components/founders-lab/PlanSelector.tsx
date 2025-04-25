@@ -1,8 +1,10 @@
 import { Button } from "@/components/ui/button";
 import { Check } from "lucide-react";
+import { useTracking } from "@/contexts/TrackingContext.js";
+import React, { ReactNode } from "react";
 
 type PlanFeature = {
-  text: string;
+  text: string | ReactNode;
 };
 
 type PlanProps = {
@@ -45,7 +47,7 @@ const Plan = ({
         <ul className="space-y-2">
           {features.map((feature, index) => (
             <li key={index} className="flex">
-              <Check className="h-5 w-5 text-orange-500 shrink-0 mr-2" />
+              <Check className="h-5 w-5 text-orange-500 shrink-0 mr-2 mt-0.5" />
               <span className="text-neutral-700 dark:text-neutral-300">{feature.text}</span>
             </li>
           ))}
@@ -72,25 +74,63 @@ const Plan = ({
   );
 };
 
-export const PlanSelector = () => {
+interface PlanSelectorProps {
+  onFreePlanClick?: () => void;
+  onPlusPlanClick?: () => void;
+}
+
+export const PlanSelector = ({ onFreePlanClick, onPlusPlanClick }: PlanSelectorProps) => {
+  const { trackButtonClick } = useTracking();
+  
   const freePlanFeatures = [
-    { text: "Create 1 Lean Canvas" },
+    { text: "1 Lean Canvas" },
     { text: "1 active project" },
     { text: "1,000 AI Mentor credits" },
-    { text: "Access to basic AI model" },
+    { text: "Basic AI model" },
     { text: "Save & share live Lean Canvas link" },
   ];
   
   const plusPlanFeatures = [
     { text: "Everything in Free, plus…" },
-    { text: "Unlimited strategy docs (Ikigai, Golden Circle, Experiment Plans, Metrics Dashboards)" },
-    { text: "Branch your docs" },
+    { text: "Unlimited documents" },
+    { 
+      text: (
+        <span>
+          10+ Traction Game Plan docs: <span className="text-xs italic text-neutral-600 dark:text-neutral-400">
+            Lean Canvas, Golden Circle Narrative, Ikigai Map, Origin Story, Elevator Pitch, Customer Journey Map, Value-Equation Worksheet, Funnel Design, Future Press Release, Customer Interview, and more
+          </span>
+        </span>
+      )
+    },
     { text: "10,000 AI Mentor credits / mo" },
-    { text: "Access to Advanced AI models" },
+    { text: "Advanced AI models" },
+    { text: "Guided Traction Flywheel to Build-Measure-Learn" },
+    { text: "Document version control" },
     { text: "Full Startup Knowledge Vault" },
-    { text: "Experiment autolog + progress timeline" },
     { text: "Early access to new AI features" }
   ];
+  
+  const handleFreePlanClick = () => {
+    trackButtonClick("select_free_plan", {
+      data: {
+        plan: "Free",
+        price: "$0"
+      }
+    });
+    // Call the callback if provided
+    if (onFreePlanClick) onFreePlanClick();
+  };
+  
+  const handlePlusPlanClick = () => {
+    trackButtonClick("select_plus_plan", {
+      data: {
+        plan: "Plus", 
+        price: "$79"
+      }
+    });
+    // Call the callback if provided
+    if (onPlusPlanClick) onPlusPlanClick();
+  };
   
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 w-full max-w-6xl mx-auto">
@@ -102,7 +142,7 @@ export const PlanSelector = () => {
         features={freePlanFeatures}
         buttonText="Get Free"
         bestFor="First‑time founders sketching an idea"
-        onButtonClick={() => {}}
+        onButtonClick={handleFreePlanClick}
       />
       
       <Plan
@@ -113,7 +153,7 @@ export const PlanSelector = () => {
         features={plusPlanFeatures}
         buttonText="Upgrade to Plus"
         bestFor="Founders committed to running weekly experiments & winning customers"
-        onButtonClick={() => {}}
+        onButtonClick={handlePlusPlanClick}
       />
     </div>
   );

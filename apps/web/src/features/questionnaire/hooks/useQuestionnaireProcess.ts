@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { toast } from 'sonner';
 import { 
   Questionnaire,
@@ -61,6 +61,7 @@ export function useQuestionnaireProcess(
   const [isLoading, setIsLoading] = useState(true);
   const [transitionState, setTransitionState] = useState<TransitionState>('none');
   const [error, setError] = useState<string | null>(null);
+  const [isInitializing, setIsInitializing] = useState(false);
   
   // Constants for transition timing
   const FADE_OUT_DURATION = 200; // ms
@@ -154,6 +155,9 @@ export function useQuestionnaireProcess(
   
   // Initialize or load existing questionnaire
   const initializeQuestionnaire = useCallback(async () => {
+    // Prevent concurrent initialization
+    if (isInitializing) return;
+    
     if (!user) {
       setError('User must be logged in to use the questionnaire');
       setIsLoading(false);
@@ -161,6 +165,7 @@ export function useQuestionnaireProcess(
     }
     
     try {
+      setIsInitializing(true);
       setIsLoading(true);
       setError(null);
       
@@ -232,8 +237,9 @@ export function useQuestionnaireProcess(
       setError(err instanceof Error ? err.message : 'Failed to initialize questionnaire');
     } finally {
       setIsLoading(false);
+      setIsInitializing(false);
     }
-  }, [fetchActiveQuestionnaire, fetchUserResponse, saveUserResponse, questionnaireType, user]);
+  }, [fetchActiveQuestionnaire, fetchUserResponse, saveUserResponse, questionnaireType, user, isInitializing]);
   
   // Start or restart the questionnaire
   const startQuestionnaire = useCallback(async () => {
@@ -260,8 +266,44 @@ export function useQuestionnaireProcess(
     }
   }, [questionnaireResponse, questionnaireId, user, responses, status, saveUserResponse]);
   
+  // Helper function to sanitize responses and ensure they're JSON-serializable
+  const sanitizeResponses = (responses: QuestionnaireResponses): QuestionnaireResponses => {
+    // Create a new object to avoid modifying the original
+    const sanitized: QuestionnaireResponses = {};
+    
+    // Process each key-value pair
+    Object.entries(responses).forEach(([key, value]) => {
+      try {
+        // Test if the value is JSON serializable
+        JSON.stringify(value);
+        sanitized[key] = value;
+      } catch (error) {
+        // If serialization fails, we need to handle based on the type
+        if (Array.isArray(value)) {
+          // For arrays, filter out non-serializable items
+          sanitized[key] = value.filter(item => {
+            try {
+              JSON.stringify(item);
+              return true;
+            } catch {
+              return false;
+            }
+          });
+        } else if (typeof value === 'object' && value !== null) {
+          // For objects, convert to string representation
+          sanitized[key] = '[Complex Object]';
+        } else {
+          // For other types, use string representation or null
+          sanitized[key] = String(value) || null;
+        }
+      }
+    });
+    
+    return sanitized;
+  };
+
   // Move to the next question
-  const goToNextQuestion = useCallback(async () => {
+  const goToNextQuestion = useCallback(async (updatedResponses?: QuestionnaireResponses) => {
     if (!questionnaire) return;
     
     const nextIndex = findNextQuestionIndex(currentQuestionIndex);
@@ -269,11 +311,17 @@ export function useQuestionnaireProcess(
     const saveProgress = async () => {
       if (!questionnaireResponse || !questionnaireId || !user) return;
       
+      // Use the provided updatedResponses if available, otherwise use the current responses state
+      const responsesToSave = updatedResponses || responses;
+      
+      // Sanitize responses before saving to prevent circular reference errors
+      const sanitizedResponses = sanitizeResponses(responsesToSave);
+      
       await saveUserResponse(
         questionnaireId,
         user.id,
         questionnaireResponse.id,
-        responses,
+        sanitizedResponses,
         nextIndex >= questionnaire.structure.length ? 'completed' : 'in_progress'
       );
       
@@ -302,17 +350,52 @@ export function useQuestionnaireProcess(
   ]);
   
   // Move to the previous question
-  const goToPreviousQuestion = useCallback(() => {
-    if (currentQuestionIndex > 0) {
-      performTransition(
-        () => setCurrentQuestionIndex(currentQuestionIndex - 1)
-      );
+  const goToPreviousQuestion = useCallback(async () => {
+    if (currentQuestionIndex > 0 && !isLoading) {
+      try {
+        // First, fetch the latest data before we start any transition
+        let freshData = null;
+        if (questionnaireId && user && questionnaireResponse) {
+          setIsLoading(true); // Set loading while fetching
+          // Use bypassCache=true to ensure we get fresh data from the database
+          const latestResponse = await fetchUserResponse(questionnaireId, user.id, true);
+          if (latestResponse && latestResponse.responses) {
+            freshData = latestResponse.responses;
+          }
+          setIsLoading(false); // Clear loading after fetch
+        }
+        
+        // Now start the transition with the fresh data
+        performTransition(
+          // In the state change function, update both the index and the responses
+          () => {
+            setCurrentQuestionIndex(currentQuestionIndex - 1);
+            // Only update responses if we got fresh data
+            if (freshData) {
+              setResponses(freshData);
+            }
+          }
+        );
+      } catch (err) {
+        console.error('Error refreshing responses when going back:', err);
+        setIsLoading(false);
+        // Still allow navigation even if refresh fails
+        performTransition(() => setCurrentQuestionIndex(currentQuestionIndex - 1));
+      }
     }
-  }, [currentQuestionIndex, performTransition]);
+  }, [
+    currentQuestionIndex, 
+    performTransition, 
+    questionnaireId, 
+    user, 
+    questionnaireResponse, 
+    fetchUserResponse,
+    isLoading
+  ]);
   
   // Save an answer for a specific question
   const saveAnswer = useCallback(async (questionId: string, answer: any) => {
-    // Update local state
+    // Update local state only
     const updatedResponses = {
       ...responses,
       [questionId]: answer
@@ -320,22 +403,9 @@ export function useQuestionnaireProcess(
     
     setResponses(updatedResponses);
     
-    // Save to database if we have all the required info
-    if (questionnaireResponse && questionnaireId && user) {
-      try {
-        await saveUserResponse(
-          questionnaireId,
-          user.id,
-          questionnaireResponse.id,
-          updatedResponses,
-          status
-        );
-      } catch (err) {
-        console.error('Error saving answer:', err);
-        setError('Failed to save answer');
-      }
-    }
-  }, [responses, questionnaireResponse, questionnaireId, user, status, saveUserResponse]);
+    // Database saving is now handled exclusively in goToNextQuestion
+    // and other transition functions to avoid race conditions
+  }, [responses]);
   
   // Submit responses
   const completeQuestionnaire = useCallback(async () => {
@@ -346,12 +416,15 @@ export function useQuestionnaireProcess(
     try {
       setIsLoading(true);
       
+      // Sanitize responses before saving
+      const sanitizedResponses = sanitizeResponses(responses);
+      
       // Save all responses with completed status
       await saveUserResponse(
         questionnaireId,
         user.id,
         questionnaireResponse?.id || null,
-        responses,
+        sanitizedResponses,
         'completed'
       );
       
@@ -386,11 +459,14 @@ export function useQuestionnaireProcess(
       async () => {
         if (status === 'completed' && questionnaireId && user) {
           try {
+            // Sanitize responses before saving
+            const sanitizedResponses = sanitizeResponses(responses);
+            
             await saveUserResponse(
               questionnaireId,
               user.id,
               questionnaireResponse?.id || null,
-              responses,
+              sanitizedResponses,
               'in_progress'
             );
           } catch (err) {
@@ -411,15 +487,14 @@ export function useQuestionnaireProcess(
     questionnaireResponse
   ]);
   
-  // Initialize on mount and when user changes
+  // Initialize on mount and when user changes - optimized to prevent redundant calls
   useEffect(() => {
-    // Only initialize if we don't already have a questionnaire or response
-    // This prevents reinitializing when switching tabs
-    if (user && (!questionnaire || !questionnaireResponse)) {
+    // Only initialize if we have a user, aren't already initializing, and don't have a questionnaire
+    if (user && !isInitializing && (!questionnaire || !questionnaireResponse)) {
       console.log('Initializing questionnaire (not already loaded)');
       initializeQuestionnaire();
     }
-  }, [user, initializeQuestionnaire, questionnaire, questionnaireResponse]);
+  }, [user, initializeQuestionnaire, questionnaire, questionnaireResponse, isInitializing]);
   
   // Combine loading and error states
   useEffect(() => {

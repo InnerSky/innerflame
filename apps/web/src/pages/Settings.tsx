@@ -124,6 +124,14 @@ export default function Settings() {
     try {
       const { error } = await deleteAccount();
       if (error) {
+        // Check if it's the edge function error but database records were successfully deleted
+        if (error.message.includes('edge function') || error.message.includes('Edge Function')) {
+          console.warn('Auth user deletion failed, but database records were successfully removed');
+          // Still consider this a success and sign out
+          await signOut();
+          navigate('/');
+          return;
+        }
         setError(error.message);
       } else {
         // Sign out and redirect to home page

@@ -40,11 +40,9 @@ export const MultipleChoiceQuestion: React.FC<MultipleChoiceQuestionProps> = ({
   
   // State to track selected options - ensure it's properly initialized
   const [selectedValues, setSelectedValues] = useState<string[]>(() => {
-    // Only use initialValue if it corresponds to this question (check against options)
-    const validInitialValues = initialValue.filter(value => 
-      step.options.some(option => option.value === value)
-    );
-    return validInitialValues.length > 0 ? validInitialValues : [];
+    // Use initialValue directly without filtering - the parent component has already
+    // determined that these values are valid for this question
+    return initialValue.length > 0 ? initialValue : [];
   });
   
   // State to track conditional input values
@@ -95,21 +93,10 @@ export const MultipleChoiceQuestion: React.FC<MultipleChoiceQuestionProps> = ({
     if (stepIdRef.current !== step.id) {
       stepIdRef.current = step.id;
       
-      // Only use initialValue if it corresponds to this question
-      const validInitialValues = initialValue.filter(value => 
-        step.options.some(option => option.value === value)
-      );
-      setSelectedValues(validInitialValues.length > 0 ? validInitialValues : []);
+      // Use initialValue directly without filtering
+      setSelectedValues(initialValue.length > 0 ? initialValue : []);
     }
   }, [step.id, initialValue, step.options]);
-  
-  // Handle conditional input change
-  const handleConditionalInputChange = (id: string, value: string) => {
-    setConditionalInputValues(prev => ({
-      ...prev,
-      [id]: value
-    }));
-  };
   
   // Toggle selection of an option
   const handleToggleOption = (value: string) => {
@@ -130,6 +117,14 @@ export const MultipleChoiceQuestion: React.FC<MultipleChoiceQuestionProps> = ({
       // Otherwise, add the selection
       return [...prev, value];
     });
+  };
+  
+  // Handle conditional input change
+  const handleConditionalInputChange = (id: string, value: string) => {
+    setConditionalInputValues(prev => ({
+      ...prev,
+      [id]: value
+    }));
   };
   
   // Check if all required conditional inputs are filled
@@ -196,10 +191,10 @@ export const MultipleChoiceQuestion: React.FC<MultipleChoiceQuestionProps> = ({
               <div 
                 key={option.value}
                 className={cn(
-                  "transition-all duration-300",
-                  isSelected && extendedOption.conditionalInput && "pb-1"
+                  "transition-all duration-300"
                 )}
               >
+                {/* The button is now separate from conditional inputs */}
                 <button
                   onClick={() => handleToggleOption(option.value)}
                   className={cn(
@@ -212,8 +207,7 @@ export const MultipleChoiceQuestion: React.FC<MultipleChoiceQuestionProps> = ({
                       ? "opacity-30 cursor-not-allowed filter grayscale" 
                       : disabled && "opacity-70 cursor-not-allowed",
                     "flex flex-col gap-4",
-                    "min-h-[72px]",
-                    isSelected && extendedOption.conditionalInput && "pb-4"
+                    "min-h-[72px]"
                   )}
                   disabled={disabled || isAtMaxAndNotSelected}
                   type="button"
@@ -260,45 +254,43 @@ export const MultipleChoiceQuestion: React.FC<MultipleChoiceQuestionProps> = ({
                       {option.label}
                     </span>
                   </div>
-                  
-                  {/* Conditional input for "Other" options */}
-                  {isSelected && extendedOption.conditionalInput && (
-                    <div className="w-full animate-fadeIn mt-3 border-t border-primary/20 pt-3">
-                      <Label htmlFor={`grid-${extendedOption.conditionalInput.id}`} className="mb-2 block text-left">
-                        Tell us more:
-                        {extendedOption.conditionalInput.required && <span className="text-destructive ml-1">*</span>}
-                      </Label>
-                      
-                      {extendedOption.conditionalInput.type === 'text_area' ? (
-                        <Textarea
-                          id={`grid-${extendedOption.conditionalInput.id}`}
-                          value={conditionalInputValues[extendedOption.conditionalInput.id] || ''}
-                          onChange={(e) => handleConditionalInputChange(extendedOption.conditionalInput!.id, e.target.value)}
-                          placeholder={extendedOption.conditionalInput.placeholder || ''}
-                          required={extendedOption.conditionalInput.required}
-                          rows={extendedOption.conditionalInput.rows || 3}
-                          maxLength={extendedOption.conditionalInput.maxLength || undefined}
-                          className="w-full resize-none text-left"
-                          disabled={disabled}
-                          onClick={(e) => e.stopPropagation()}
-                        />
-                      ) : (
-                        <Input
-                          id={`grid-${extendedOption.conditionalInput.id}`}
-                          type="text"
-                          value={conditionalInputValues[extendedOption.conditionalInput.id] || ''}
-                          onChange={(e) => handleConditionalInputChange(extendedOption.conditionalInput!.id, e.target.value)}
-                          placeholder={extendedOption.conditionalInput.placeholder || ''}
-                          required={extendedOption.conditionalInput.required}
-                          maxLength={extendedOption.conditionalInput.maxLength || undefined}
-                          className="w-full text-left"
-                          disabled={disabled}
-                          onClick={(e) => e.stopPropagation()}
-                        />
-                      )}
-                    </div>
-                  )}
                 </button>
+                
+                {/* Conditional input is now OUTSIDE the button */}
+                {isSelected && extendedOption.conditionalInput && (
+                  <div className="w-full animate-fadeIn mt-3 mb-2 pt-3 border-t border-primary/20">
+                    <Label htmlFor={`list-${extendedOption.conditionalInput.id}`} className="mb-2 block text-left">
+                      Tell us more:
+                      {extendedOption.conditionalInput.required && <span className="text-destructive ml-1">*</span>}
+                    </Label>
+                    
+                    {extendedOption.conditionalInput.type === 'text_area' ? (
+                      <Textarea
+                        id={`list-${extendedOption.conditionalInput.id}`}
+                        value={conditionalInputValues[extendedOption.conditionalInput.id] || ''}
+                        onChange={(e) => handleConditionalInputChange(extendedOption.conditionalInput!.id, e.target.value)}
+                        placeholder={extendedOption.conditionalInput.placeholder || ''}
+                        required={extendedOption.conditionalInput.required}
+                        rows={extendedOption.conditionalInput.rows || 3}
+                        maxLength={extendedOption.conditionalInput.maxLength || undefined}
+                        className="w-full resize-none text-left"
+                        disabled={disabled}
+                      />
+                    ) : (
+                      <Input
+                        id={`list-${extendedOption.conditionalInput.id}`}
+                        type="text"
+                        value={conditionalInputValues[extendedOption.conditionalInput.id] || ''}
+                        onChange={(e) => handleConditionalInputChange(extendedOption.conditionalInput!.id, e.target.value)}
+                        placeholder={extendedOption.conditionalInput.placeholder || ''}
+                        required={extendedOption.conditionalInput.required}
+                        maxLength={extendedOption.conditionalInput.maxLength || undefined}
+                        className="w-full text-left"
+                        disabled={disabled}
+                      />
+                    )}
+                  </div>
+                )}
               </div>
             );
           })}
@@ -321,10 +313,10 @@ export const MultipleChoiceQuestion: React.FC<MultipleChoiceQuestionProps> = ({
               <div 
                 key={option.value}
                 className={cn(
-                  "transition-all duration-300",
-                  isSelected && extendedOption.conditionalInput && "pb-1"
+                  "transition-all duration-300"
                 )}
               >
+                {/* The button is now separate from conditional inputs */}
                 <button
                   onClick={() => handleToggleOption(option.value)}
                   className={cn(
@@ -337,8 +329,7 @@ export const MultipleChoiceQuestion: React.FC<MultipleChoiceQuestionProps> = ({
                       ? "opacity-30 cursor-not-allowed filter grayscale" 
                       : disabled && "opacity-70 cursor-not-allowed",
                     "flex flex-col items-center justify-center gap-3",
-                    "min-h-[160px]",
-                    isSelected && extendedOption.conditionalInput && "pb-4"
+                    "min-h-[160px]"
                   )}
                   disabled={disabled || isAtMaxAndNotSelected}
                   type="button"
@@ -372,45 +363,43 @@ export const MultipleChoiceQuestion: React.FC<MultipleChoiceQuestionProps> = ({
                       {option.label}
                     </span>
                   </div>
-                  
-                  {/* Conditional input for "Other" options */}
-                  {isSelected && extendedOption.conditionalInput && (
-                    <div className="w-full animate-fadeIn mt-3 border-t border-primary/20 pt-3">
-                      <Label htmlFor={`grid-${extendedOption.conditionalInput.id}`} className="mb-2 block text-left">
-                        Tell us more:
-                        {extendedOption.conditionalInput.required && <span className="text-destructive ml-1">*</span>}
-                      </Label>
-                      
-                      {extendedOption.conditionalInput.type === 'text_area' ? (
-                        <Textarea
-                          id={`grid-${extendedOption.conditionalInput.id}`}
-                          value={conditionalInputValues[extendedOption.conditionalInput.id] || ''}
-                          onChange={(e) => handleConditionalInputChange(extendedOption.conditionalInput!.id, e.target.value)}
-                          placeholder={extendedOption.conditionalInput.placeholder || ''}
-                          required={extendedOption.conditionalInput.required}
-                          rows={extendedOption.conditionalInput.rows || 3}
-                          maxLength={extendedOption.conditionalInput.maxLength || undefined}
-                          className="w-full resize-none text-left"
-                          disabled={disabled}
-                          onClick={(e) => e.stopPropagation()}
-                        />
-                      ) : (
-                        <Input
-                          id={`grid-${extendedOption.conditionalInput.id}`}
-                          type="text"
-                          value={conditionalInputValues[extendedOption.conditionalInput.id] || ''}
-                          onChange={(e) => handleConditionalInputChange(extendedOption.conditionalInput!.id, e.target.value)}
-                          placeholder={extendedOption.conditionalInput.placeholder || ''}
-                          required={extendedOption.conditionalInput.required}
-                          maxLength={extendedOption.conditionalInput.maxLength || undefined}
-                          className="w-full text-left"
-                          disabled={disabled}
-                          onClick={(e) => e.stopPropagation()}
-                        />
-                      )}
-                    </div>
-                  )}
                 </button>
+                
+                {/* Conditional input is now OUTSIDE the button */}
+                {isSelected && extendedOption.conditionalInput && (
+                  <div className="w-full animate-fadeIn mt-3 mb-2 pt-3 border-t border-primary/20">
+                    <Label htmlFor={`grid-${extendedOption.conditionalInput.id}`} className="mb-2 block text-left">
+                      Tell us more:
+                      {extendedOption.conditionalInput.required && <span className="text-destructive ml-1">*</span>}
+                    </Label>
+                    
+                    {extendedOption.conditionalInput.type === 'text_area' ? (
+                      <Textarea
+                        id={`grid-${extendedOption.conditionalInput.id}`}
+                        value={conditionalInputValues[extendedOption.conditionalInput.id] || ''}
+                        onChange={(e) => handleConditionalInputChange(extendedOption.conditionalInput!.id, e.target.value)}
+                        placeholder={extendedOption.conditionalInput.placeholder || ''}
+                        required={extendedOption.conditionalInput.required}
+                        rows={extendedOption.conditionalInput.rows || 3}
+                        maxLength={extendedOption.conditionalInput.maxLength || undefined}
+                        className="w-full resize-none text-left"
+                        disabled={disabled}
+                      />
+                    ) : (
+                      <Input
+                        id={`grid-${extendedOption.conditionalInput.id}`}
+                        type="text"
+                        value={conditionalInputValues[extendedOption.conditionalInput.id] || ''}
+                        onChange={(e) => handleConditionalInputChange(extendedOption.conditionalInput!.id, e.target.value)}
+                        placeholder={extendedOption.conditionalInput.placeholder || ''}
+                        required={extendedOption.conditionalInput.required}
+                        maxLength={extendedOption.conditionalInput.maxLength || undefined}
+                        className="w-full text-left"
+                        disabled={disabled}
+                      />
+                    )}
+                  </div>
+                )}
               </div>
             );
           })}

@@ -40,6 +40,7 @@ import {
 import { supabase } from "@/lib/supabase";
 import { anonymousAuthService } from "@/features/auth/services/anonymousAuthService.js";
 import { OnboardingModal } from "@/components/OnboardingModal.js";
+import { TrackingProvider } from "@/contexts/TrackingContext.js";
 const OfflinePage = lazy(() => import("./pages/OfflinePage.js"));
 const LeanCanvas = lazy(() => import("./pages/LeanCanvas.js"));
 
@@ -47,7 +48,9 @@ function App() {
   return (
     <ThemeProvider defaultTheme="system" storageKey="innerflame-ui-theme">
       <BrowserRouter>
+        <TrackingProvider>
         <AppContent />
+        </TrackingProvider>
         <Toaster />
       </BrowserRouter>
     </ThemeProvider>
@@ -255,6 +258,7 @@ function AppContent() {
   const [anonSignInAttempted, setAnonSignInAttempted] = useState(false);
   const [showOnboardingModal, setShowOnboardingModal] = useState(false);
   const [checkingOnboarding, setCheckingOnboarding] = useState(false);
+  const [onboardingChecked, setOnboardingChecked] = useState(false);
   // Define ref at component level, not inside useEffect
   const isFirstAuthRender = useRef(true);
   
@@ -384,8 +388,8 @@ function AppContent() {
 
   // Check if user has completed onboarding
   useEffect(() => {
-    // Only check for permanent users
-    if (!loading && user && !isAnonymous) {
+    // Only check once for permanent users who haven't been checked yet
+    if (!loading && user && !isAnonymous && !onboardingChecked && !checkingOnboarding) {
       const checkOnboardingStatus = async () => {
         try {
           setCheckingOnboarding(true);
@@ -406,6 +410,8 @@ function AppContent() {
           
           // Show onboarding modal if no completed questionnaire
           setShowOnboardingModal(!data);
+          // Mark as checked regardless of outcome
+          setOnboardingChecked(true);
         } catch (err) {
           console.error('Error checking onboarding status:', err);
         } finally {
@@ -414,11 +420,12 @@ function AppContent() {
       };
       
       checkOnboardingStatus();
-    } else {
+    } else if (!user || isAnonymous) {
       // Reset for non-permanent users
       setShowOnboardingModal(false);
+      setOnboardingChecked(false);
     }
-  }, [user, isAnonymous, loading]);
+  }, [user, isAnonymous, loading, onboardingChecked, checkingOnboarding]);
   
   // Handler for when onboarding is completed
   const handleOnboardingComplete = () => {

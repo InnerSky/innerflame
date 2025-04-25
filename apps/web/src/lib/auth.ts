@@ -219,87 +219,43 @@ export async function getCurrentUser() {
 
 export async function deleteAccount() {
   try {
-    // Get current user ID
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    if (userError) {
-      throw new Error(`Failed to get current user: ${userError.message}`);
+    // Get the current session to use its access token
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError) {
+      throw new Error(`Failed to get session: ${sessionError.message}`);
     }
-    if (!user) throw new Error('No user found');
-
-    const userId = user.id;
-
-    // 1. Delete all messages from the user
-    const { error: messagesError } = await supabase
-      .from('messages')
-      .delete()
-      .eq('user_id', userId);
-    if (messagesError) {
-      throw new Error(`Failed to delete messages: ${messagesError.message}`);
+    
+    if (!sessionData.session) {
+      throw new Error('No active session found');
     }
 
-    // 2. Delete all entity versions for the user's documents
-    const { data: entities, error: entitiesError } = await supabase
-      .from('entities')
-      .select('id, active_version_id')
-      .eq('user_id', userId);
-    if (entitiesError) {
-      throw new Error(`Failed to fetch entities: ${entitiesError.message}`);
-    }
+    const accessToken = sessionData.session.access_token;
 
-    if (entities && entities.length > 0) {
-      const entityIds = entities.map(e => e.id);
-      
-      // First, update all entities to remove active version references
-      const { error: updateError } = await supabase
-        .from('entities')
-        .update({ active_version_id: null })
-        .in('id', entityIds);
-      if (updateError) {
-        throw new Error(`Failed to update entities: ${updateError.message}`);
+    // Call the new Edge Function to delete everything server-side
+    const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL || window.location.origin}/functions/v1/delete-account`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${accessToken}`
       }
-
-      // Then delete versions
-      const { error: versionsError } = await supabase
-        .from('entity_versions')
-        .delete()
-        .in('entity_id', entityIds);
-      if (versionsError) {
-        throw new Error(`Failed to delete entity versions: ${versionsError.message}`);
-      }
-
-      // Finally delete entities
-      const { error: deleteEntitiesError } = await supabase
-        .from('entities')
-        .delete()
-        .in('id', entityIds);
-      if (deleteEntitiesError) {
-        throw new Error(`Failed to delete entities: ${deleteEntitiesError.message}`);
-      }
-    }
-
-    // 3. Delete user's record from users table
-    const { error: deleteUserRecordError } = await supabase
-      .from('users')
-      .delete()
-      .eq('id', userId);
-    if (deleteUserRecordError) {
-      throw new Error(`Failed to delete user record: ${deleteUserRecordError.message}`);
-    }
-
-    // 4. Sign out the user
-    const { error: signOutError } = await supabase.auth.signOut();
-    if (signOutError) {
-      throw new Error(`Failed to sign out: ${signOutError.message}`);
-    }
-
-    // 5. Call the Edge Function to delete the user
-    const { data, error: functionError } = await supabase.functions.invoke('delete-user', {
-      body: { userId }
     });
 
-    if (functionError) {
-      throw new Error(`Failed to delete user via edge function: ${functionError.message}`);
+    const result = await response.json();
+
+    if (!response.ok) {
+      // Check if it's a partial success (database deleted but auth failed)
+      if (result.partialSuccess) {
+        console.warn('Database records were deleted but auth user deletion failed. Signing out anyway.');
+        // Sign out the user since their data is gone
+        await supabase.auth.signOut();
+        return { error: null };
+      }
+      
+      throw new Error(result.error || 'Failed to delete account');
     }
+
+    // Sign out the user after successful deletion
+    await supabase.auth.signOut();
     
     return { error: null };
   } catch (err) {

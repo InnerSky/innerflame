@@ -9,6 +9,8 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog.js';
 import { AuthModal } from '@/components/auth/AuthModal.js';
+import { useTracking } from '@/contexts/TrackingContext.js';
+import { PricingModal } from '@/components/PricingModal.js';
 
 interface ChatInputProps {
   onSendMessage: (message: string) => void;
@@ -36,7 +38,9 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
   const [message, setMessage] = useState('');
   const [showManual, setShowManual] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
+  const [showPricingModal, setShowPricingModal] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const { trackButtonClick } = useTracking();
   
   // Expose methods via ref
   useImperativeHandle(ref, () => ({
@@ -82,6 +86,19 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
   // Determine if we should show the conversion overlay
   const showConversionOverlay = isAnonymous && canvasHasContent;
   
+  // Handle plan button click
+  const handleActivePlanClick = () => {
+    trackButtonClick("chat_overlay_activate_plan", {
+      data: {
+        source: "chat_input",
+        context: "lean_canvas"
+      }
+    });
+    
+    // Open the pricing modal instead of navigating
+    setShowPricingModal(true);
+  };
+
   return (
     <div className={`flex flex-col mt-auto transition-all duration-200`}>
       {/* Card-like container with pronounced edge */}
@@ -154,40 +171,35 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
           <div className="w-full bg-background/95 backdrop-blur-sm flex items-center justify-center rounded-t-lg border-2 border-primary">
             <div className="text-center w-full max-w-md py-6 px-4">
               <h3 className="text-lg font-semibold text-primary bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent mb-6">
-                🔥 Unlock Your Complete Lean Canvas 🔥
+                Activate Your Traction Flywheel
               </h3>
               <div className="space-y-3 text-left mb-6">
                 <div className="flex items-center gap-2">
                   <div className="rounded-full bg-green-100 p-1 flex-shrink-0">
                     <Check className="h-3 w-3 text-green-600" />
                   </div>
-                  <span className="text-xs">📊 Save & share your business model with stakeholders</span>
+                  <span className="text-xs">12 plug-and-play Game-Plan templates</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="rounded-full bg-green-100 p-1 flex-shrink-0">
                     <Check className="h-3 w-3 text-green-600" />
                   </div>
-                  <span className="text-xs">💡 Refine your strategy with AI-powered insights</span>
+                  <span className="text-xs">Guided Build-Measure-Learn cycles</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="rounded-full bg-green-100 p-1 flex-shrink-0">
                     <Check className="h-3 w-3 text-green-600" />
                   </div>
-                  <span className="text-xs">🚀 Test multiple scenarios with variant canvases</span>
+                  <span className="text-xs">Powered by AI in one workspace</span>
                 </div>
               </div>
               <div>
-                <AuthModal 
-                  defaultTab="sign-up"
-                  trigger={
-                    <Button className="w-full bg-gradient-to-r from-orange-600 to-red-600 text-white hover:from-orange-700 hover:to-red-700 text-xs py-2">
-                      Continue for Free - No Credit Card
-                    </Button>
-                  }
-                />
-                <div className="text-[10px] text-muted-foreground mt-2">
-                  ⏱️ Takes less than 30 seconds
-                </div>
+                <Button 
+                  className="w-full bg-gradient-to-r from-orange-600 to-red-600 text-white hover:from-orange-700 hover:to-red-700 text-xs py-2"
+                  onClick={handleActivePlanClick}
+                >
+                  Yes, please!
+                </Button>
               </div>
             </div>
           </div>
@@ -223,6 +235,12 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Pricing Modal */}
+      <PricingModal 
+        open={showPricingModal} 
+        onOpenChange={setShowPricingModal} 
+      />
     </div>
   );
 }); 

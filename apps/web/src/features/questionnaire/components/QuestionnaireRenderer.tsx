@@ -144,18 +144,62 @@ export const QuestionnaireRenderer: React.FC<QuestionnaireRendererProps> = ({
     : 0;
   const totalQuestions = questionSteps.length;
   
+  // Helper to ensure data is JSON-serializable
+  const sanitizeValue = (value: any): any => {
+    try {
+      // Test if value is JSON serializable by attempting to stringify it
+      JSON.stringify(value);
+      return value;
+    } catch (error) {
+      // If it's an array, filter out non-serializable items
+      if (Array.isArray(value)) {
+        return value.filter(item => {
+          try {
+            JSON.stringify(item);
+            return true;
+          } catch {
+            return false;
+          }
+        });
+      }
+      // If it's an object, return a simple string
+      else if (typeof value === 'object' && value !== null) {
+        return '[Complex Object]';
+      }
+      // For other types, convert to string
+      return String(value) || null;
+    }
+  };
+  
   const handleQuestionResponse = (questionId: string, value: any, conditionalInputs?: Record<string, string>) => {
-    // Save the main answer
-    saveAnswer(questionId, value);
+    // Sanitize the input value to ensure it's JSON-serializable
+    const sanitizedValue = sanitizeValue(value);
     
-    // If we have conditional inputs, save each one individually
+    // Create the updated responses object
+    let updatedResponses = {
+      ...responses,
+      [questionId]: sanitizedValue
+    };
+    
+    // Save the main answer
+    saveAnswer(questionId, sanitizedValue);
+    
+    // If we have conditional inputs, sanitize and save each one individually
     if (conditionalInputs && Object.keys(conditionalInputs).length > 0) {
       Object.entries(conditionalInputs).forEach(([inputId, inputValue]) => {
-        saveAnswer(inputId, inputValue);
+        // Sanitize the conditional input value
+        const sanitizedInputValue = sanitizeValue(inputValue);
+        
+        updatedResponses = {
+          ...updatedResponses,
+          [inputId]: sanitizedInputValue
+        };
+        saveAnswer(inputId, sanitizedInputValue);
       });
     }
     
-    goToNextQuestion();
+    // Directly pass the updated responses to goToNextQuestion
+    goToNextQuestion(updatedResponses);
   };
   
   const renderProgressHeader = () => {
@@ -176,7 +220,7 @@ export const QuestionnaireRenderer: React.FC<QuestionnaireRendererProps> = ({
         )}
         
         {/* Logo with breathing animation - matching navbar style */}
-        <div className="relative mr-2">
+        <div className="relative mr-4">
           <div className="absolute -inset-1 animate-pulse rounded-full bg-orange-500/20 dark:bg-orange-500/30"></div>
           <img 
             src="https://lpxnyybizytwcqdqasll.supabase.co/storage/v1/object/public/innerflame_asset//Logo1.png" 
@@ -198,7 +242,14 @@ export const QuestionnaireRenderer: React.FC<QuestionnaireRendererProps> = ({
   const renderCurrentStep = (step: QuestionnaireItem) => {
     // Render based on step type
     if (isInfoStep(step)) {
-      return <InfoStep step={step} onContinue={goToNextQuestion} />;
+      // For info steps, we use a separate handler that doesn't save responses
+      // but preserves the completion logic for the last step
+      const handleInfoStepContinue = () => {
+        // Just navigate to the next question without saving any response data
+        goToNextQuestion();
+      };
+      
+      return <InfoStep step={step} onContinue={handleInfoStepContinue} />;
     }
     
     if (isSingleChoiceQuestion(step)) {

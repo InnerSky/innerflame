@@ -46,7 +46,7 @@ export function OnboardingModal({ onComplete }: OnboardingModalProps) {
       }`}
     >
       <div className="w-full h-full flex items-stretch">
-        <div className="w-full h-full flex flex-col">
+        <div className="w-full h-full flex flex-col md:my-[30px] md:max-h-[calc(100vh-60px)]">
           <QuestionnaireRenderer 
             questionnaireType="onboarding" 
             onComplete={handleQuestionnaireDone}

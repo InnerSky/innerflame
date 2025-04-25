@@ -481,6 +481,62 @@ export type Database = {
         }
         Relationships: []
       }
+      user_events: {
+        Row: {
+          id: string
+          user_id: string
+          session_id: string | null
+          event_category: string
+          event_action: string
+          event_label: string | null
+          event_value: number | null
+          event_data: Json | null
+          client_timestamp: string
+          created_at: string
+          url: string | null
+          referrer: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          session_id?: string | null
+          event_category: string
+          event_action: string
+          event_label?: string | null
+          event_value?: number | null
+          event_data?: Json | null
+          client_timestamp: string
+          created_at?: string
+          url?: string | null
+          referrer?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          session_id?: string | null
+          event_category?: string
+          event_action?: string
+          event_label?: string | null
+          event_value?: number | null
+          event_data?: Json | null
+          client_timestamp?: string
+          created_at?: string
+          url?: string | null
+          referrer?: string | null
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_events_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never

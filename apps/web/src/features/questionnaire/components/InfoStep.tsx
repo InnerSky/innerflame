@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { InfoStep as InfoStepType } from '@innerflame/types/questionnaire.js';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -11,6 +11,8 @@ interface InfoStepProps {
 export const InfoStep: React.FC<InfoStepProps> = ({ step, onContinue }) => {
   // Check if we have any content to display
   const hasContent = step.title || step.subtitle || step.body || step.description;
+  // Track image loading state
+  const [imageLoaded, setImageLoaded] = useState(false);
   
   return (
     <div className="p-4 flex flex-col h-full">
@@ -34,14 +36,29 @@ export const InfoStep: React.FC<InfoStepProps> = ({ step, onContinue }) => {
         
         {/* Image (if available) - moved above body text */}
         {step.imageUrl && (
-          <div className={cn("my-3")}>
+          <div className={cn(
+            "my-3 overflow-hidden",
+            imageLoaded ? "transform-none" : "h-0"
+          )}>
             <img 
               src={step.imageUrl} 
               alt="Informational graphic" 
-              className="mx-auto max-w-full h-auto max-h-[50vh] rounded-md object-contain"
+              className={cn(
+                "mx-auto max-w-full h-auto max-h-[50vh] rounded-md object-contain transition-all duration-500 ease-out",
+                imageLoaded ? "translate-y-0 opacity-100" : "translate-y-full opacity-0"
+              )}
+              onLoad={() => setImageLoaded(true)}
             />
           </div>
         )}
+        
+        {/* Button placed right after the image */}
+        <Button
+          onClick={onContinue}
+          className="w-full mt-1 mb-3 flex-shrink-0"
+        >
+          {step.buttonText}
+        </Button>
         
         {/* Main body content (if available) */}
         {step.body && (
@@ -55,13 +72,6 @@ export const InfoStep: React.FC<InfoStepProps> = ({ step, onContinue }) => {
           <p className="text-center text-muted-foreground">Information step</p>
         )}
       </div>
-      
-      <Button
-        onClick={onContinue}
-        className="w-full mt-4 flex-shrink-0"
-      >
-        {step.buttonText}
-      </Button>
     </div>
   );
 }; 
