@@ -8,6 +8,7 @@ interface LeanCanvasDisplayProps {
   jsonData: Record<string, string> | null;
   onDataChange?: (updatedData: Record<string, string>) => void;
   readOnly?: boolean;
+  showAdditionalCards?: boolean;
 }
 
 // Define Lean Canvas keys 
@@ -58,7 +59,7 @@ const sectionDisplayNames: Record<string, string> = {
   unfair_advantage: "Advantage"
 };
 
-export function LeanCanvasDisplay({ jsonData, onDataChange, readOnly = false }: LeanCanvasDisplayProps) {
+export function LeanCanvasDisplay({ jsonData, onDataChange, readOnly = false, showAdditionalCards = false }: LeanCanvasDisplayProps) {
   // Create refs for each section
   const sectionRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const headerRef = useRef<HTMLDivElement | null>(null);
@@ -641,37 +642,39 @@ export function LeanCanvasDisplay({ jsonData, onDataChange, readOnly = false }: 
         </div>
       )}
 
-      {/* Other cards section */}
-      <div className="mt-6">
-        <h3 className="text-lg font-medium mb-4">Additional Cards</h3>
-        {Object.keys(otherData).length > 0 ? (
-          <JSONDisplay 
-            jsonData={otherData}
-            onDataChange={handleDataChange}
-            readOnly={readOnly}
-            editableKeys={Object.keys(otherData)}
-            hideHeaderFields={true}
-          />
-        ) : !readOnly && (
-          <Card 
-            className="overflow-hidden border border-dashed border-primary/30 shadow-sm hover:shadow-md hover:border-primary/60 transition-all duration-200 cursor-pointer flex flex-col items-center justify-center min-h-[200px] animate-in fade-in"
-            onClick={() => {
-              // Simply add a new empty card to otherData
-              handleDataChange({
-                ...jsonData,
-                "New Card": ""
-              });
-            }}
-          >
-            <div className="flex flex-col items-center justify-center p-6 text-center">
-              <div className="rounded-full bg-primary/10 p-3 mb-3">
-                <Plus className="h-6 w-6 text-primary" />
+      {/* Other cards section - only show if showAdditionalCards is true */}
+      {showAdditionalCards && (
+        <div className="mt-6">
+          <h3 className="text-lg font-medium mb-4">Additional Cards</h3>
+          {Object.keys(otherData).length > 0 ? (
+            <JSONDisplay 
+              jsonData={otherData}
+              onDataChange={handleDataChange}
+              readOnly={readOnly}
+              editableKeys={Object.keys(otherData)}
+              hideHeaderFields={true}
+            />
+          ) : !readOnly && (
+            <Card 
+              className="overflow-hidden border border-dashed border-primary/30 shadow-sm hover:shadow-md hover:border-primary/60 transition-all duration-200 cursor-pointer flex flex-col items-center justify-center min-h-[200px] animate-in fade-in"
+              onClick={() => {
+                // Simply add a new empty card to otherData
+                handleDataChange({
+                  ...jsonData,
+                  "New Card": ""
+                });
+              }}
+            >
+              <div className="flex flex-col items-center justify-center p-6 text-center">
+                <div className="rounded-full bg-primary/10 p-3 mb-3">
+                  <Plus className="h-6 w-6 text-primary" />
+                </div>
+                <p className="text-sm font-medium text-muted-foreground">Add new card</p>
               </div>
-              <p className="text-sm font-medium text-muted-foreground">Add new card</p>
-            </div>
-          </Card>
-        )}
-      </div>
+            </Card>
+          )}
+        </div>
+      )}
 
       {/* Notes and footnotes section */}
       <JSONDisplay 

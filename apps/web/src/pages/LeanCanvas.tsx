@@ -331,10 +331,11 @@ export default function LeanCanvas() {
         throw new Error('Not authenticated');
       }
       
-      // Call API endpoint with proper path
-      // The /api prefix will be handled correctly by Vite's proxy in development
-      // and by the API server's path normalization in production
-      const response = await fetch(`/api/documents/versions/${versionId}/accept`, {
+      // Use the same API_BASE_URL approach as in sseClient.ts
+      const API_BASE_URL = import.meta.env.VITE_API_URL || '';
+      
+      // Call API endpoint with proper base URL
+      const response = await fetch(`${API_BASE_URL}/api/documents/versions/${versionId}/accept`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -383,10 +384,11 @@ export default function LeanCanvas() {
         throw new Error('Not authenticated');
       }
       
-      // Call API endpoint with proper path
-      // The /api prefix will be handled correctly by Vite's proxy in development
-      // and by the API server's path normalization in production
-      const response = await fetch(`/api/documents/versions/${versionId}/reject`, {
+      // Use the same API_BASE_URL approach as in sseClient.ts
+      const API_BASE_URL = import.meta.env.VITE_API_URL || '';
+      
+      // Call API endpoint with proper base URL
+      const response = await fetch(`${API_BASE_URL}/api/documents/versions/${versionId}/reject`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -1,0 +1,19 @@
+---
+description: When sending complex data (especially arrays) to Supabase always force proper serialization
+globs: 
+alwaysApply: false
+---
+When sending complex data (especially arrays) to Supabase, always force proper serialization:
+
+// Force JSON serialization/deserialization before sending to Supabase
+const data = {
+  complexData: JSON.parse(JSON.stringify(yourComplexObject))
+};
+
+await supabase
+  .from('your_table')
+  .update(data)
+  .eq('id', recordId);
+
+This ensures consistent behavior across all environments by normalizing the data structure before transmission.
+These practices are crucial for maintaining behavior consistency between development and production environments.

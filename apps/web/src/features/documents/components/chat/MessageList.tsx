@@ -105,7 +105,7 @@ export const MessageList = forwardRef<{ scrollToBottom: () => void }, MessageLis
 
   return (
     <div className="h-full overflow-y-auto overflow-x-hidden w-full" ref={containerRef}>
-      <div className="px-2 pt-4 pb-[150px] space-y-4 md:space-y-6">
+      <div className="px-2 pt-4 pb-16 md:pb-[150px] space-y-4 md:space-y-6">
         {messages.map((message, index) => {
           const isFirstMessage = index === 0;
           

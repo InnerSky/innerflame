@@ -42,6 +42,25 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { trackButtonClick } = useTracking();
   
+  // Detect if we're on a mobile device
+  const [isMobile, setIsMobile] = useState(false);
+  
+  // Check if the device is mobile on component mount
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    
+    // Initial check
+    checkMobile();
+    
+    // Add event listener for window resize
+    window.addEventListener('resize', checkMobile);
+    
+    // Cleanup
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+  
   // Expose methods via ref
   useImperativeHandle(ref, () => ({
     setInputText: (text: string) => {
@@ -55,11 +74,11 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
   // Handle keyboard shortcuts
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter') {
-      if (e.shiftKey) {
-        // Allow new line with Shift+Enter
+      if (e.shiftKey || isMobile) {
+        // Allow new line with Shift+Enter or on mobile
         return;
       } else {
-        // Send message on plain Enter
+        // Send message on plain Enter (desktop only)
         e.preventDefault();
         handleSendMessage();
       }
@@ -158,7 +177,7 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
             >
               <Info className="h-4 w-4" />
             </Button>
-            {message.trim() && (
+            {message.trim() && !isMobile && (
               <p className="text-xs text-muted-foreground">
                 Use <strong>Shift</strong> + <strong>Return</strong> for a new line
               </p>
@@ -219,8 +238,8 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
               <h3 className="font-medium">Basic Usage</h3>
               <ul className="list-disc pl-4 space-y-1">
                 <li>Type your message in the text area</li>
-                <li>Press Return to send your message</li>
-                <li>Use Shift+Return for new lines</li>
+                <li>{isMobile ? 'Press the send button to send your message' : 'Press Return to send your message'}</li>
+                <li>{isMobile ? 'Press Return for new lines' : 'Use Shift+Return for new lines'}</li>
               </ul>
             </div>
 

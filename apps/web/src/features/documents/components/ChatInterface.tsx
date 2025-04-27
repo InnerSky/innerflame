@@ -260,7 +260,7 @@ export const ChatInterface = forwardRef<ChatInterfaceRef, ChatInterfaceProps>(({
         className={`h-full flex flex-col px-4 ${className}`}
         data-chat-container
       >
-        <div className="flex-1 flex flex-col overflow-hidden">
+        <div className="flex-1 flex flex-col overflow-hidden min-h-0">
           {chatContent}
         </div>
       </div>
@@ -270,7 +270,7 @@ export const ChatInterface = forwardRef<ChatInterfaceRef, ChatInterfaceProps>(({
   // In desktop sidebar, use card container
   return (
     <Card className={`h-full flex flex-col border-0 shadow-none ${className}`}>
-      <CardContent className="flex-1 flex flex-col overflow-hidden px-4 pt-0">
+      <CardContent className="flex-1 flex flex-col overflow-hidden px-4 pt-0 min-h-0">
         {chatContent}
       </CardContent>
     </Card>

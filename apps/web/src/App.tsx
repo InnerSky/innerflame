@@ -18,6 +18,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { AuthModal } from "@/components/auth/AuthModal";
 import { OfflineBanner } from "@/components/OfflineBanner";
 import { Toaster } from "@/components/ui/toaster";
+import { DevTools } from "@/components/DevTools";
 import Home from "./pages/Home";
 import Articles from "./pages/Articles";
 import Article from "./pages/Article";
@@ -435,6 +436,7 @@ function AppContent() {
   return (
     <>
       <OfflineBanner />
+      <DevTools />
       
       {!hideNavAndFooter && (
         <nav className={`sticky top-0 z-40 transition-all duration-300 ${

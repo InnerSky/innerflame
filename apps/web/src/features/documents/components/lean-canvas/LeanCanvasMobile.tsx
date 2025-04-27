@@ -30,14 +30,18 @@ export function LeanCanvasMobile({
   const tabBarHeight = 64; // 16 in spacing units = 64px
   
   return (
-    <div className="h-screen w-full flex flex-col bg-background">
-      {/* Main content area - using flex-grow to fill available space */}
-      <div className="flex-1 overflow-hidden relative">
+    <div className="h-[100svh] w-full flex flex-col bg-background">
+      
+      {/* Main content area - fixed height calculated by subtracting tab bar height */}
+      <div 
+        className="flex-1 overflow-hidden relative"
+        style={{ maxHeight: `calc(100svh - ${tabBarHeight}px)` }}
+      >
         {/* Canvas View */}
         {activeTab === 'canvas' && (
           <div className="h-full overflow-auto">
             {selectedDocument ? (
-              <div className="px-2 pt-4 pb-4">
+              <div className="px-2 pt-4 pb-16">
                 <LeanCanvasDisplay 
                   jsonData={jsonData} 
                   onDataChange={onDataChange} 
@@ -72,9 +76,9 @@ export function LeanCanvasMobile({
         )}
       </div>
       
-      {/* Bottom tab bar - part of the flex layout */}
+      {/* Bottom tab bar - fixed height, positioned at bottom */}
       <div 
-        className="bg-background border-t border-border flex items-center justify-around shadow-lg z-50"
+        className="bg-background border-t border-border flex items-center justify-around shadow-lg z-50 flex-shrink-0"
         style={{ height: `${tabBarHeight}px` }}
       >
         {/* Chat Tab */}

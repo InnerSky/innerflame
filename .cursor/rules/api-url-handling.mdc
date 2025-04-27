@@ -1,0 +1,14 @@
+---
+description: How to use import.meta.env.VITE_API_URL
+globs: 
+alwaysApply: false
+---
+Always use environment-aware API URLs to handle differences between development and production.
+
+// Use environment variables for API URLs
+const API_BASE_URL = import.meta.env.VITE_API_URL || '';
+
+// Use the base URL in all API requests
+const response = await fetch(`${API_BASE_URL}/api/endpoint`, {...});
+
+In development, Vite's proxy handles relative URLs, but in production, you must explicitly set the full domain.

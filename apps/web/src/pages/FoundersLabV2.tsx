@@ -31,6 +31,8 @@ export default function FoundersLabV2() {
   const startRef = useRef<HTMLDivElement>(null);
   const heroRef = useRef<HTMLDivElement>(null);
   const [email, setEmail] = useState("");
+  const [showWhySection, setShowWhySection] = useState(false);
+  const [showPricingSection, setShowPricingSection] = useState(false);
 
   const scrollToStart = () => {
     startRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -116,101 +118,105 @@ export default function FoundersLabV2() {
       </section>
       
       {/* Why We Do What We Do Section */}
-      <section className="py-20 bg-gradient-to-br from-orange-50/50 via-white to-orange-50/50 dark:from-neutral-950 dark:via-neutral-950 dark:to-neutral-950">
-        <div className="max-w-6xl mx-auto px-4">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5 }}
-            className="text-center mb-12"
-          >
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">
-              Why we do what we do
-            </h2>
-          </motion.div>
-          
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5 }}
-            className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 items-center"
-          >
-            {/* Placeholder image */}
-            <div className="order-2 md:order-1 flex justify-center">
-              <div className="bg-orange-100 dark:bg-neutral-800 rounded-xl overflow-hidden shadow-lg w-full max-w-md flex items-center justify-center">
-                <img 
-                  src={atmosphericImage} 
-                  alt="InnerFlame Vision" 
-                  className="w-full h-auto"
-                />
-              </div>
-            </div>
+      {showWhySection && (
+        <section className="py-20 bg-gradient-to-br from-orange-50/50 via-white to-orange-50/50 dark:from-neutral-950 dark:via-neutral-950 dark:to-neutral-950">
+          <div className="max-w-6xl mx-auto px-4">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5 }}
+              className="text-center mb-12"
+            >
+              <h2 className="text-3xl md:text-4xl font-bold mb-4">
+                Why we do what we do
+              </h2>
+            </motion.div>
             
-            {/* Mission text */}
-            <div className="order-1 md:order-2">
-              <div className="bg-white dark:bg-neutral-900 p-6 md:p-8 rounded-xl border border-orange-100 dark:border-neutral-800 shadow-md relative">
-                {/* Decorative quotation mark */}
-                <div className="absolute top-3 left-3 text-6xl text-orange-300/30 dark:text-orange-500/20 font-serif">
-                  "
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5 }}
+              className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 items-center"
+            >
+              {/* Placeholder image */}
+              <div className="order-2 md:order-1 flex justify-center">
+                <div className="bg-orange-100 dark:bg-neutral-800 rounded-xl overflow-hidden shadow-lg w-full max-w-md flex items-center justify-center">
+                  <img 
+                    src={atmosphericImage} 
+                    alt="InnerFlame Vision" 
+                    className="w-full h-auto"
+                  />
                 </div>
-                
-                <div className="space-y-6 relative z-10 px-8 pt-5">
-                  <p className="handwriting-font text-neutral-700 dark:text-neutral-300">
-                    We imagine a world where founders wake up feeling clear and confident, spend the day working on problems people actually care about, and head to bed proud of real impact in the world.
-                  </p>
+              </div>
+              
+              {/* Mission text */}
+              <div className="order-1 md:order-2">
+                <div className="bg-white dark:bg-neutral-900 p-6 md:p-8 rounded-xl border border-orange-100 dark:border-neutral-800 shadow-md relative">
+                  {/* Decorative quotation mark */}
+                  <div className="absolute top-3 left-3 text-6xl text-orange-300/30 dark:text-orange-500/20 font-serif">
+                    "
+                  </div>
                   
-                  <p className="handwriting-font text-neutral-700 dark:text-neutral-300">
-                    We believe the way to build that world is to give every entrepreneur a simple, living game plan and a tireless AI sidekick—to turn ideas into traction, one proven step at a time.
-                  </p>
-                </div>
-                
-                {/* Closing quotation mark */}
-                <div className="absolute bottom-3 right-3 text-6xl text-orange-300/30 dark:text-orange-500/20 font-serif">
-                  "
-                </div>
-                
-                {/* Signature-like element */}
-                <div className="mt-8 flex justify-end pr-8">
-                  <div className="signature">
-                    — The InnerFlame Team
+                  <div className="space-y-6 relative z-10 px-8 pt-5">
+                    <p className="handwriting-font text-neutral-700 dark:text-neutral-300">
+                      We imagine a world where founders wake up feeling clear and confident, spend the day working on problems people actually care about, and head to bed proud of real impact in the world.
+                    </p>
+                    
+                    <p className="handwriting-font text-neutral-700 dark:text-neutral-300">
+                      We believe the way to build that world is to give every entrepreneur a simple, living game plan and a tireless AI sidekick—to turn ideas into traction, one proven step at a time.
+                    </p>
+                  </div>
+                  
+                  {/* Closing quotation mark */}
+                  <div className="absolute bottom-3 right-3 text-6xl text-orange-300/30 dark:text-orange-500/20 font-serif">
+                    "
+                  </div>
+                  
+                  {/* Signature-like element */}
+                  <div className="mt-8 flex justify-end pr-8">
+                    <div className="signature">
+                      — The InnerFlame Team
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          </motion.div>
-        </div>
-      </section>
+            </motion.div>
+          </div>
+        </section>
+      )}
       
       {/* Plan Selector Section */}
-      <section className="py-20 bg-white dark:bg-neutral-950">
-        <div className="max-w-6xl mx-auto px-4">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5 }}
-            className="text-center mb-16"
-          >
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">
-              Pricing
-            </h2>
-            <p className="text-lg text-neutral-600 dark:text-neutral-400 max-w-3xl mx-auto">
-              
-            </p>
-          </motion.div>
-          
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-          >
-            <PlanSelector />
-          </motion.div>
-        </div>
-      </section>
+      {showPricingSection && (
+        <section className="py-20 bg-white dark:bg-neutral-950">
+          <div className="max-w-6xl mx-auto px-4">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5 }}
+              className="text-center mb-16"
+            >
+              <h2 className="text-3xl md:text-4xl font-bold mb-4">
+                Pricing
+              </h2>
+              <p className="text-lg text-neutral-600 dark:text-neutral-400 max-w-3xl mx-auto">
+                
+              </p>
+            </motion.div>
+            
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+            >
+              <PlanSelector />
+            </motion.div>
+          </div>
+        </section>
+      )}
       
       {/* Final CTA Section */}
       <section className="py-20 bg-gradient-to-br from-orange-50 via-white to-orange-50 dark:from-neutral-900 dark:via-neutral-950 dark:to-neutral-900">

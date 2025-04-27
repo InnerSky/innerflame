@@ -129,7 +129,7 @@ export function useQuestionnaireService() {
         // Update existing
         if (responseId) {
           const updateData: any = {
-            responses,
+            responses: JSON.parse(JSON.stringify(responses)),
             status,
             updated_at: timestamp
           };
@@ -168,7 +168,7 @@ export function useQuestionnaireService() {
             
             // Use update instead since we found an existing record
             const updateData: any = {
-              responses,
+              responses: JSON.parse(JSON.stringify(responses)),
               status,
               updated_at: timestamp
             };
@@ -192,7 +192,7 @@ export function useQuestionnaireService() {
             const insertData: any = {
               questionnaire_id: questionnaireId,
               user_id: userId,
-              responses,
+              responses: JSON.parse(JSON.stringify(responses)),
               status,
               created_at: timestamp,
               updated_at: timestamp
