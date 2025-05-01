@@ -1,3 +1,8 @@
+/* Import YoungSerif font from Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Young+Serif&display=swap');
+/* Import Karla font from Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Karla:wght@300;400;500;600;700&display=swap');
+
 /* postcss-ignore-next-line */
 @tailwind base;
 /* postcss-ignore-next-line */
@@ -6,6 +11,11 @@
 @tailwind utilities;
 
 @layer base {
+  /* Set Karla as the default font */
+  html {
+    font-family: 'Karla', sans-serif;
+  }
+  
   :root {
     --background: 0 0% 100%;
     --foreground: 0 0% 3.9%;
@@ -27,6 +37,8 @@
     --input: 0 0% 89.8%;
     --ring: 24 96% 53%;
     --radius: 0.75rem;
+    --complement: 195 100% 32%;  /* Teal blue complementary color */
+    --complement-foreground: 0 0% 98%;
   }
 
   .dark {
@@ -49,6 +61,8 @@
     --border: 0 0% 25%;
     --input: 0 0% 25%;
     --ring: 24 96% 53%;
+    --complement: 195 94% 53%;  /* Teal blue complementary color */
+    --complement-foreground: 0 0% 98%;
   }
 }
 

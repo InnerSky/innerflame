@@ -440,19 +440,22 @@ function AppContent() {
       
       {!hideNavAndFooter && (
         <nav className={`sticky top-0 z-40 transition-all duration-300 ${
-          scrolled ? "border-b bg-white/80 backdrop-blur-xl dark:bg-neutral-900/80" : "bg-transparent"
+          scrolled ? "border-b bg-gradient-to-r from-white/90 via-white/90 to-complement/5 backdrop-blur-xl dark:from-neutral-900/90 dark:via-neutral-900/90 dark:to-complement/10" : "bg-transparent"
         }`}>
           <div className="mx-auto flex max-w-7xl items-center justify-between p-4">
             <Link to="/" className="flex items-center gap-2">
               <div className="relative">
-                <div className="absolute -inset-1 animate-pulse rounded-full bg-orange-500/20 dark:bg-orange-500/30"></div>
+                <div className="absolute -inset-1 animate-pulse rounded-full bg-gradient-to-r from-orange-500/20 to-complement/20 dark:from-orange-500/30 dark:to-complement/30"></div>
                 <img 
-                  src="https://lpxnyybizytwcqdqasll.supabase.co/storage/v1/object/public/innerflame_asset//Logo1.png" 
+                  src="/src/assets/images/Logo_512x512.png" 
                   alt="InnerFlame Logo" 
                   className="relative h-5 w-5 sm:h-6 sm:w-6"
                 />
               </div>
-              <span className="text-lg sm:text-xl font-semibold">InnerFlame</span>
+              <div className="flex items-center">
+                <span className="text-lg sm:text-xl font-normal font-young-serif">InnerFlame</span>
+                <span className="text-lg sm:text-xl font-normal font-young-serif text-muted-foreground ml-1">Studio</span>
+              </div>
             </Link>
             
             <Button 
@@ -552,23 +555,25 @@ function AppContent() {
       </Suspense>
 
       {!hideNavAndFooter && (
-        <footer className="border-t bg-gradient-to-b from-white to-orange-50/30 py-12 sm:py-16 dark:from-neutral-900 dark:to-neutral-900/80">
+        <footer className="border-t bg-gradient-to-b from-white to-complement/10 py-12 sm:py-16 dark:from-neutral-900 dark:to-complement/20">
           <div className="mx-auto max-w-7xl px-4 sm:px-6">
             <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-3">
               <div className="text-center sm:text-left">
                 <div className="flex items-center justify-center sm:justify-start gap-2">
                   <div className="relative">
-                    <div className="absolute -inset-1 animate-pulse rounded-full bg-orange-500/20 dark:bg-orange-500/30"></div>
+                    <div className="absolute -inset-1 animate-pulse rounded-full bg-gradient-to-r from-orange-500/20 to-complement/20 dark:from-orange-500/30 dark:to-complement/30"></div>
                     <img 
-                      src="https://lpxnyybizytwcqdqasll.supabase.co/storage/v1/object/public/innerflame_asset//Logo1.png" 
+                      src="/src/assets/images/Logo_512x512.png" 
                       alt="InnerFlame Logo" 
                       className="relative h-5 w-5 sm:h-6 sm:w-6"
                     />
                   </div>
-                  <span className="text-lg sm:text-xl font-semibold">InnerFlame</span>
+                  <div className="flex items-center">
+                    <span className="text-lg sm:text-xl font-normal font-young-serif">InnerFlame</span>
+                  </div>
                 </div>
                 <p className="mt-4 sm:mt-5 text-xs sm:text-sm text-muted-foreground">
-                Empowering founders with an intelligent game-plan that grows alongside their vision.
+                To keep bold ideas burning bright—so every dream can light up the sky.
                 </p>
               </div>
               
@@ -594,14 +599,14 @@ function AppContent() {
               </div>
             </div>
             
-            <Separator className="my-8 sm:my-10 bg-gradient-to-r from-transparent via-orange-200/50 dark:via-orange-500/10 to-transparent" />
+            <Separator className="my-8 sm:my-10 bg-gradient-to-r from-transparent via-complement/30 dark:via-complement/20 to-transparent" />
             
             <div className="flex flex-col sm:flex-row items-center justify-between gap-5">
               <p className="text-xs sm:text-sm text-muted-foreground text-center sm:text-left">
                 © 2025 InnerFlame. All rights reserved.
               </p>
               <div className="flex items-center gap-5 justify-center sm:justify-end">
-                <a href="https://www.youtube.com/@founders_innerflame" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-orange-500 transition-colors duration-200 hover:scale-110 transform">
+                <a href="https://www.youtube.com/@founders_innerflame" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-complement transition-colors duration-200 hover:scale-110 transform">
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 sm:h-5 sm:w-5">
                     <path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33A2.78 2.78 0 0 0 3.4 19c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.25 29 29 0 0 0-.46-5.33z"></path>
                     <polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02"></polygon>

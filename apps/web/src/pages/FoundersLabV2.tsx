@@ -2,11 +2,12 @@ import { useState, useRef } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
-import { ArrowRight, Check, Zap, Brain, FolderArchive, BarChart3, Lightbulb, FileText, Wallet } from "lucide-react";
+import { ArrowRight, Check, Zap, Brain, FolderArchive, BarChart3, Lightbulb, FileText, Wallet, Target, Clock, Shield, MessageSquare, Users } from "lucide-react";
 import { motion } from "framer-motion";
 import { HeroSectionV2 } from "@/components/founders-lab/HeroSectionV2";
 import { PlanSelector } from "@/components/founders-lab/PlanSelector";
 import atmosphericImage from "@/assets/images/InnerFlame_atmospheric.png";
+import lakeBkgImage from "@/assets/images/lake_bkg.png";
 
 // Add Google Fonts import for a handwriting font
 const handwritingFontStyle = `
@@ -48,6 +49,27 @@ export default function FoundersLabV2() {
       {/* Add the style for the handwriting font */}
       <style dangerouslySetInnerHTML={{ __html: handwritingFontStyle }} />
       
+      {/* Full-width lake background section */}
+      <section className="relative w-full h-[500px] md:h-[600px] flex items-center justify-center overflow-hidden">
+        {/* Background image */}
+        <div 
+          className="absolute inset-0 bg-cover bg-center" 
+          style={{ backgroundImage: `url(${lakeBkgImage})` }}
+        >
+          <div className="absolute inset-0 bg-black/30 dark:bg-black/50"></div>
+        </div>
+        
+        {/* Text overlay */}
+        <div className="relative z-10 max-w-4xl mx-auto px-4 text-center">
+          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-6 font-young-serif drop-shadow-lg">
+            "The co-founder I never knew I needed."
+          </h1>
+          <p className="text-lg md:text-xl text-white/90 max-w-3xl mx-auto leading-relaxed drop-shadow-md">
+            Clarity in days, not months. InnerFlame complements entrepreneur's growth and success with positive psychology in mind.
+          </p>
+        </div>
+      </section>
+      
       {/* HeroSectionV2 */}
       <div className="w-full" ref={heroRef}>
         <HeroSectionV2 scrollToCheckout={scrollToStart} />
@@ -63,9 +85,12 @@ export default function FoundersLabV2() {
             transition={{ duration: 0.5 }}
             className="text-center mb-16"
           >
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">
-              How does InnerFlame work?
+            <h2 className="text-3xl md:text-4xl font-bold mb-4 font-young-serif">
+              Your companion for mission-driven momentum
             </h2>
+            <p className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto">
+              InnerFlame unites purpose alignment, real-world experiments, and compounding habits in one integrated workspace.
+            </p>
           </motion.div>
           
           <motion.div 
@@ -73,43 +98,82 @@ export default function FoundersLabV2() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.5 }}
-            className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-12"
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 md:gap-6"
           >
-            {/* Step 1: Idea In */}
-            <div className="bg-orange-50 dark:bg-neutral-900 rounded-xl p-8 border border-orange-100 dark:border-neutral-800 shadow-md transition-transform hover:scale-105 duration-300">
+            {/* Stay focused on your WHY */}
+            <div className="bg-complement/10 dark:bg-complement/5 rounded-xl p-8 border border-complement/20 dark:border-complement/10 shadow-md transition-transform hover:scale-105 duration-300">
               <div className="flex flex-col items-center">
                 <div className="p-4 bg-gradient-to-br from-orange-400 to-red-500 rounded-full mb-6">
-                  <Lightbulb className="h-8 w-8 text-white" />
+                  <Target className="h-8 w-8 text-white" />
                 </div>
-                <h3 className="text-xl font-bold text-center mb-4">Idea In</h3>
+                <h3 className="text-xl font-bold text-center mb-4 font-young-serif">Stay focused on your WHY</h3>
                 <p className="text-center text-neutral-700 dark:text-neutral-300">
-                  Just type one sentence about the product you want to build.
+                  InnerFlame maps every decision and task back to your North Star, ending mission drift and clarifying what matters most.
                 </p>
               </div>
             </div>
             
-            {/* Step 2: Canvas Out */}
-            <div className="bg-orange-50 dark:bg-neutral-900 rounded-xl p-8 border border-orange-100 dark:border-neutral-800 shadow-md transition-transform hover:scale-105 duration-300">
+            {/* Stress-test your business model */}
+            <div className="bg-complement/10 dark:bg-complement/5 rounded-xl p-8 border border-complement/20 dark:border-complement/10 shadow-md transition-transform hover:scale-105 duration-300">
               <div className="flex flex-col items-center">
                 <div className="p-4 bg-gradient-to-br from-orange-400 to-red-500 rounded-full mb-6">
-                  <FileText className="h-8 w-8 text-white" />
+                  <BarChart3 className="h-8 w-8 text-white" />
                 </div>
-                <h3 className="text-xl font-bold text-center mb-4">Canvas Out</h3>
+                <h3 className="text-xl font-bold text-center mb-4 font-young-serif">Stress-test your business model</h3>
                 <p className="text-center text-neutral-700 dark:text-neutral-300">
-                Our AI instantly turns it into a crisp Lean Canvas and lets you refine your assumptions on the spot.
+                  Surface your riskiest hypotheses and run lean experiments that uncover truth in days, not quarters.
                 </p>
               </div>
             </div>
             
-            {/* Step 3: Validate with Wallet */}
-            <div className="bg-orange-50 dark:bg-neutral-900 rounded-xl p-8 border border-orange-100 dark:border-neutral-800 shadow-md transition-transform hover:scale-105 duration-300">
+            {/* Build compounding habits */}
+            <div className="bg-complement/10 dark:bg-complement/5 rounded-xl p-8 border border-complement/20 dark:border-complement/10 shadow-md transition-transform hover:scale-105 duration-300">
               <div className="flex flex-col items-center">
                 <div className="p-4 bg-gradient-to-br from-orange-400 to-red-500 rounded-full mb-6">
-                  <Wallet className="h-8 w-8 text-white" />
+                  <Clock className="h-8 w-8 text-white" />
                 </div>
-                <h3 className="text-xl font-bold text-center mb-4">Validate</h3>
+                <h3 className="text-xl font-bold text-center mb-4 font-young-serif">Build compounding habits</h3>
                 <p className="text-center text-neutral-700 dark:text-neutral-300">
-                  Run experiments with your AI mentor and see if real customers pay—proof in days, not months.
+                  Design sprints, daily check-ins, and weekly reviews keep momentum high and burnout low.
+                </p>
+              </div>
+            </div>
+            
+            {/* Private and secure */}
+            <div className="bg-complement/10 dark:bg-complement/5 rounded-xl p-8 border border-complement/20 dark:border-complement/10 shadow-md transition-transform hover:scale-105 duration-300">
+              <div className="flex flex-col items-center">
+                <div className="p-4 bg-gradient-to-br from-orange-400 to-red-500 rounded-full mb-6">
+                  <Shield className="h-8 w-8 text-white" />
+                </div>
+                <h3 className="text-xl font-bold text-center mb-4 font-young-serif">Private and secure</h3>
+                <p className="text-center text-neutral-700 dark:text-neutral-300">
+                  Your data is encrypted in transit and at rest to protect your privacy.
+                </p>
+              </div>
+            </div>
+            
+            {/* Speak freely */}
+            <div className="bg-complement/10 dark:bg-complement/5 rounded-xl p-8 border border-complement/20 dark:border-complement/10 shadow-md transition-transform hover:scale-105 duration-300">
+              <div className="flex flex-col items-center">
+                <div className="p-4 bg-gradient-to-br from-orange-400 to-red-500 rounded-full mb-6">
+                  <MessageSquare className="h-8 w-8 text-white" />
+                </div>
+                <h3 className="text-xl font-bold text-center mb-4 font-young-serif">Speak freely</h3>
+                <p className="text-center text-neutral-700 dark:text-neutral-300">
+                  Tap InnerFlame as mentor, mindfulness coach, or brainstorming partner—anytime, in text or voice.
+                </p>
+              </div>
+            </div>
+            
+            {/* Earn loyal customers */}
+            <div className="bg-complement/10 dark:bg-complement/5 rounded-xl p-8 border border-complement/20 dark:border-complement/10 shadow-md transition-transform hover:scale-105 duration-300">
+              <div className="flex flex-col items-center">
+                <div className="p-4 bg-gradient-to-br from-orange-400 to-red-500 rounded-full mb-6">
+                  <Users className="h-8 w-8 text-white" />
+                </div>
+                <h3 className="text-xl font-bold text-center mb-4 font-young-serif">Earn loyal customers</h3>
+                <p className="text-center text-neutral-700 dark:text-neutral-300">
+                  Guided problem-discovery interviews help you understand users better than they understand themselves.
                 </p>
               </div>
             </div>
@@ -128,7 +192,7 @@ export default function FoundersLabV2() {
               transition={{ duration: 0.5 }}
               className="text-center mb-12"
             >
-              <h2 className="text-3xl md:text-4xl font-bold mb-4">
+              <h2 className="text-3xl md:text-4xl font-bold mb-4 font-young-serif">
                 Why we do what we do
               </h2>
             </motion.div>
@@ -177,7 +241,7 @@ export default function FoundersLabV2() {
                   {/* Signature-like element */}
                   <div className="mt-8 flex justify-end pr-8">
                     <div className="signature">
-                      — The InnerFlame Team
+                      — <span className="font-young-serif">The InnerFlame Team</span>
                     </div>
                   </div>
                 </div>
@@ -198,7 +262,7 @@ export default function FoundersLabV2() {
               transition={{ duration: 0.5 }}
               className="text-center mb-16"
             >
-              <h2 className="text-3xl md:text-4xl font-bold mb-4">
+              <h2 className="text-3xl md:text-4xl font-bold mb-4 font-young-serif">
                 Pricing
               </h2>
               <p className="text-lg text-neutral-600 dark:text-neutral-400 max-w-3xl mx-auto">
@@ -227,7 +291,7 @@ export default function FoundersLabV2() {
             viewport={{ once: true }}
             transition={{ duration: 0.5 }}
           >
-            <h2 className="text-3xl md:text-4xl font-bold mb-8">
+            <h2 className="text-3xl md:text-4xl font-bold mb-8 font-young-serif">
               Your dream is one click from clarity
             </h2>
             

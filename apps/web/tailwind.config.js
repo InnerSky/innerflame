@@ -81,6 +81,11 @@ export default {
         lg: ['1.25rem', { lineHeight: '1.875rem' }],   // 20px
         xl: ['1.375rem', { lineHeight: '2rem' }],      // 22px
       },
+      fontFamily: {
+        sans: ['Karla', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        'karla': ['Karla', 'sans-serif'],
+        'young-serif': ['"Young Serif"', 'serif'],
+      },
       borderRadius: {
         lg: 'var(--radius)',
         md: 'calc(var(--radius) - 2px)',
@@ -116,6 +121,10 @@ export default {
         destructive: {
           DEFAULT: 'hsl(var(--destructive))',
           foreground: 'hsl(var(--destructive-foreground))',
+        },
+        complement: {
+          DEFAULT: 'hsl(var(--complement))',
+          foreground: 'hsl(var(--complement-foreground))',
         },
         border: 'hsl(var(--border))',
         input: 'hsl(var(--input))',

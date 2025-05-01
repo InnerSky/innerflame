@@ -28,8 +28,13 @@ export function DevTools() {
     };
   }, []);
   
-  // Only render dev tools in development environment
-  if (process.env.NODE_ENV === 'production') {
+  // Ensure we don't render in production environments using multiple checks
+  const isProd = 
+    process.env.NODE_ENV === 'production' || 
+    import.meta.env.PROD === true || 
+    import.meta.env.MODE === 'production';
+  
+  if (isProd) {
     return null;
   }
   
