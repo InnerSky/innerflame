@@ -19,6 +19,7 @@ import { AuthModal } from "@/components/auth/AuthModal";
 import { OfflineBanner } from "@/components/OfflineBanner";
 import { Toaster } from "@/components/ui/toaster";
 import { DevTools } from "@/components/DevTools";
+import { SEO } from "@/components/SEO";
 import Home from "./pages/Home";
 import Articles from "./pages/Articles";
 import Article from "./pages/Article";
@@ -50,6 +51,11 @@ function App() {
     <ThemeProvider defaultTheme="system" storageKey="innerflame-ui-theme">
       <BrowserRouter>
         <TrackingProvider>
+        <SEO 
+          title="InnerFlame Studio"
+          description="InnerFlame helps founders navigate challenges with personalized guidance and insights, so you can keep your flame burning bright."
+          image="/images/OpenGraphImage.png"
+        />
         <AppContent />
         </TrackingProvider>
         <Toaster />
@@ -444,14 +450,11 @@ function AppContent() {
         }`}>
           <div className="mx-auto flex max-w-7xl items-center justify-between p-4">
             <Link to="/" className="flex items-center gap-2">
-              <div className="relative">
-                <div className="absolute -inset-1 animate-pulse rounded-full bg-gradient-to-r from-orange-500/20 to-complement/20 dark:from-orange-500/30 dark:to-complement/30"></div>
-                <img 
-                  src="/src/assets/images/Logo_512x512.png" 
-                  alt="InnerFlame Logo" 
-                  className="relative h-5 w-5 sm:h-6 sm:w-6"
-                />
-              </div>
+              <img 
+                src="/images/Logo_512x512.png"
+                alt="InnerFlame Logo" 
+                className="h-7 w-7 sm:h-8 sm:w-8"
+              />
               <div className="flex items-center">
                 <span className="text-lg sm:text-xl font-normal font-young-serif">InnerFlame</span>
                 <span className="text-lg sm:text-xl font-normal font-young-serif text-muted-foreground ml-1">Studio</span>
@@ -560,14 +563,11 @@ function AppContent() {
             <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-3">
               <div className="text-center sm:text-left">
                 <div className="flex items-center justify-center sm:justify-start gap-2">
-                  <div className="relative">
-                    <div className="absolute -inset-1 animate-pulse rounded-full bg-gradient-to-r from-orange-500/20 to-complement/20 dark:from-orange-500/30 dark:to-complement/30"></div>
-                    <img 
-                      src="/src/assets/images/Logo_512x512.png" 
-                      alt="InnerFlame Logo" 
-                      className="relative h-5 w-5 sm:h-6 sm:w-6"
-                    />
-                  </div>
+                  <img 
+                    src="/images/Logo_512x512.png"
+                    alt="InnerFlame Logo" 
+                    className="h-7 w-7 sm:h-8 sm:w-8"
+                  />
                   <div className="flex items-center">
                     <span className="text-lg sm:text-xl font-normal font-young-serif">InnerFlame</span>
                   </div>

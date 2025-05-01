@@ -4,6 +4,7 @@ import { AnimatedSection } from "@/components/animated-section";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { SEO } from "@/components/SEO";
 import { 
   Clock,
   Share2,
@@ -169,6 +170,16 @@ export default function Article() {
 
   return (
     <div className="min-h-screen bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-orange-50 via-white to-white dark:from-neutral-950 dark:via-neutral-900 dark:to-neutral-900">
+      {/* Add SEO with dynamic content from the article */}
+      {article && (
+        <SEO
+          title={article.title}
+          description={article.excerpt || `${article.title} - Read the full article on InnerFlame`}
+          image={article.image_url || '/images/OpenGraphImage.png'}
+          type="article"
+        />
+      )}
+      
       {/* Hero Section */}
       <section className="relative py-6 sm:py-8">
         <div className="absolute inset-0 -z-10">

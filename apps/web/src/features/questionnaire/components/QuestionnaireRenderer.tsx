@@ -220,12 +220,11 @@ export const QuestionnaireRenderer: React.FC<QuestionnaireRendererProps> = ({
         )}
         
         {/* Logo with breathing animation - matching navbar style */}
-        <div className="relative mr-4">
-          <div className="absolute -inset-1 animate-pulse rounded-full bg-orange-500/20 dark:bg-orange-500/30"></div>
+        <div className="mr-4">
           <img 
-            src="https://lpxnyybizytwcqdqasll.supabase.co/storage/v1/object/public/innerflame_asset//Logo1.png" 
+            src="/images/Logo_512x512.png" 
             alt="InnerFlame Logo" 
-            className="relative h-6 w-6"
+            className="h-7 w-7"
           />
         </div>
         

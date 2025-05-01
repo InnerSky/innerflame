@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { AnimatedSection } from "@/components/animated-section";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +14,7 @@ import {
 import { getArticles } from "@/lib/api";
 import type { Article } from "@/lib/api";
 import { ArticleCard } from "@/components/article-card";
+import { SEO } from "@/components/SEO";
 
 const categories = [
   "All",
@@ -56,6 +58,11 @@ export default function Articles() {
 
   return (
     <div className="min-h-screen bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-orange-50 via-white to-white dark:from-neutral-950 dark:via-neutral-900 dark:to-neutral-900">
+      <SEO
+        title="Articles"
+        description="Explore the latest articles about startup insights, founder challenges, and entrepreneurial growth on InnerFlame."
+      />
+      
       {/* Hero Section */}
       <section className="relative py-8 sm:py-12">
         <div className="absolute inset-0 -z-10">
