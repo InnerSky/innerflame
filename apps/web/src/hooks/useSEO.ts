@@ -66,6 +66,9 @@ export const useSEO = ({
         ? image 
         : `${window.location.origin}${image.startsWith('/') ? '' : '/'}${image}`;
       updateMetaTag('og:image', absoluteImage);
+      // Add standard image dimensions for better social media sharing
+      updateMetaTag('og:image:width', '1200');
+      updateMetaTag('og:image:height', '630');
     }
 
     // Twitter Card meta tags
