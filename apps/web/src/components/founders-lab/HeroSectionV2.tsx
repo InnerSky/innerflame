@@ -1,16 +1,15 @@
-import { ArrowRight, Clock, CheckCircle2, Zap } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { AnimatedSection } from "@/components/animated-section";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { useState, useEffect, useRef } from "react";
-import { useAuth } from "@/contexts/AuthContext.js";
-import { useNavigate } from "react-router-dom";
-import leanCanvasService from "@/features/documents/services/leanCanvasService.js";
-import { anonymousAuthService } from "@/features/auth/services/anonymousAuthService.js";
-import rocketImage from "@/assets/images/Rocket_blueprint.png";
+import { ArrowRight, Clock, CheckCircle2, Zap } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { AnimatedSection } from '@/components/animated-section';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { useState, useEffect, useRef } from 'react';
+import { useAuth } from '@/contexts/AuthContext.js';
+import { useNavigate } from 'react-router-dom';
+import leanCanvasService from '@/features/documents/services/leanCanvasService.js';
+import { anonymousAuthService } from '@/features/auth/services/anonymousAuthService.js';
 
 // CSS for the rocket vibration animation
 const animationStyles = `
@@ -72,7 +71,7 @@ interface HeroSectionV2Props {
 }
 
 export function HeroSectionV2({ scrollToCheckout }: HeroSectionV2Props) {
-  const [startupIdea, setStartupIdea] = useState("");
+  const [startupIdea, setStartupIdea] = useState('');
   const { user } = useAuth();
   const navigate = useNavigate();
   const [isCreating, setIsCreating] = useState(false);
@@ -104,7 +103,7 @@ export function HeroSectionV2({ scrollToCheckout }: HeroSectionV2Props) {
         const mostRecentCanvas = await leanCanvasService.getMostRecentLeanCanvas(user.id);
         setHasExistingCanvas(!!mostRecentCanvas);
       } catch (error) {
-        console.error("Error checking for existing canvas:", error);
+        console.error('Error checking for existing canvas:', error);
         setHasExistingCanvas(false);
       } finally {
         setIsLoading(false);
@@ -135,50 +134,50 @@ export function HeroSectionV2({ scrollToCheckout }: HeroSectionV2Props) {
 
   const handleGenerateCanvas = async () => {
     if (!startupIdea.trim()) return;
-    
+
     try {
       setIsCreating(true);
-      
+
       let currentUser = user;
-      
+
       // If no user is logged in, create an anonymous user
       if (!currentUser?.id) {
         currentUser = await anonymousAuthService.getOrCreateAnonymousUser();
         if (!currentUser?.id) {
-          throw new Error("Failed to create anonymous user");
+          throw new Error('Failed to create anonymous user');
         }
       }
-      
+
       // Create the lean canvas with the current user (anonymous or registered)
       await leanCanvasService.createLeanCanvas(currentUser.id);
-      
+
       // Navigate to the lean canvas page
-      navigate("/lean-canvas", { 
-        state: { 
+      navigate('/lean-canvas', {
+        state: {
           initialIdea: startupIdea,
-          isAnonymous: anonymousAuthService.isAnonymousUser(currentUser)
-        } 
+          isAnonymous: anonymousAuthService.isAnonymousUser(currentUser),
+        },
       });
     } catch (error) {
-      console.error("Error creating lean canvas:", error);
-      alert("Failed to create lean canvas. Please try again.");
+      console.error('Error creating lean canvas:', error);
+      alert('Failed to create lean canvas. Please try again.');
     } finally {
       setIsCreating(false);
     }
   };
 
   const handleGoToCanvas = () => {
-    navigate("/lean-canvas");
+    navigate('/lean-canvas');
   };
 
   return (
     <section className="w-full px-4 py-16 sm:py-24 lg:py-32 bg-gradient-to-br from-orange-50/50 via-white to-complement/5 dark:from-neutral-950 dark:via-neutral-950 dark:to-complement/10 relative overflow-hidden">
       {/* Inject the animation styles */}
       <style dangerouslySetInnerHTML={{ __html: animationStyles }} />
-      
+
       {/* Rocket Image */}
-      <img src={rocketImage} alt="Rocket blueprint" className="rocket-image" />
-      
+      <img src="/images/Rocket_blueprint.png" alt="Rocket blueprint" className="rocket-image" />
+
       <div className="max-w-7xl mx-auto relative z-10">
         <AnimatedSection>
           {/* Header - First Focal Point */}
@@ -187,25 +186,34 @@ export function HeroSectionV2({ scrollToCheckout }: HeroSectionV2Props) {
               <span className="mr-2">🧭</span> For Vision-Driven Founders
             </div>
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-normal mb-2 font-young-serif">
-              Build a business that stays 
+              Build a business that stays
               <span className="relative mx-1 inline-block">
                 <span className="relative z-10 text-primary font-bold px-1">
                   true to your vision
                 </span>
-                <svg className="absolute -bottom-1 sm:-bottom-2 left-0 -z-0 h-2 sm:h-3 w-full text-primary dark:text-primary/90" viewBox="0 0 100 12" preserveAspectRatio="none">
+                <svg
+                  className="absolute -bottom-1 sm:-bottom-2 left-0 -z-0 h-2 sm:h-3 w-full text-primary dark:text-primary/90"
+                  viewBox="0 0 100 12"
+                  preserveAspectRatio="none"
+                >
                   <path d="M0,0 Q50,12 100,0" stroke="currentColor" strokeWidth="8" fill="none">
-                    <animate attributeName="d" dur="4s" repeatCount="indefinite"
-                      values="M0,0 Q50,12 100,0;M0,0 Q50,8 100,0;M0,0 Q50,12 100,0" />
+                    <animate
+                      attributeName="d"
+                      dur="4s"
+                      repeatCount="indefinite"
+                      values="M0,0 Q50,12 100,0;M0,0 Q50,8 100,0;M0,0 Q50,12 100,0"
+                    />
                   </path>
                 </svg>
               </span>
-               — <span className="whitespace-nowrap">and pays off</span>
+              — <span className="whitespace-nowrap">and pays off</span>
             </h1>
             <p className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto">
-              InnerFlame links purpose, experiments, and habits in one workspace, turning your North Star into loyal, paying customers.
+              InnerFlame is your idea-to-impact partner, linking purpose, experiments, and habits in
+              one workspace.
             </p>
           </div>
-          
+
           {/* Idea Input - Second Focal Point */}
           <div className="max-w-3xl mx-auto mb-16">
             <Card className="border-2 border-complement/20 bg-white/95 dark:bg-neutral-900/95 backdrop-blur shadow-lg relative">
@@ -215,18 +223,18 @@ export function HeroSectionV2({ scrollToCheckout }: HeroSectionV2Props) {
                   No Signup & FREE
                 </div>
               </div>
-              
-              <CardContent className="p-6 md:p-8">              
+
+              <CardContent className="p-6 md:p-8">
                 <div className="space-y-4">
                   {!hasExistingCanvas && (
                     <>
                       <p className="text-left text-sm md:text-base text-neutral-700 dark:text-neutral-300 mb-2">
-                      <strong className="font-bold">STEP 1:</strong> Idea in → Canvas out
+                        <strong className="font-bold">STEP 1:</strong> Idea in → Business Model out
                       </p>
                       <Textarea
                         id="startup-idea"
                         ref={textareaRef}
-                        placeholder="What business do you want to build?"
+                        placeholder="What business are you building?"
                         value={startupIdea}
                         onChange={handleStartupIdeaChange}
                         maxLength={2500}
@@ -234,30 +242,36 @@ export function HeroSectionV2({ scrollToCheckout }: HeroSectionV2Props) {
                       />
                     </>
                   )}
-                  
-                  <Button 
+
+                  <Button
                     onClick={hasExistingCanvas ? handleGoToCanvas : handleGenerateCanvas}
                     size="lg"
                     className="w-full bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 transition-all duration-300 border-0 shadow-lg group text-white font-medium"
-                    disabled={isLoading || isCreating || (!hasExistingCanvas && !startupIdea.trim())}
+                    disabled={
+                      isLoading || isCreating || (!hasExistingCanvas && !startupIdea.trim())
+                    }
                   >
                     <Zap className="mr-2 h-5 w-5" />
-                    {isLoading ? "Loading..." : 
-                     isCreating ? "Creating Canvas..." : 
-                     hasExistingCanvas ? "Go to My Lean Canvas" : 
-                     "Generate Lean Canvas in 30 seconds"}
+                    {isLoading
+                      ? 'Loading...'
+                      : isCreating
+                        ? 'Creating Canvas...'
+                        : hasExistingCanvas
+                          ? 'Go to My Lean Canvas'
+                          : 'Generate Lean Canvas in 30 seconds'}
                     <ArrowRight className="ml-2 h-4 w-4 opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all duration-300" />
                   </Button>
                 </div>
               </CardContent>
             </Card>
-            
+
             <p className="mt-6 text-center text-neutral-700 dark:text-neutral-300 text-sm font-medium">
-              <span className="text-complement font-semibold">Save months</span> of blind pivots
+              <span className="text-complement font-semibold">Skip months</span> of blind pivots by
+              staying focused
             </p>
           </div>
         </AnimatedSection>
       </div>
     </section>
   );
-} 
+}
