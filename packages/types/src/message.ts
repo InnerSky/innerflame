@@ -9,7 +9,10 @@ import { Tables } from "./supabase.js";
 export enum MessageContextType {
   None = 'none',
   Project = 'project',
-  Document = 'document'
+  Document = 'document',
+  Ask = 'ask',
+  Reflect = 'reflect',
+  Capture = 'capture'
 }
 
 /**

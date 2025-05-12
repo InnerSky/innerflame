@@ -34,7 +34,9 @@ export const PlaybookType = {
   ORCHESTRATOR: 'ORCHESTRATOR',
   GENERATOR: 'GENERATOR',
   MENTOR: 'MENTOR',
-  WEB_SEARCH: 'WEB_SEARCH'
+  WEB_SEARCH: 'WEB_SEARCH',
+  ASK: 'ASK',
+  COACH: 'COACH'
 } as const;
 
 /**

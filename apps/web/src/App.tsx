@@ -43,6 +43,7 @@ import { supabase } from "@/lib/supabase";
 import { anonymousAuthService } from "@/features/auth/services/anonymousAuthService.js";
 import { OnboardingModal } from "@/components/OnboardingModal.js";
 import { TrackingProvider } from "@/contexts/TrackingContext.js";
+import CoachPage from "./features/coach/CoachPage.js";
 const OfflinePage = lazy(() => import("./pages/OfflinePage.js"));
 const LeanCanvas = lazy(() => import("./pages/LeanCanvas.js"));
 
@@ -272,7 +273,9 @@ function AppContent() {
   // Check if we're on the documents page or lean-canvas page
   const isDocumentsPage = location.pathname === '/documents';
   const isLeanCanvasPage = location.pathname === '/lean-canvas';
-  const hideNavAndFooter = isDocumentsPage || isLeanCanvasPage;
+  const isHomePage = location.pathname === '/home';
+  const isCoachPage = location.pathname === '/coach';
+  const hideNavAndFooter = isDocumentsPage || isLeanCanvasPage || isHomePage || isCoachPage;
 
   // Only log auth status check in development and only on 
   // significant changes (user ID change or anonymous status change)
@@ -554,6 +557,7 @@ function AppContent() {
           <Route path="/usage-policy" element={<UsagePolicy />} />
           <Route path="/privacy-policy" element={<PrivacyPolicy />} />
           <Route path="/test-questionnaire" element={<TestQuestionnaire />} />
+          <Route path="/coach" element={<CoachPage />} />
         </Routes>
       </Suspense>
 

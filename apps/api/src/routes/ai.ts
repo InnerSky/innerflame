@@ -29,6 +29,8 @@ const orchestratorAgent = createAgent(llmAdapter, tools, PlaybookType.ORCHESTRAT
 const generatorAgent = createStreamingAgent(llmAdapter, tools, PlaybookType.GENERATOR);
 const mentorAgent = createStreamingAgent(llmAdapter, tools, PlaybookType.MENTOR);
 const webSearchAgent = createStreamingAgent(llmAdapter, tools, PlaybookType.WEB_SEARCH);
+const askAgent = createStreamingAgent(llmAdapter, tools, PlaybookType.ASK);
+const coachAgent = createStreamingAgent(llmAdapter, tools, PlaybookType.COACH);
 
 // Legacy agent for backward compatibility (uses LEAN_CANVAS_CHAPTER1)
 const streamingAgent = createStreamingAgent(llmAdapter, tools);
@@ -205,6 +207,12 @@ export async function handleSpecializedAgentRequest(req: Request, res: Response)
         break;
       case 'web_search_agent':
         selectedAgent = webSearchAgent;
+        break;
+      case 'ask_agent':
+        selectedAgent = askAgent;
+        break;
+      case 'coach_agent':
+        selectedAgent = coachAgent;
         break;
       default:
         // Fallback to mentor agent

@@ -1,0 +1,1 @@
+-- Enable RLS on api_logs table ALTER TABLE api_logs ENABLE ROW LEVEL SECURITY; -- Create policy to allow only admins to view logs CREATE POLICY admin_select_logs ON api_logs FOR SELECT USING (auth.uid() IN (SELECT id FROM users WHERE is_admin = true));

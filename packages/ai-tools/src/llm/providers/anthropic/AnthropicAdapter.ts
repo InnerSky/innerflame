@@ -7,6 +7,63 @@ import {
   LLMApiError
 } from '../../interfaces/LLMProvider.js';
 import { AnthropicHandler } from '../../../api/providers/anthropic.js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import type { Database } from '@innerflame/types';
+
+/**
+ * Create a Supabase client for logging
+ */
+function createSupabaseLogger(): SupabaseClient<Database> | null {
+  const supabaseUrl = process.env.SUPABASE_URL || '';
+  const supabaseKey = process.env.SUPABASE_KEY || '';
+  
+  if (!supabaseUrl || !supabaseKey) {
+    console.error('[API Logging] SUPABASE_URL or SUPABASE_KEY not defined, API logging will not work');
+    return null;
+  }
+  
+  return createClient<Database>(supabaseUrl, supabaseKey);
+}
+
+/**
+ * Log an API request to Supabase
+ */
+async function logApiRequest(
+  supabase: SupabaseClient<Database> | null,
+  provider: string, 
+  endpoint: string, 
+  request: any
+): Promise<string | null> {
+  if (!supabase) {
+    console.warn('[API Logging] Supabase client not initialized, API logging will be skipped');
+    return null;
+  }
+  
+  try {
+    console.log('[API Logging] Inserting log entry into api_logs table');
+    const { data, error } = await supabase
+      .from('api_logs')
+      .insert({
+        provider,
+        endpoint,
+        request,
+        status: 'pending',
+      })
+      .select('id')
+      .single();
+      
+    if (error) {
+      console.error('[API Logging] Error logging API request:', error);
+      return null;
+    }
+    
+    console.log(`[API Logging] Successfully logged API request with ID: ${data?.id}`);
+    return data?.id || null;
+  } catch (err) {
+    console.error('[API Logging] Failed to log API request:', err);
+    return null;
+  }
+}
 
 /**
  * Extended usage metrics that include caching-related token counts
@@ -86,6 +143,7 @@ export class AnthropicAdapter implements LLMProvider {
   private defaultModel: string;
   private defaultThinkingBudget: number;
   private cachingEnabled: boolean;
+  private supabase: SupabaseClient<Database> | null;
   // defaultMaxTokens is reserved for future use when the handler supports direct token limits
   
   constructor(apiKey: string, options?: { 
@@ -101,8 +159,10 @@ export class AnthropicAdapter implements LLMProvider {
     this.defaultModel = options?.defaultModel || 'claude-3-haiku-20240307';
     this.defaultThinkingBudget = options?.defaultThinkingBudget || 1000;
     this.cachingEnabled = options?.enableCaching ?? false;
-    // Store defaultMaxTokens for future implementation
-    // this.defaultMaxTokens = options?.defaultMaxTokens || 1024;
+    
+    // Initialize Supabase client for logging
+    console.log('[API Logging] Initializing Supabase client for API logging in AnthropicAdapter');
+    this.supabase = createSupabaseLogger();
     
     // Create the handler with appropriate options
     this.handler = new AnthropicHandler({
@@ -111,8 +171,6 @@ export class AnthropicAdapter implements LLMProvider {
       // Set default thinking budget
       thinkingBudgetTokens: this.defaultThinkingBudget
     });
-    
-    // Removed retry wrapper due to TypeScript compatibility issues
   }
   
   /**
@@ -233,6 +291,18 @@ export class AnthropicAdapter implements LLMProvider {
         ? this.markMessagesForCaching(anthropicMessages)
         : anthropicMessages;
       
+      // Log API request to Supabase
+      console.log('[API Logging] Anthropic non-streaming API request detected');
+      const requestData = {
+        model: model.id,
+        systemPrompt,
+        messages: processedMessages,
+        thinking: enableThinking,
+        caching: enableCaching && cachingSupported
+      };
+      
+      await logApiRequest(this.supabase, 'anthropic', 'sendMessage', requestData);
+      
       // Process the full response
       let content = '';
       let reasoning = '';
@@ -315,6 +385,19 @@ export class AnthropicAdapter implements LLMProvider {
       const processedMessages = enableCaching && cachingSupported 
         ? this.markMessagesForCaching(anthropicMessages)
         : anthropicMessages;
+      
+      // Log API request to Supabase
+      console.log('[API Logging] Anthropic streaming API request detected');
+      const requestData = {
+        model: model.id,
+        systemPrompt,
+        messages: processedMessages,
+        thinking: enableThinking,
+        caching: enableCaching && cachingSupported,
+        streaming: true
+      };
+      
+      await logApiRequest(this.supabase, 'anthropic', 'streamMessage', requestData);
       
       // Create a readable stream from the generator
       const handler = this.handler; // Capture the handler reference
