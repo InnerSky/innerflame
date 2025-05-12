@@ -7,11 +7,12 @@
   "types": "./src/index.ts",
   "scripts": {
     "lint": "eslint .",
-    "clean": "rm -rf .turbo && rm -rf node_modules"
+    "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf dist"
   },
   "dependencies": {
-    "@innerflame/types": "*",
-    "@supabase/supabase-js": "^2.49.1"
+    "@innerflame/types": "workspace:*",
+    "@supabase/supabase-js": "^2.49.1",
+    "openai": "^4.56.0"
   },
   "devDependencies": {
     "typescript": "^5.5.3"

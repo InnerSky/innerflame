@@ -13,9 +13,9 @@
     "test:docs": "NODE_ENV=development tsx src/test/runDocumentTests.ts"
   },
   "dependencies": {
-    "@innerflame/ai-tools": "*",
-    "@innerflame/types": "*",
-    "@innerflame/utils": "*",
+    "@innerflame/ai-tools": "workspace:*",
+    "@innerflame/types": "workspace:*",
+    "@innerflame/utils": "workspace:*",
     "@langchain/langgraph": "^0.2.56",
     "@supabase/supabase-js": "^2.49.1",
     "@trpc/server": "^11.0.0-rc.4",
@@ -32,4 +32,4 @@
     "tsx": "^4.7.1",
     "typescript": "^5.5.3"
   }
-} 
+}

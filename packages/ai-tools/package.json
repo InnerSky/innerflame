@@ -7,16 +7,18 @@
   "types": "./src/index.ts",
   "scripts": {
     "lint": "eslint .",
-    "clean": "rm -rf .turbo && rm -rf node_modules",
+    "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf dist",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",
-    "@innerflame/types": "*",
-    "@innerflame/utils": "*",
+    "@innerflame/types": "workspace:*",
+    "@innerflame/utils": "workspace:*",
     "@langchain/langgraph": "^0.2.56",
+    "@langchain/community": "^0.2.20",
+    "@langchain/core": "^0.2.19",
     "zod": "^3.23.8"
   },
   "devDependencies": {
