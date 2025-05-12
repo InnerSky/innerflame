@@ -7,10 +7,10 @@
   "types": "./src/index.ts",
   "scripts": {
     "lint": "eslint .",
-    "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf dist"
+    "clean": "rm -rf .turbo && rm -rf node_modules"
   },
   "dependencies": {
-    "@innerflame/types": "workspace:*",
+    "@innerflame/types": "*",
     "@radix-ui/react-accordion": "^1.2.0",
     "@radix-ui/react-alert-dialog": "^1.1.1",
     "@radix-ui/react-aspect-ratio": "^1.1.0",

@@ -43,7 +43,6 @@ export default defineConfig(({ mode }) => {
         '@innerflame/ui': path.resolve(__dirname, '../../packages/ui/src'),
         '@innerflame/utils': path.resolve(__dirname, '../../packages/utils/src'),
         '@innerflame/ai-tools': path.resolve(__dirname, '../../packages/ai-tools/src'),
-        '@innerflame/services': path.resolve(__dirname, '../../packages/services/src'),
       },
     },
     server: {

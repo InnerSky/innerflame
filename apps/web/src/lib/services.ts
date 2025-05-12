@@ -532,6 +532,10 @@ export const MessageServiceStatic = {
       contextType: MessageContextType.None,
       limit
     }),
+  getAllUserMessages: (limit = 100) => 
+    messageService.loadMessages({
+      limit
+    }),
   deleteMessagesByContext: (contextId: string, contextType?: MessageContextType) => 
     messageService.deleteMessagesByContext(contextId, contextType)
 }; 

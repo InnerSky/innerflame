@@ -1,0 +1,1 @@
+CREATE TABLE api_logs (id UUID PRIMARY KEY DEFAULT uuid_generate_v4(), created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(), provider VARCHAR NOT NULL, endpoint VARCHAR NOT NULL, request JSONB NOT NULL, response JSONB, status VARCHAR NOT NULL);
