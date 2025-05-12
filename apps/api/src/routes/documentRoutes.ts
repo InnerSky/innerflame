@@ -1,8 +1,8 @@
-import express, { Request, Response } from 'express';
+import express, { Request, Response, Router } from 'express';
 import { authenticateUser } from '../middleware/auth.js';
 import { acceptVersion, rejectVersion } from '../services/documents/documentApprovalService.js';
 
-const router = express.Router();
+const router: Router = express.Router();
 
 // Document version approval routes
 router.post('/versions/:versionId/accept', authenticateUser, async (req: Request, res: Response) => {

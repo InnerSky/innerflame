@@ -1,5 +1,4 @@
 import { createClient } from '@supabase/supabase-js';
-import type { Request, Response } from 'express';
 
 // Initialize Supabase admin client with service role key
 const supabaseAdmin = createClient(
@@ -7,7 +6,7 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-export default async function handler(req: Request, res: Response) {
+export default async function handler(req: any, res: any) {
   if (req.method !== 'POST') {
     return res.status(405).json({ message: 'Method not allowed' });
   }

@@ -48,3 +48,6 @@ supabase/.env.*
 
 # Reference code (not for deployment)
 /cline/
+
+# Turbo cache
+.turbo/
