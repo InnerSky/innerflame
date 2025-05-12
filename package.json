@@ -18,6 +18,7 @@
     "clean": "turbo run clean && rm -rf node_modules",
     "reset-dev": "./scripts/clear-dev-servers.sh",
     "prepare": "husky",
+    "postinstall": "node scripts/fix-workspace-links.js",
     "gen:types": "npx supabase gen types typescript --project-id lpxnyybizytwcqdqasll > packages/types/src/supabase.ts"
   },
   "devDependencies": {
