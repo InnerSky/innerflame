@@ -22,6 +22,7 @@ import { motion } from 'framer-motion';
 import { HeroSectionV2 } from '@/components/founders-lab/HeroSectionV2';
 import { PlanSelector } from '@/components/founders-lab/PlanSelector';
 import { SEO } from '@/components/SEO';
+import { CalendlyEmbed } from '@/features/bookMeetings/index.js';
 
 // Add Google Fonts import for a handwriting font
 const handwritingFontStyle = `
@@ -343,6 +344,40 @@ export default function FoundersLabV2() {
               <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
             </Button>
           </motion.div>
+        </div>
+      </section>
+
+      {/* Calendly Section with Header */}
+      <section className="bg-white dark:bg-neutral-950 pt-20 pb-0">
+        <div className="max-w-4xl mx-auto px-4 mb-0">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5 }}
+            className="text-center"
+          >
+            <h2 className="text-3xl md:text-4xl font-bold mb-4 font-young-serif">
+              Book a call with us
+            </h2>
+            <p className="text-lg text-muted-foreground max-w-3xl mx-auto mb-0">
+              Have questions or want to learn more? Schedule a 30-minute call with our team.
+            </p>
+          </motion.div>
+        </div>
+        
+        {/* Direct embed with responsive settings */}
+        <div className="w-full overflow-visible">
+          <CalendlyEmbed 
+            key="calendly-embed-2"
+            className="w-full max-w-[1600px] mx-auto"
+            backgroundColor="f8f8f8"
+            textColor="313131"
+            primaryColor="00c5c3"
+            height={900}
+            minWidth={320}
+            hideScrollbar={true}
+          />
         </div>
       </section>
 

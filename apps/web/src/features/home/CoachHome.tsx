@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import { Send, ChevronLeft, X } from "lucide-react";
 import { cn } from "@/lib/utils.js";
 import { Card } from "@/components/ui/card.js";
@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button.js";
 import { useNavigate } from "react-router-dom";
 
 // Import OneChat component
-import { OneChat } from "@/features/oneChat/OneChat.js";
+import { OneChat, OneChatRef } from "@/features/oneChat/OneChat.js";
 import { DocumentsProvider } from "@/features/documents/contexts/DocumentsContext.js";
 
 // Import SaveStatus type
@@ -16,6 +16,7 @@ export const CoachHome: React.FC = () => {
   const [activeTab, setActiveTab] = useState<"today" | "history">("today");
   const [showCoachInterface, setShowCoachInterface] = useState(false);
   const navigate = useNavigate();
+  const oneChatRef = useRef<OneChatRef>(null);
 
   // Add debug effect
   useEffect(() => {
@@ -33,6 +34,17 @@ export const CoachHome: React.FC = () => {
   const handleEndConversation = () => {
     setShowCoachInterface(false);
     // Additional logic for ending conversation could go here
+  };
+
+  const handleMorningIntention = () => {
+    setShowCoachInterface(true);
+    
+    // Allow time for the interface to open and the OneChat component to mount
+    setTimeout(() => {
+      if (oneChatRef.current) {
+        oneChatRef.current.sendMessage("Start morning intention");
+      }
+    }, 300);
   };
 
   // Create mock Documents context for OneChat
@@ -146,7 +158,10 @@ export const CoachHome: React.FC = () => {
               {/* Cards */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 w-full">
                 {/* Morning Intention Card */}
-                <Card className="overflow-hidden bg-complement/10 dark:bg-complement/5 border-complement/20 dark:border-complement/10 shadow-md transition-transform hover:scale-105 duration-300">
+                <Card 
+                  className="overflow-hidden bg-complement/10 dark:bg-complement/5 border-complement/20 dark:border-complement/10 shadow-md transition-transform hover:scale-105 duration-300 cursor-pointer"
+                  onClick={handleMorningIntention}
+                >
                   <div className="p-6 flex flex-col items-center">
                     <div className="w-16 h-16 flex items-center justify-center mb-3">
                       <img 
@@ -161,7 +176,7 @@ export const CoachHome: React.FC = () => {
                 </Card>
 
                 {/* Evening Reflection Card */}
-                <Card className="overflow-hidden bg-complement/10 dark:bg-complement/5 border-complement/20 dark:border-complement/10 shadow-md transition-transform hover:scale-105 duration-300">
+                <Card className="overflow-hidden bg-complement/10 dark:bg-complement/5 border-complement/20 dark:border-complement/10 shadow-md transition-transform hover:scale-105 duration-300 cursor-pointer">
                   <div className="p-6 flex flex-col items-center">
                     <div className="w-16 h-16 flex items-center justify-center mb-3">
                       <img 
@@ -250,6 +265,7 @@ export const CoachHome: React.FC = () => {
         <div className="h-[calc(100vh-3.5rem)]">
           <DocumentsProvider value={mockDocumentsContext}>
             <OneChat 
+              ref={oneChatRef}
               isStandalone={true}
               viewMode="coach"
             />
