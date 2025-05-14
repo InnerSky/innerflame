@@ -41,6 +41,28 @@ export const CoachHome: React.FC = () => {
   const oneChatRef = useRef<OneChatRef>(null);
   const { user } = useAuth();
   
+  // Extract user's full name for greeting
+  const userFullName = useMemo(() => {
+    if (!user) return 'there';
+    
+    // Use user metadata if available, or fall back to email/id
+    const metadata = user.user_metadata;
+    if (metadata?.full_name) return metadata.full_name;
+    if (metadata?.name) return metadata.name;
+    
+    // Alternative: split email to get name
+    if (user.email) {
+      const emailName = user.email.split('@')[0];
+      // Convert email format (e.g., john.doe) to name format (John Doe)
+      return emailName
+        .split(/[._-]/) // Split by common email separators
+        .map(part => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+        .join(' ');
+    }
+    
+    return 'there'; // Fallback
+  }, [user]);
+  
   // Setup real-time subscription when tab changes to history
   useEffect(() => {
     // Only set up subscription when the history tab is active
@@ -132,6 +154,30 @@ export const CoachHome: React.FC = () => {
     const intervalId = setInterval(checkAvailableMessages, 5000);
     
     return () => clearInterval(intervalId);
+  }, [showCoachInterface]);
+
+  // New effect to scroll to bottom when the modal appears
+  useEffect(() => {
+    if (showCoachInterface && oneChatRef.current) {
+      // The OneChat component doesn't directly expose scrollToBottom,
+      // but we can use a known technique to get the MessageList's scrollToBottom
+      
+      // Short timeout to ensure the component is fully rendered
+      const timer = setTimeout(() => {
+        // Find the message container by its data attribute
+        const messageContainer = document.querySelector('[data-chat-container]');
+        if (messageContainer) {
+          // Find the scrollable area within the message container
+          const scrollableElement = messageContainer.querySelector('.overflow-auto, .overflow-y-auto');
+          if (scrollableElement instanceof HTMLElement) {
+            // Immediately scroll to the bottom without animation
+            scrollableElement.scrollTop = scrollableElement.scrollHeight;
+          }
+        }
+      }, 50); // Small delay for rendering
+      
+      return () => clearTimeout(timer);
+    }
   }, [showCoachInterface]);
 
   const handleOpenCoachInterface = () => {
@@ -352,8 +398,8 @@ export const CoachHome: React.FC = () => {
                 />
               </div>
               
-              {/* Catch up text */}
-              <p className="text-xl mb-6 font-medium">Po, want to catch up?</p>
+              {/* Catch up text - now dynamic with user's full name */}
+              <p className="text-xl mb-6 font-medium">{userFullName}, want to catch up?</p>
               
               {/* Message Input Field - Now clickable */}
               <div className="w-full relative mb-12">
@@ -370,41 +416,41 @@ export const CoachHome: React.FC = () => {
                 </div>
               </div>
               
-              {/* Cards */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 w-full">
-                {/* Morning Intention Card */}
+              {/* Cards - changed to display side by side by default */}
+              <div className="grid grid-cols-2 gap-3 xs:gap-4 sm:gap-6 w-full">
+                {/* Morning Intention Card - more compact styling */}
                 <Card 
-                  className="overflow-hidden bg-complement/10 dark:bg-complement/5 border-complement/20 dark:border-complement/10 shadow-md transition-transform hover:scale-105 duration-300 cursor-pointer"
+                  className="overflow-hidden bg-complement/10 dark:bg-complement/5 border-complement/20 dark:border-complement/10 shadow-md transition-transform hover:scale-105 duration-300 cursor-pointer min-w-[120px]"
                   onClick={handleMorningIntention}
                 >
-                  <div className="p-6 flex flex-col items-center">
-                    <div className="w-16 h-16 flex items-center justify-center mb-3">
+                  <div className="p-3 sm:p-6 flex flex-col items-center">
+                    <div className="w-12 h-12 sm:w-16 sm:h-16 flex items-center justify-center mb-2 sm:mb-3">
                       <img 
                         src="/images/morning_sun.png" 
                         alt="Morning Sun" 
-                        className="w-16 h-16 object-contain drop-shadow-sm"
+                        className="w-12 h-12 sm:w-16 sm:h-16 object-contain drop-shadow-sm"
                       />
                     </div>
-                    <p className="text-xl font-medium">morning</p>
-                    <p className="text-xl">intention</p>
+                    <p className="text-base sm:text-xl font-medium">morning</p>
+                    <p className="text-base sm:text-xl">intention</p>
                   </div>
                 </Card>
 
-                {/* Evening Reflection Card */}
+                {/* Evening Reflection Card - more compact styling */}
                 <Card 
-                  className="overflow-hidden bg-complement/10 dark:bg-complement/5 border-complement/20 dark:border-complement/10 shadow-md transition-transform hover:scale-105 duration-300 cursor-pointer"
+                  className="overflow-hidden bg-complement/10 dark:bg-complement/5 border-complement/20 dark:border-complement/10 shadow-md transition-transform hover:scale-105 duration-300 cursor-pointer min-w-[120px]"
                   onClick={handleEveningReflection}
                 >
-                  <div className="p-6 flex flex-col items-center">
-                    <div className="w-16 h-16 flex items-center justify-center mb-3">
+                  <div className="p-3 sm:p-6 flex flex-col items-center">
+                    <div className="w-12 h-12 sm:w-16 sm:h-16 flex items-center justify-center mb-2 sm:mb-3">
                       <img 
                         src="/images/night_moon.png" 
                         alt="Night Moon" 
-                        className="w-16 h-16 object-contain drop-shadow-sm"
+                        className="w-12 h-12 sm:w-16 sm:h-16 object-contain drop-shadow-sm"
                       />
                     </div>
-                    <p className="text-xl font-medium">evening</p>
-                    <p className="text-xl">reflection</p>
+                    <p className="text-base sm:text-xl font-medium">evening</p>
+                    <p className="text-base sm:text-xl">reflection</p>
                   </div>
                 </Card>
               </div>
@@ -520,7 +566,7 @@ export const CoachHome: React.FC = () => {
               <ChevronLeft className="h-5 w-5" />
             </Button>
             
-            <h1 className="text-lg font-medium">Coach</h1>
+            <div className="w-8"></div> {/* Empty div for spacing */}
             
             <Button
               variant="ghost"

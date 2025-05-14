@@ -14,6 +14,7 @@ interface MessageRow {
   context_id: string | null;
   context_type: string | null;
   created_at: string | null;
+  inhistory_id: string | null;
   reply_to_message_id: string | null;
   sender_type: string;
   user_id: string;
@@ -140,6 +141,7 @@ export class MessageSubscriptionService {
                 context_id: null,
                 context_entity_version_id: null,
                 reply_to_message_id: null,
+                inhistory_id: null,
                 createdAt: new Date(),
                 isEdited: false
               };

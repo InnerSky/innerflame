@@ -1,5 +1,5 @@
 import React from "react";
-import { Camera, Users, Code } from "lucide-react";
+import { QuoteIcon, MessageSquare, FileEdit } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 type NavigationTab = "capture" | "coach" | "studio";
@@ -22,19 +22,19 @@ export const HomeNavigation: React.FC<HomeNavigationProps> = ({
             <TabButton 
               isActive={activeTab === "capture"}
               onClick={() => setActiveTab("capture")}
-              icon={<Camera className="h-5 w-5 mr-2" />}
+              icon={<QuoteIcon className="h-5 w-5 mr-2" />}
               label="Capture"
             />
             <TabButton 
               isActive={activeTab === "coach"}
               onClick={() => setActiveTab("coach")}
-              icon={<Users className="h-5 w-5 mr-2" />}
-              label="Coach"
+              icon={<MessageSquare className="h-5 w-5 mr-2" />}
+              label="Reflect"
             />
             <TabButton 
               isActive={activeTab === "studio"}
               onClick={() => setActiveTab("studio")}
-              icon={<Code className="h-5 w-5 mr-2" />}
+              icon={<FileEdit className="h-5 w-5 mr-2" />}
               label="Studio"
             />
           </div>
@@ -47,21 +47,21 @@ export const HomeNavigation: React.FC<HomeNavigationProps> = ({
           <TabButton 
             isActive={activeTab === "capture"}
             onClick={() => setActiveTab("capture")}
-            icon={<Camera className="h-5 w-5 mb-1" />}
+            icon={<QuoteIcon className="h-5 w-5 mb-1" />}
             label="Capture"
             isMobile
           />
           <TabButton 
             isActive={activeTab === "coach"}
             onClick={() => setActiveTab("coach")}
-            icon={<Users className="h-5 w-5 mb-1" />}
-            label="Coach"
+            icon={<MessageSquare className="h-5 w-5 mb-1" />}
+            label="Reflect"
             isMobile
           />
           <TabButton 
             isActive={activeTab === "studio"}
             onClick={() => setActiveTab("studio")}
-            icon={<Code className="h-5 w-5 mb-1" />}
+            icon={<FileEdit className="h-5 w-5 mb-1" />}
             label="Studio"
             isMobile
           />

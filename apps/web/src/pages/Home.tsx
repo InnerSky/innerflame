@@ -7,7 +7,7 @@ import {
 } from "@/features/home/index.js";
 
 export default function Home() {
-  const [activeTab, setActiveTab] = useState<"capture" | "coach" | "studio">("capture");
+  const [activeTab, setActiveTab] = useState<"capture" | "coach" | "studio">("coach");
 
   return (
     <div className="flex flex-col h-screen w-full">
@@ -17,7 +17,7 @@ export default function Home() {
         {activeTab === "capture" && <CaptureHome />}
         {activeTab === "coach" && <CoachHome />}
         {activeTab === "studio" && <StudioHome />}
-                    </div>
-                  </div>
+      </div>
+    </div>
   );
 }

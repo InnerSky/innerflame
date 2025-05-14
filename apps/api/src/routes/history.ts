@@ -1,8 +1,8 @@
-import express from 'express';
+import express, { Router } from 'express';
 import { createHistory } from '../controllers/history.js';
 import { authenticateUser } from '../middleware/auth.js'; // Assuming you have this middleware
 
-const router = express.Router();
+const router: Router = express.Router();
 
 /**
  * History API routes

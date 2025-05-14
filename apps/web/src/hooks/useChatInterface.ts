@@ -310,6 +310,7 @@ export function useChatInterface({
       context_id: contextId ?? null,
       context_entity_version_id: contextEntityVersionId,
       reply_to_message_id: null,
+      inhistory_id: null,
       createdAt: new Date(),
       isEdited: false
     };
@@ -366,6 +367,7 @@ export function useChatInterface({
         context_id: contextId ?? null,
         context_entity_version_id: contextEntityVersionId,
         reply_to_message_id: null,
+        inhistory_id: null,
         createdAt: new Date(),
         isEdited: false
       };

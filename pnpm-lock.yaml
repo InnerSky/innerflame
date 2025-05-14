@@ -124,6 +124,9 @@ importers:
       '@innerflame/ai-tools':
         specifier: '*'
         version: link:../../packages/ai-tools
+      '@innerflame/services':
+        specifier: '*'
+        version: link:../../packages/services
       '@innerflame/types':
         specifier: '*'
         version: link:../../packages/types
