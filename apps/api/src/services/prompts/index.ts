@@ -27,17 +27,18 @@ export const ContextType = {
 } as const;
 
 /**
- * Playbook type constants
+ * Playbook type enum to keep track of available playbooks
  */
-export const PlaybookType = {
-  LEAN_CANVAS_CHAPTER1: 'LEAN_CANVAS_CHAPTER1',
-  ORCHESTRATOR: 'ORCHESTRATOR',
-  GENERATOR: 'GENERATOR',
-  MENTOR: 'MENTOR',
-  WEB_SEARCH: 'WEB_SEARCH',
-  ASK: 'ASK',
-  COACH: 'COACH'
-} as const;
+export enum PlaybookType {
+  LEAN_CANVAS_CHAPTER1 = 'LEAN_CANVAS_CHAPTER1',
+  ORCHESTRATOR = 'ORCHESTRATOR',
+  GENERATOR = 'GENERATOR',
+  MENTOR = 'MENTOR',
+  WEB_SEARCH = 'WEB_SEARCH',
+  ASK = 'ASK',
+  COACH = 'COACH',
+  MESSAGE_TO_HISTORY = 'MESSAGE_TO_HISTORY'
+}
 
 /**
  * Enhanced options for system prompt creation

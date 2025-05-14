@@ -1,5 +1,5 @@
-import React, { useState, useMemo, useEffect, useRef } from "react";
-import { Send, ChevronLeft, X } from "lucide-react";
+import React, { useState, useMemo, useEffect, useRef, useCallback } from "react";
+import { Send, ChevronLeft, X, Sparkles, BookOpen } from "lucide-react";
 import { cn } from "@/lib/utils.js";
 import { Card } from "@/components/ui/card.js";
 import { Button } from "@/components/ui/button.js";
@@ -12,16 +12,127 @@ import { DocumentsProvider } from "@/features/documents/contexts/DocumentsContex
 // Import SaveStatus type
 import { SaveStatus } from "@/features/documents/models/document.js";
 
+// Import HistorySummary component
+import { HistorySummary } from "@/features/history/HistorySummary.js";
+import { HistoryDetail } from "@/features/history/HistoryDetail.js";
+import { 
+  getUserHistory, 
+  groupHistoryByDate, 
+  formatDate, 
+  HistoryItem,
+  subscribeToHistoryList
+} from "@/features/history/historyService.js";
+import { createHistory } from "@/api/history/index.js";
+import { messageSubscriptionService } from "@/lib/services.js";
+import { useAuth } from "@/contexts/AuthContext.js";
+
 export const CoachHome: React.FC = () => {
   const [activeTab, setActiveTab] = useState<"today" | "history">("today");
   const [showCoachInterface, setShowCoachInterface] = useState(false);
+  const [showSpotlightModal, setShowSpotlightModal] = useState(false);
+  const [messageIds, setMessageIds] = useState<string[]>([]);
+  const [historyItems, setHistoryItems] = useState<HistoryItem[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [selectedHistoryId, setSelectedHistoryId] = useState<string | null>(null);
+  const [generatingSpotlight, setGeneratingSpotlight] = useState(false);
+  const [hasAvailableMessages, setHasAvailableMessages] = useState(false);
   const navigate = useNavigate();
   const oneChatRef = useRef<OneChatRef>(null);
+  const { user } = useAuth();
+  
+  // Setup real-time subscription when tab changes to history
+  useEffect(() => {
+    // Only set up subscription when the history tab is active
+    if (activeTab !== 'history') return;
+    
+    setIsLoading(true);
+    
+    // Set up subscription to history updates
+    const unsubscribe = subscribeToHistoryList((items) => {
+      setHistoryItems(items);
+      setIsLoading(false);
+      setError(null);
+    });
+    
+    // Handle initial loading or errors
+    const handleInitialLoad = async () => {
+      try {
+        // Initial fetch in case subscription takes time
+        const data = await getUserHistory();
+        setHistoryItems(data);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load history');
+        console.error('Error fetching history:', err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    handleInitialLoad();
+    
+    // Clean up subscription when component unmounts or tab changes
+    return () => {
+      unsubscribe();
+    };
+  }, [activeTab]);
+
+  // Subscribe to message updates to keep track of available messages for spotlighting
+  useEffect(() => {
+    if (!user || !showCoachInterface) return;
+    
+    // Function to check for available messages
+    const checkAvailableMessages = () => {
+      if (oneChatRef.current) {
+        const messagesData = oneChatRef.current.getMessages();
+        // Filter out messages that already have an inhistory_id
+        const availableMessages = messagesData.messages.filter(msg => !msg.inhistory_id);
+        setHasAvailableMessages(availableMessages.length > 0);
+      }
+    };
+    
+    // Set up listener for message updates
+    const messageUpdateHandler = messageSubscriptionService.onMessageUpdated((updatedMessage) => {
+      console.log('CoachHome: Message updated:', updatedMessage.id, 'inhistory_id:', updatedMessage.inhistory_id);
+      // When a message is updated (including inhistory_id changes), recheck available messages
+      checkAvailableMessages();
+    });
+    
+    // Initial check
+    checkAvailableMessages();
+    
+    // Clean up subscription when component unmounts or when coach interface is hidden
+    return () => {
+      messageUpdateHandler();
+    };
+  }, [user, showCoachInterface]);
 
   // Add debug effect
   useEffect(() => {
     console.log('CoachHome mounted - OneChat will be loaded with useOneChat hook');
   }, []);
+
+  // Check for available messages whenever coach interface is visible
+  useEffect(() => {
+    if (!showCoachInterface || !oneChatRef.current) return;
+    
+    const checkAvailableMessages = () => {
+      if (oneChatRef.current) {
+        const messagesData = oneChatRef.current.getMessages();
+        // Filter out messages that already have an inhistory_id
+        const availableMessages = messagesData.messages.filter(msg => !msg.inhistory_id);
+        setHasAvailableMessages(availableMessages.length > 0);
+      }
+    };
+    
+    // Check initially
+    checkAvailableMessages();
+    
+    // Set up interval to check periodically (as a backup)
+    const intervalId = setInterval(checkAvailableMessages, 5000);
+    
+    return () => clearInterval(intervalId);
+  }, [showCoachInterface]);
 
   const handleOpenCoachInterface = () => {
     setShowCoachInterface(true);
@@ -29,11 +140,60 @@ export const CoachHome: React.FC = () => {
 
   const handleCloseCoachInterface = () => {
     setShowCoachInterface(false);
+    setShowSpotlightModal(false);
   };
 
   const handleEndConversation = () => {
     setShowCoachInterface(false);
-    // Additional logic for ending conversation could go here
+    setShowSpotlightModal(false);
+  };
+
+  const handleSpotlightClick = () => {
+    // Get the current message IDs from OneChat
+    if (oneChatRef.current) {
+      const messagesData = oneChatRef.current.getMessages();
+      
+      // Filter out messages that already have an inhistory_id
+      const availableMessages = messagesData.messages.filter(msg => !msg.inhistory_id);
+      const currentMessageIds = availableMessages.map(msg => msg.id);
+      
+      if (currentMessageIds.length === 0) {
+        // Show a toast or alert that there are no new messages to summarize
+        console.log("No new messages available for summarization");
+        setHasAvailableMessages(false);
+        // You could add a toast notification here
+        return;
+      }
+      
+      setHasAvailableMessages(true);
+      setMessageIds(currentMessageIds);
+      setShowSpotlightModal(true);
+    } else {
+      console.error("OneChat reference not available");
+    }
+  };
+
+  const handleGenerateSpotlight = async () => {
+    try {
+      // Show loading state
+      setGeneratingSpotlight(true);
+      
+      // Create a history entry from the message IDs
+      console.log(`CoachHome: Creating history from ${messageIds.length} messages`);
+      const result = await createHistory(messageIds);
+      console.log(`CoachHome: Created history with ID ${result.historyId}`);
+      
+      // Hide the spotlight modal
+      setShowSpotlightModal(false);
+      
+      // Show the history detail for the newly created history
+      setSelectedHistoryId(result.historyId);
+    } catch (error) {
+      console.error("Error generating spotlight:", error);
+      // You could show an error toast here
+    } finally {
+      setGeneratingSpotlight(false);
+    }
   };
 
   const handleMorningIntention = () => {
@@ -45,6 +205,26 @@ export const CoachHome: React.FC = () => {
         oneChatRef.current.sendMessage("Start morning intention");
       }
     }, 300);
+  };
+
+  const handleEveningReflection = () => {
+    setShowCoachInterface(true);
+    
+    // Allow time for the interface to open and the OneChat component to mount
+    setTimeout(() => {
+      if (oneChatRef.current) {
+        oneChatRef.current.sendMessage("Start evening reflection");
+      }
+    }, 300);
+  };
+
+  const handleHistoryItemClick = (historyId: string) => {
+    setSelectedHistoryId(historyId);
+  };
+
+  const handleCloseHistoryDetail = () => {
+    setSelectedHistoryId(null);
+    // No need to manually refresh as we now have real-time subscription
   };
 
   // Create mock Documents context for OneChat
@@ -78,6 +258,41 @@ export const CoachHome: React.FC = () => {
     acceptDocumentVersion: async () => {},
     rejectDocumentVersion: async () => {}
   }), []);
+
+  // Render history item for a specific date
+  const renderHistoryDateCard = (date: string, items: HistoryItem[]) => {
+    const formattedDate = formatDate(date);
+    const item = items[0]; // Get the first item for the date
+    
+    // Get title or generate a fallback
+    const getTitle = () => {
+      if (item.content.title) {
+        return item.content.title;
+      }
+      
+      // Use type if available as a fallback
+      if (item.content.type) {
+        const type = item.content.type;
+        return type.charAt(0).toUpperCase() + type.slice(1) + ' reflection';
+      }
+      
+      // Default title if no other options
+      return 'Conversation';
+    };
+    
+    return (
+      <Card 
+        key={date} 
+        className="mb-4 bg-complement/5 hover:bg-complement/10 border-complement/10 transition-all duration-300 cursor-pointer"
+        onClick={() => handleHistoryItemClick(items[0].id)}
+      >
+        <div className="p-4">
+          <div className="font-medium text-lg">{getTitle()}</div>
+          <div className="text-sm text-muted-foreground mt-1">{formattedDate}</div>
+        </div>
+      </Card>
+    );
+  };
 
   return (
     <div className="flex flex-col h-full w-full overflow-hidden relative">
@@ -176,7 +391,10 @@ export const CoachHome: React.FC = () => {
                 </Card>
 
                 {/* Evening Reflection Card */}
-                <Card className="overflow-hidden bg-complement/10 dark:bg-complement/5 border-complement/20 dark:border-complement/10 shadow-md transition-transform hover:scale-105 duration-300 cursor-pointer">
+                <Card 
+                  className="overflow-hidden bg-complement/10 dark:bg-complement/5 border-complement/20 dark:border-complement/10 shadow-md transition-transform hover:scale-105 duration-300 cursor-pointer"
+                  onClick={handleEveningReflection}
+                >
                   <div className="p-6 flex flex-col items-center">
                     <div className="w-16 h-16 flex items-center justify-center mb-3">
                       <img 
@@ -196,34 +414,88 @@ export const CoachHome: React.FC = () => {
           {/* History Content */}
           <div className="w-1/2 h-full flex flex-col items-center px-4 py-6 overflow-y-auto">
             <div className="w-full max-w-3xl">
-              {/* Date boxes */}
-              {[
-                { date: "May 15, 2024", items: 2 },
-                { date: "May 14, 2024", items: 1 },
-                { date: "May 13, 2024", items: 2 },
-                { date: "May 12, 2024", items: 1 },
-                { date: "May 11, 2024", items: 2 },
-              ].map((entry, index) => (
-                <Card 
-                  key={index} 
-                  className="mb-4 bg-complement/10 dark:bg-complement/5 border-complement/20 dark:border-complement/10 shadow-md transition-transform hover:scale-105 duration-300"
-                >
-                  <div className="px-4 py-3 border-b border-complement/20 dark:border-complement/10">
-                    <div className="text-sm text-muted-foreground">{entry.date}</div>
+              {/* Loading state */}
+              {isLoading && (
+                <div className="flex flex-col items-center justify-center py-12">
+                  <div className="w-12 h-12 rounded-full border-4 border-primary/30 border-t-primary animate-spin mb-4"></div>
+                  <p className="text-muted-foreground">Loading history...</p>
+                </div>
+              )}
+              
+              {/* Error state */}
+              {!isLoading && error && (
+                <div className="flex flex-col items-center justify-center py-12">
+                  <div className="text-destructive mb-4">Failed to load history</div>
+                  <p className="text-muted-foreground mb-6">{error}</p>
+                  <Button 
+                    onClick={() => {
+                      // Force a refresh by toggling the tab
+                      setActiveTab("today");
+                      setTimeout(() => setActiveTab("history"), 10);
+                    }}
+                  >
+                    Try Again
+                  </Button>
+                </div>
+              )}
+              
+              {/* Empty state */}
+              {!isLoading && !error && historyItems.length === 0 && (
+                <div className="flex flex-col items-center justify-center py-12">
+                  <BookOpen className="h-16 w-16 text-muted-foreground mb-4" />
+                  <h3 className="text-xl font-medium mb-2">No history yet</h3>
+                  <p className="text-muted-foreground text-center mb-6">
+                    Your conversation history will appear here after you've completed some reflections.
+                  </p>
+                  <Button onClick={() => setActiveTab("today")}>Start a Conversation</Button>
+                </div>
+              )}
+              
+              {/* Individual history items */}
+              {!isLoading && !error && historyItems.length > 0 && (
+                <div>
+                  <div className="mb-4 flex justify-between items-center">
+                    <h3 className="text-lg font-medium">All History ({historyItems.length})</h3>
                   </div>
-                  <div className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div className="font-medium">Past entries ({entry.items})</div>
-                      <div className="text-xs px-2 py-1 bg-complement/20 dark:bg-complement/30 rounded-full">
-                        {entry.items === 1 ? "Evening" : "Morning & Evening"}
+                  
+                  {historyItems.map((item) => (
+                    <Card 
+                      key={item.id} 
+                      className="mb-4 bg-complement/5 hover:bg-complement/10 border-complement/10 transition-all duration-300 cursor-pointer"
+                      onClick={() => handleHistoryItemClick(item.id)}
+                    >
+                      <div className="p-4">
+                        <div className="font-medium text-lg">
+                          {item.content.title || 
+                            (item.content.type 
+                              ? item.content.type.charAt(0).toUpperCase() + item.content.type.slice(1) + ' reflection'
+                              : 'Conversation'
+                            )
+                          }
+                        </div>
+                        <div className="text-sm text-muted-foreground mt-1">{formatDate(item.created_at)}</div>
+                        {item.content.tags && item.content.tags.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-2">
+                            {item.content.tags.slice(0, 3).map((tag, index) => (
+                              <div 
+                                key={index}
+                                className="inline-flex items-center rounded-full bg-primary/5 px-1.5 py-0.5 text-xs font-medium text-primary/70"
+                              >
+                                {tag}
+                              </div>
+                            ))}
+                            {item.content.tags.length > 3 && (
+                              <div className="inline-flex items-center rounded-full bg-primary/5 px-1.5 py-0.5 text-xs font-medium text-primary/70">
+                                +{item.content.tags.length - 3} more
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
-                    </div>
-                    <div className="mt-3 h-12 w-full bg-complement/10 dark:bg-complement/20 rounded-lg flex items-center justify-center">
-                      <span className="text-sm text-muted-foreground">Tap to view entry details</span>
-                    </div>
-                  </div>
-                </Card>
-              ))}
+                    </Card>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -253,10 +525,17 @@ export const CoachHome: React.FC = () => {
             <Button
               variant="ghost"
               size="icon"
-              onClick={handleEndConversation}
-              aria-label="End conversation"
+              onClick={handleSpotlightClick}
+              aria-label="Create spotlight"
+              className={cn(
+                "transition-colors",
+                hasAvailableMessages
+                  ? "text-primary hover:text-primary/80"
+                  : "text-muted-foreground cursor-not-allowed opacity-50"
+              )}
+              disabled={!hasAvailableMessages}
             >
-              <X className="h-5 w-5" />
+              <Sparkles className="h-5 w-5" />
             </Button>
           </div>
         </header>
@@ -272,6 +551,64 @@ export const CoachHome: React.FC = () => {
           </DocumentsProvider>
         </div>
       </div>
+
+      {/* Spotlight Modal */}
+      {showSpotlightModal && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center"
+          onClick={() => setShowSpotlightModal(false)}
+        >
+          <div 
+            className="bg-background rounded-lg shadow-lg w-full max-w-md mx-auto p-6 flex flex-col items-center"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Sparkle Icon */}
+            <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center mb-4">
+              <Sparkles className="h-8 w-8 text-primary" />
+            </div>
+            
+            <h2 className="text-xl font-semibold mb-3 text-center">Ready to create your spotlight?</h2>
+            
+            <p className="text-center text-muted-foreground mb-6">
+              InnerFlame can now analyze your conversation and highlight meaningful insights. 
+              Create your spotlight now or continue chatting to add more context.
+            </p>
+            
+            <div className="w-full space-y-3">
+              <Button 
+                className="w-full"
+                onClick={handleGenerateSpotlight}
+                disabled={messageIds.length === 0 || generatingSpotlight}
+              >
+                {generatingSpotlight ? (
+                  <>
+                    <div className="w-4 h-4 rounded-full border-2 border-background/30 border-t-background animate-spin mr-2"></div>
+                    Generating...
+                  </>
+                ) : (
+                  'Generate my spotlight'
+                )}
+              </Button>
+              
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => setShowSpotlightModal(false)}
+              >
+                Continue chatting
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* History Detail Modal */}
+      {selectedHistoryId && (
+        <HistoryDetail 
+          historyId={selectedHistoryId}
+          onClose={handleCloseHistoryDetail}
+        />
+      )}
     </div>
   );
 };

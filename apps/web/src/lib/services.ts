@@ -205,11 +205,25 @@ export class MessageSubscriptionService {
     contextType?: MessageContextType, 
     contextId?: string | null
   ): boolean {
+    // If contextType is 'None', it means we want all messages for the user,
+    // regardless of their specific context. So, no filtering should occur.
+    if (contextType === MessageContextType.None) {
+      return false; // Do not filter, allow the message through
+    }
+    
+    // Original logic for specific contexts (when contextType is not 'None'):
     if (contextType && contextId) {
+      // Filter if the message's context_type or context_id doesn't match
       return message.context_type !== contextType || message.context_id !== contextId;
     } else if (contextType) {
+      // If only contextType is provided (and it's not 'None'), 
+      // filter if the message's context_type doesn't match.
+      // This case might imply "all messages of a certain type, across all context IDs of that type".
       return message.context_type !== contextType;
     }
+    
+    // Default to not filtering if no specific context criteria are met
+    // (e.g., if contextType was undefined but not MessageContextType.None, though current usage doesn't lead here)
     return false;
   }
   

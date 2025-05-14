@@ -7,6 +7,31 @@ export type Json =
   | Json[]
 
 export type Database = {
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          operationName?: string
+          query?: string
+          variables?: Json
+          extensions?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   public: {
     Tables: {
       api_logs: {
@@ -236,6 +261,38 @@ export type Database = {
           },
         ]
       }
+      history: {
+        Row: {
+          content: Json
+          created_at: string
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          content: Json
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          content?: Json
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "history_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       message_references: {
         Row: {
           created_at: string | null
@@ -312,6 +369,7 @@ export type Database = {
           context_type: string | null
           created_at: string | null
           id: string
+          inhistory_id: string | null
           reply_to_message_id: string | null
           sender_type: string
           user_id: string
@@ -324,6 +382,7 @@ export type Database = {
           context_type?: string | null
           created_at?: string | null
           id?: string
+          inhistory_id?: string | null
           reply_to_message_id?: string | null
           sender_type: string
           user_id: string
@@ -336,6 +395,7 @@ export type Database = {
           context_type?: string | null
           created_at?: string | null
           id?: string
+          inhistory_id?: string | null
           reply_to_message_id?: string | null
           sender_type?: string
           user_id?: string
@@ -346,6 +406,13 @@ export type Database = {
             columns: ["context_entity_version_id"]
             isOneToOne: false
             referencedRelation: "entity_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_inhistory_id_fkey"
+            columns: ["inhistory_id"]
+            isOneToOne: false
+            referencedRelation: "history"
             referencedColumns: ["id"]
           },
           {
@@ -821,6 +888,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {
       resourceType: [

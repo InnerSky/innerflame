@@ -12,6 +12,7 @@ import { initTRPC } from '@trpc/server';
 import { initSSE } from './controllers/sse.js';
 import { SupabaseService } from './services/supabase/supabaseService.js';
 import documentRoutes from './routes/documentRoutes.js';
+import historyRoutes from './routes/history.js';
 
 // Load environment variables from the API directory with debug
 const currentPath = path.resolve(process.cwd(), '.env');
@@ -132,6 +133,7 @@ try {
 
 // API Routes
 app.use('/documents', documentRoutes);
+app.use('/history', historyRoutes);
 
 // Create an API router
 const t = initTRPC.create();
