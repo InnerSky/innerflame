@@ -584,6 +584,9 @@ function AppContent() {
               <div className="text-center sm:text-left">
                 <h4 className="text-sm sm:text-base font-semibold bg-gradient-to-r from-orange-500 to-red-500 bg-clip-text text-transparent">Quick Links</h4>
                 <div className="mt-4 sm:mt-5 flex flex-col gap-3 items-center sm:items-start">
+                  <Link to="/home">
+                    <Button variant="link" className="h-auto p-0 text-xs sm:text-sm hover:text-orange-500 transition-colors">App</Button>
+                  </Link>
                   <Link to="/articles">
                     <Button variant="link" className="h-auto p-0 text-xs sm:text-sm hover:text-orange-500 transition-colors">Articles</Button>
                   </Link>

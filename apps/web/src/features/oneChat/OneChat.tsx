@@ -13,6 +13,7 @@ import { MessageList } from '@/features/documents/components/chat/MessageList.js
 import { OneChatInput, OneChatInputRef } from './OneChatInput.js';
 import { useOneChat } from './useOneChat.js';
 import { MessageServiceStatic as MessageService } from '@/lib/services.js';
+import { Document } from '@/features/documents/models/document.js';
 
 type OneChatProps = {
   className?: string;
@@ -100,6 +101,14 @@ export const OneChat = forwardRef<OneChatRef, OneChatProps>(({
     (projectsData[selectedProjectId] || 'Unknown project') : 
     'All Documents';
   
+  // State for selected document from modal
+  const [modalSelectedDocument, setModalSelectedDocument] = useState<Document | null>(null);
+  
+  // State for previous mode before switching to document
+  const [previousMode, setPreviousMode] = useState<'capture' | 'ask' | 'coach'>(
+    viewMode === 'document' ? 'capture' : viewMode as 'capture' | 'ask' | 'coach'
+  );
+  
   // Use our custom OneChat hook for message loading/handling
   const {
     chatHistory,
@@ -117,8 +126,8 @@ export const OneChat = forwardRef<OneChatRef, OneChatProps>(({
     editMessage,
     deleteMessage
   } = useOneChat({
-    documentTitle: documentName,
-    documentContent: content,
+    documentTitle: modalSelectedDocument?.title || documentName,
+    documentContent: modalSelectedDocument?.content || content,
     projectId: selectedProjectId || undefined,
     projectName,
     viewMode: currentMode // Use the current mode from state
@@ -126,6 +135,11 @@ export const OneChat = forwardRef<OneChatRef, OneChatProps>(({
   
   // Handle mode changes from the chat input
   const handleModeChange = (mode: 'capture' | 'ask' | 'coach' | 'document') => {
+    // Save previous mode when switching to document mode
+    if (mode === 'document' && currentMode !== 'document') {
+      setPreviousMode(currentMode as 'capture' | 'ask' | 'coach');
+    }
+    
     setCurrentMode(mode);
     console.log(`OneChat - Mode changed to: ${mode}`);
   };
@@ -227,6 +241,26 @@ export const OneChat = forwardRef<OneChatRef, OneChatProps>(({
     }
   }, [shouldScrollToBottom]);
   
+  // Handle document selection from OneChatInput
+  const handleDocumentSelect = (document: Document | null) => {
+    setModalSelectedDocument(document);
+    
+    // If document selected, switch to document mode
+    if (document) {
+      setCurrentMode('document');
+    } else {
+      // When document is deselected, revert to previous mode
+      setCurrentMode(previousMode);
+    }
+    
+    console.log(`OneChat - Document ${document ? 'selected' : 'deselected'}: ${document?.title || ''}`);
+  };
+  
+  // Calculate the effective document to use for context
+  // Priority: modal selected document > document context document
+  const effectiveDocument = modalSelectedDocument || selectedDocument;
+  const effectiveDocumentName = modalSelectedDocument?.title || documentName;
+  
   // Chat content (messages and input)
   const chatContent = (
     <>
@@ -268,6 +302,8 @@ export const OneChat = forwardRef<OneChatRef, OneChatProps>(({
         canvasHasContent={canvasHasContent}
         onModeChange={handleModeChange}
         initialMode={currentMode}
+        onDocumentSelect={handleDocumentSelect}
+        selectedDocument={modalSelectedDocument}
       />
     </>
   );

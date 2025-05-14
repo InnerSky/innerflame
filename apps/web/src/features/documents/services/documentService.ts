@@ -2,12 +2,18 @@ import { DocumentRepository } from '../repositories/documentRepository.js';
 import { Document, DocumentType } from '../models/document.js';
 import { MessageServiceStatic as MessageService } from '@/lib/services.js';
 import { MessageContextType } from '@innerflame/types';
+import { supabase } from '@/lib/supabase.js';
 
 // Singleton instance
 let instance: DocumentService | null = null;
 
+// Document update handler type
+export type DocumentUpdateHandler = (documents: Document[]) => void;
+
 export class DocumentService {
   private repository: DocumentRepository;
+  private documentSubscriptions: Record<string, () => void> = {};
+  private userDocumentHandlers: Map<string, Set<DocumentUpdateHandler>> = new Map();
   
   constructor() {
     this.repository = new DocumentRepository();
@@ -19,6 +25,108 @@ export class DocumentService {
       instance = new DocumentService();
     }
     return instance;
+  }
+  
+  /**
+   * Subscribe to real-time updates of a user's documents
+   * @param userId - The user ID to subscribe to documents for
+   * @param handler - Callback function to handle updated documents
+   * @returns Unsubscribe function to clean up subscription
+   */
+  subscribeToUserDocuments(userId: string, handler: DocumentUpdateHandler): () => void {
+    // Create a unique key for this user
+    const subscriptionKey = `user-docs:${userId}`;
+    
+    // Initialize handler set if it doesn't exist
+    if (!this.userDocumentHandlers.has(userId)) {
+      this.userDocumentHandlers.set(userId, new Set());
+      
+      // Set up the Supabase subscription if this is the first handler
+      const channel = supabase.channel(subscriptionKey);
+      
+      // Subscribe to the channel and store the unsubscribe function
+      channel
+        // Listen for document creations
+        .on('postgres_changes', { 
+          event: 'INSERT', 
+          schema: 'public', 
+          table: 'entities',
+          filter: `user_id=eq.${userId}`
+        }, () => this.fetchAndNotifyUserDocuments(userId))
+        
+        // Listen for document updates
+        .on('postgres_changes', { 
+          event: 'UPDATE', 
+          schema: 'public', 
+          table: 'entities',
+          filter: `user_id=eq.${userId}`
+        }, () => this.fetchAndNotifyUserDocuments(userId))
+        
+        // Listen for document deletions
+        .on('postgres_changes', { 
+          event: 'DELETE', 
+          schema: 'public', 
+          table: 'entities',
+          filter: `user_id=eq.${userId}`
+        }, () => this.fetchAndNotifyUserDocuments(userId))
+        
+        .subscribe();
+      
+      // Store unsubscribe function
+      this.documentSubscriptions[subscriptionKey] = () => {
+        channel.unsubscribe();
+      };
+    }
+    
+    // Add this handler to the set
+    this.userDocumentHandlers.get(userId)!.add(handler);
+    
+    // Return unsubscribe function
+    return () => {
+      const handlers = this.userDocumentHandlers.get(userId);
+      if (handlers) {
+        handlers.delete(handler);
+        
+        // If no handlers left, clean up the subscription
+        if (handlers.size === 0) {
+          this.userDocumentHandlers.delete(userId);
+          
+          // Unsubscribe from Supabase
+          if (this.documentSubscriptions[subscriptionKey]) {
+            const unsubscribe = this.documentSubscriptions[subscriptionKey];
+            unsubscribe();
+            delete this.documentSubscriptions[subscriptionKey];
+          }
+        }
+      }
+    };
+  }
+  
+  /**
+   * Fetch latest documents for a user and notify all handlers
+   * @param userId - The user ID to fetch documents for
+   */
+  private async fetchAndNotifyUserDocuments(userId: string): Promise<void> {
+    try {
+      const documents = await this.repository.getUserDocuments(userId);
+      
+      // Notify all handlers with the updated documents
+      const handlers = this.userDocumentHandlers.get(userId);
+      if (handlers) {
+        handlers.forEach(handler => handler(documents));
+      }
+    } catch (error) {
+      console.error(`Error fetching updated documents for user ${userId}:`, error);
+    }
+  }
+  
+  /**
+   * Get all documents for a user
+   * @param userId - The user ID
+   * @returns Promise resolving to the user's documents
+   */
+  async getUserDocuments(userId: string): Promise<Document[]> {
+    return this.repository.getUserDocuments(userId);
   }
   
   /**

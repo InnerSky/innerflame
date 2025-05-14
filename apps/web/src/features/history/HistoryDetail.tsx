@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef, useMemo } from 'react';
-import { ChevronLeft, Clock, Tag, MoreVertical, MessageSquare, Trash2, AlertTriangle, Sparkles } from 'lucide-react';
+import { ChevronLeft, Clock, Tag, MoreVertical, MessageSquare, Trash2, AlertTriangle, Sparkles, X } from 'lucide-react';
 import { cn } from '@/lib/utils.js';
 import { Button } from '@/components/ui/button.js';
 import { 
@@ -8,6 +8,7 @@ import {
   DropdownMenuItem, 
   DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu.js';
+import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { 
   Dialog, 
   DialogContent, 
@@ -16,12 +17,32 @@ import {
   DialogDescription, 
   DialogFooter 
 } from '@/components/ui/dialog.js';
+import { Cross2Icon } from '@radix-ui/react-icons';
 import { getHistoryById, getMessagesForHistory, deleteHistory, HistoryItem, formatDate } from './historyService.js';
 import { MessageList } from '@/features/documents/components/chat/MessageList.js';
 import { Message } from '@innerflame/types';
 import { DocumentsProvider } from '@/features/documents/contexts/DocumentsContext.js';
 import { SaveStatus } from '@/features/documents/models/document.js';
 import { subscribeToHistory } from './historySubscription.js';
+
+// Media query hook at the root level, outside of any component
+function useMediaQuery(query: string) {
+  const [matches, setMatches] = useState(false);
+  
+  useEffect(() => {
+    const mediaQuery = window.matchMedia(query);
+    setMatches(mediaQuery.matches);
+    
+    const handler = (event: MediaQueryListEvent) => {
+      setMatches(event.matches);
+    };
+    
+    mediaQuery.addEventListener('change', handler);
+    return () => mediaQuery.removeEventListener('change', handler);
+  }, [query]);
+  
+  return matches;
+}
 
 interface HistoryDetailProps {
   historyId: string;
@@ -41,6 +62,7 @@ export function HistoryDetail({ historyId, onClose }: HistoryDetailProps) {
   const [messagesError, setMessagesError] = useState<string | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const messageListRef = useRef<{ scrollToBottom: () => void }>(null);
+  const isMobileScreen = useMediaQuery('(max-width: 768px)'); // Call the hook at the top level
 
   // Create mock Documents context for MessageList
   const mockDocumentsContext = useMemo(() => ({
@@ -388,15 +410,24 @@ export function HistoryDetail({ historyId, onClose }: HistoryDetailProps) {
 
       {/* Messages Modal */}
       <Dialog open={showMessagesModal} onOpenChange={setShowMessagesModal}>
-        <DialogContent className="sm:max-w-[600px] max-h-[80vh] flex flex-col">
-          <DialogHeader>
-            <DialogTitle>Messages</DialogTitle>
-            <DialogDescription>
+        <DialogContent className="w-full h-full max-w-full max-h-full p-0 m-0 rounded-none flex flex-col gap-0 [&>button]:hidden md:max-w-[750px] md:max-h-[80vh] md:h-auto md:rounded-lg md:m-auto">
+          <DialogHeader className="relative py-3.5 px-5 border-b flex justify-center items-center md:py-3.5 md:px-5">
+            <DialogTitle className="text-center text-xl font-semibold">Messages</DialogTitle>
+            <button 
+              onClick={() => setShowMessagesModal(false)}
+              className="absolute right-5 top-[45%] -translate-y-1/2 rounded-sm opacity-70 hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+            >
+              <svg width="15" height="15" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 pb-[2px]">
+                <path d="M11.7816 4.03157C12.0062 3.80702 12.0062 3.44295 11.7816 3.2184C11.5571 2.99385 11.193 2.99385 10.9685 3.2184L7.50005 6.68682L4.03164 3.2184C3.80708 2.99385 3.44301 2.99385 3.21846 3.2184C2.99391 3.44295 2.99391 3.80702 3.21846 4.03157L6.68688 7.49999L3.21846 10.9684C2.99391 11.193 2.99391 11.557 3.21846 11.7816C3.44301 12.0061 3.80708 12.0061 4.03164 11.7816L7.50005 8.31316L10.9685 11.7816C11.193 12.0061 11.5571 12.0061 11.7816 11.7816C12.0062 11.557 12.0062 11.193 11.7816 10.9684L8.31322 7.49999L11.7816 4.03157Z" fill="currentColor" fillRule="evenodd" clipRule="evenodd"></path>
+              </svg>
+              <span className="sr-only">Close</span>
+            </button>
+            <DialogDescription className="sr-only">
               Original messages that were used to create this summary.
             </DialogDescription>
           </DialogHeader>
           
-          <div className="flex-1 min-h-[400px] overflow-hidden my-4 border rounded-md">
+          <div className="flex-1 overflow-y-auto">
             {messagesLoading ? (
               <div className="flex items-center justify-center h-full">
                 <div className="w-8 h-8 rounded-full border-4 border-primary/30 border-t-primary animate-spin"></div>
@@ -412,31 +443,29 @@ export function HistoryDetail({ historyId, onClose }: HistoryDetailProps) {
               </div>
             ) : (
               <DocumentsProvider value={mockDocumentsContext}>
-                <MessageList
-                  ref={messageListRef}
-                  messages={messages}
-                  streamingContents={{}}
-                  streamingMessages={{}}
-                  editingMessageId={null}
-                  isEditing={false}
-                  editedMessageIds={new Set()}
-                  isInitialLoading={false}
-                  isLoading={false}
-                  isMobileScreen={false}
-                  isStandalone={true}
-                  onEdit={async () => false}
-                  onDelete={async () => false}
-                  onCancelEdit={() => {}}
-                  onStartEdit={() => {}}
-                  shouldScrollToBottom={true}
-                />
+                <div className="h-full [&>div]:h-full [&>div>div]:pt-0 [&_div.pt-\\[30px\\]]:pt-0">
+                  <MessageList
+                    ref={messageListRef}
+                    messages={messages}
+                    streamingContents={{}}
+                    streamingMessages={{}}
+                    editingMessageId={null}
+                    isEditing={false}
+                    editedMessageIds={new Set()}
+                    isInitialLoading={false}
+                    isLoading={false}
+                    isMobileScreen={isMobileScreen} 
+                    isStandalone={true}
+                    onEdit={async () => false}
+                    onDelete={async () => false}
+                    onCancelEdit={() => {}}
+                    onStartEdit={() => {}}
+                    shouldScrollToBottom={false}
+                  />
+                </div>
               </DocumentsProvider>
             )}
           </div>
-          
-          <DialogFooter>
-            <Button onClick={() => setShowMessagesModal(false)}>Close</Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
 

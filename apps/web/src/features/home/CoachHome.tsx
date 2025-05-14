@@ -341,14 +341,14 @@ export const CoachHome: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-full w-full overflow-hidden relative">
-      {/* Toggle */}
-      <div className="flex justify-center py-4 border-b mb-2">
-        <div className="inline-flex items-center">
+    <div className="flex flex-col h-[100dvh] w-full">
+      {/* Fixed header that stays at the top */}
+                    <div className="sticky top-0 w-full bg-background/95 backdrop-blur-sm flex justify-center border-b z-40 shadow-sm">
+          <div className="inline-flex items-center h-[60px]">
           <button
             onClick={() => setActiveTab("today")}
             className={cn(
-              "px-4 py-2 text-lg font-medium transition-colors relative",
+              "px-4 h-full text-lg font-medium transition-colors relative flex items-center",
               activeTab === "today" 
                 ? "text-primary" 
                 : "text-muted-foreground hover:text-primary/80"
@@ -356,14 +356,14 @@ export const CoachHome: React.FC = () => {
           >
             today
             {activeTab === "today" && (
-              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary"></div>
+              <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-primary"></div>
             )}
           </button>
           <span className="text-muted-foreground mx-1">|</span>
           <button
             onClick={() => setActiveTab("history")}
             className={cn(
-              "px-4 py-2 text-lg font-medium transition-colors relative",
+              "px-4 h-full text-lg font-medium transition-colors relative flex items-center",
               activeTab === "history" 
                 ? "text-primary" 
                 : "text-muted-foreground hover:text-primary/80"
@@ -371,14 +371,14 @@ export const CoachHome: React.FC = () => {
           >
             history
             {activeTab === "history" && (
-              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary"></div>
+              <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-primary"></div>
             )}
           </button>
         </div>
       </div>
 
-      {/* Sliding Content */}
-      <div className="flex-1 overflow-hidden">
+      {/* Content area with padding-top to account for fixed header */}
+      <div className="flex-1 overflow-hidden pt-[70px] md:pt-[60px]">
         <div 
           className="flex h-full transition-transform duration-300 ease-in-out"
           style={{ 
@@ -386,9 +386,9 @@ export const CoachHome: React.FC = () => {
             width: "200%" 
           }}
         >
-          {/* Today Content */}
-          <div className="w-1/2 h-full flex flex-col items-center px-4 overflow-y-auto pb-6">
-            <div className="mt-10 flex flex-col items-center w-full max-w-md">
+                      {/* Today Content */}
+          <div className="w-1/2 h-full flex flex-col items-center px-4 overflow-y-auto pb-20">
+            <div className="mt-6 md:mt-10 flex flex-col items-center w-full max-w-md">
               {/* Flame Character */}
               <div className="w-20 h-20 flex items-center justify-center mb-6">
                 <img 
@@ -458,7 +458,7 @@ export const CoachHome: React.FC = () => {
           </div>
           
           {/* History Content */}
-          <div className="w-1/2 h-full flex flex-col items-center px-4 py-6 overflow-y-auto">
+          <div className="w-1/2 h-full flex flex-col items-center px-4 py-6 overflow-y-auto pb-20">
             <div className="w-full max-w-3xl">
               {/* Loading state */}
               {isLoading && (

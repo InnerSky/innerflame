@@ -1,7 +1,7 @@
 import React, { useState, KeyboardEvent, useRef, useEffect, forwardRef, useImperativeHandle } from 'react';
 import { Button } from '@/components/ui/button.js';
 import { Textarea } from '@/components/ui/textarea.js';
-import { ArrowUp, Info, Check, FileText } from 'lucide-react';
+import { ArrowUp, Info, Check, FileText, Pen, X } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -13,6 +13,9 @@ import { AuthModal } from '@/components/auth/AuthModal.js';
 import { useTracking } from '@/contexts/TrackingContext.js';
 import { PricingModal } from '@/components/PricingModal.js';
 import { cn } from '@/lib/utils.js';
+import { useAuth } from '@/contexts/AuthContext.js';
+import { DocumentService } from '@/features/documents/services/documentService.js';
+import { Document } from '@/features/documents/models/document.js';
 
 interface OneChatInputProps {
   onSendMessage: (message: string) => void;
@@ -23,6 +26,8 @@ interface OneChatInputProps {
   canvasHasContent?: boolean;
   onModeChange?: (mode: 'capture' | 'ask' | 'coach' | 'document') => void;
   initialMode?: 'capture' | 'ask' | 'coach' | 'document';
+  onDocumentSelect?: (document: Document | null) => void;
+  selectedDocument?: Document | null;
 }
 
 // Define the ref interface
@@ -39,7 +44,9 @@ export const OneChatInput = forwardRef<OneChatInputRef, OneChatInputProps>(({
   isAnonymous = false,
   canvasHasContent = false,
   onModeChange,
-  initialMode = 'coach'
+  initialMode = 'coach',
+  onDocumentSelect,
+  selectedDocument
 }, ref) => {
   const [message, setMessage] = useState('');
   const [showManual, setShowManual] = useState(false);
@@ -47,8 +54,14 @@ export const OneChatInput = forwardRef<OneChatInputRef, OneChatInputProps>(({
   const [showPricingModal, setShowPricingModal] = useState(false);
   const [showDocumentModal, setShowDocumentModal] = useState(false);
   const [currentMode, setCurrentMode] = useState<'capture' | 'ask' | 'coach' | 'document'>(initialMode);
+  const [previousMode, setPreviousMode] = useState<'capture' | 'ask' | 'coach'>(initialMode === 'document' ? 'capture' : initialMode as 'capture' | 'ask' | 'coach');
+  const [userDocuments, setUserDocuments] = useState<Document[]>([]);
+  const [isLoadingDocuments, setIsLoadingDocuments] = useState(false);
+  const [selectedDocumentId, setSelectedDocumentId] = useState<string | null>(selectedDocument?.id || null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { trackButtonClick } = useTracking();
+  const { user } = useAuth();
+  const documentService = DocumentService.getInstance();
   
   // Detect if we're on a mobile device
   const [isMobile, setIsMobile] = useState(false);
@@ -120,6 +133,10 @@ export const OneChatInput = forwardRef<OneChatInputRef, OneChatInputProps>(({
   // Handle mode changes
   const handleModeChange = (mode: 'capture' | 'ask' | 'coach' | 'document') => {
     if (mode === 'document') {
+      // Save the current mode before switching to document mode
+      if (currentMode !== 'document') {
+        setPreviousMode(currentMode as 'capture' | 'ask' | 'coach');
+      }
       setShowDocumentModal(true);
     } else {
       setCurrentMode(mode);
@@ -142,27 +159,77 @@ export const OneChatInput = forwardRef<OneChatInputRef, OneChatInputProps>(({
     setShowPricingModal(true);
   };
 
-  // Placeholder for mock documents
-  const mockDocuments = [
-    { id: 'doc1', title: 'Project Overview' },
-    { id: 'doc2', title: 'Business Model Canvas' },
-    { id: 'doc3', title: 'Customer Research' },
-    { id: 'doc4', title: 'Pitch Deck' },
-    { id: 'doc5', title: 'Marketing Strategy' },
-  ];
+  // Set up real-time subscription to documents when modal opens
+  useEffect(() => {
+    let unsubscribe: (() => void) | undefined;
+    
+    const setupDocumentSubscription = async () => {
+      if (showDocumentModal && user?.id) {
+        setIsLoadingDocuments(true);
+        
+        try {
+          // Fetch initial documents
+          const initialDocuments = await documentService.getUserDocuments(user.id);
+          setUserDocuments(initialDocuments);
+          
+          // Subscribe to real-time updates
+          unsubscribe = documentService.subscribeToUserDocuments(user.id, (documents) => {
+            setUserDocuments(documents);
+          });
+        } catch (error) {
+          console.error("Error loading documents:", error);
+        } finally {
+          setIsLoadingDocuments(false);
+        }
+      }
+    };
+    
+    setupDocumentSubscription();
+    
+    // Clean up subscription when modal closes
+    return () => {
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
+  }, [showDocumentModal, user?.id]);
 
+  // Handle document select
   const handleDocumentSelect = (docId: string) => {
+    const selectedDoc = userDocuments.find(doc => doc.id === docId);
+    setSelectedDocumentId(docId);
     setCurrentMode('document');
     setShowDocumentModal(false);
-    // In a real implementation, you would notify the parent about the selected document
+    
+    // Notify parent component about selected document
+    if (onDocumentSelect && selectedDoc) {
+      onDocumentSelect(selectedDoc);
+    }
+  };
+
+  // Handle document deselect
+  const handleDocumentDeselect = () => {
+    setSelectedDocumentId(null);
+    
+    // Switch back to the previous mode
+    setCurrentMode(previousMode);
+    
+    // Notify parent component about deselection
+    if (onDocumentSelect) {
+      onDocumentSelect(null);
+    }
   };
 
   const tabLabels = [
     { key: 'capture', label: 'capture' },
-    { key: 'ask', label: 'ask' },
     { key: 'coach', label: 'reflect' },
-    { key: 'document', label: 'create' },
+    { key: 'ask', label: 'ask' },
+    { key: 'document', label: 'doc agent' },
   ];
+  
+  // Filter out the document tab if no document is selected
+  const filteredTabs = selectedDocumentId ? tabLabels : tabLabels.filter(tab => tab.key !== 'document');
+  
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const [highlightStyle, setHighlightStyle] = useState<{ left: number; width: number }>({ left: 0, width: 0 });
 
@@ -192,7 +259,40 @@ export const OneChatInput = forwardRef<OneChatInputRef, OneChatInputProps>(({
       >
         {/* Input area */}
         <div className={`${showConversionOverlay ? 'hidden' : ''}`}>
-          <div className="px-4 pt-4 pb-3">
+          <div className="pl-2 pr-4 pt-4 pb-3">
+            {/* Document button or selected document display */}
+            <div className="mb-.5 ml-2">
+              {selectedDocumentId ? (
+                <div className="flex items-center gap-2">
+                  <Button 
+                    variant="ghost" 
+                    className="h-6 min-h-0 text-xs leading-none text-foreground hover:text-foreground flex items-center gap-1.5 rounded-md px-2 py-0.5 border border-primary/30 hover:border-primary/50 bg-primary/10 hover:bg-primary/20"
+                  >
+                    <FileText className="h-3 w-3" />
+                    <span className="leading-none">
+                      {userDocuments.find(doc => doc.id === selectedDocumentId)?.title || "Unnamed document"}
+                    </span>
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-5 w-5 p-0 rounded-full"
+                    onClick={handleDocumentDeselect}
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                </div>
+              ) : (
+                <Button 
+                  variant="ghost" 
+                  className="h-6 min-h-0 text-xs leading-none text-muted-foreground/60 hover:text-foreground flex items-center gap-1.5 rounded-md px-2 py-0.5 border border-muted-foreground/30 hover:border-muted-foreground/50 bg-transparent hover:bg-background/60"
+                  onClick={() => handleModeChange('document')}
+                >
+                  <Pen className="h-3 w-3" />
+                  <span className="leading-none">work on a document</span>
+                </Button>
+              )}
+            </div>
             <div className="relative w-full">
               <div className="w-full pr-12 overflow-hidden">
                 <Textarea
@@ -209,7 +309,7 @@ export const OneChatInput = forwardRef<OneChatInputRef, OneChatInputProps>(({
                   className="w-full min-h-[72px] max-h-[288px] resize-none overflow-y-auto border-0 focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 shadow-none"
                   style={{
                     height: 'auto',
-                    overflowY: message.split('\n').length > 12 ? 'scroll' : 'hidden'
+                    overflowY: message.split('\n').length > 10 ? 'scroll' : 'hidden'
                   }}
                   rows={Math.min(Math.max(message.split('\n').length || 3, 3), 12)}
                   disabled={isLoading || isDisabled}
@@ -228,7 +328,7 @@ export const OneChatInput = forwardRef<OneChatInputRef, OneChatInputProps>(({
           </div>
           
           {/* Toolbar with mode toggles */}
-          <div className="flex items-center justify-between gap-2 px-5 pb-4">
+          <div className="flex items-center justify-between gap-2 pl-4 pr-5 pb-4">
             {/* Mode toggle buttons */}
             <div className="relative inline-flex rounded-md bg-muted/40">
               {/* Sliding indicator - absolutely positioned */}
@@ -243,7 +343,7 @@ export const OneChatInput = forwardRef<OneChatInputRef, OneChatInputProps>(({
               />
               {/* Tab buttons as inline-flex */}
               <div className="flex h-8 items-center relative z-10" role="tablist" aria-label="Chat mode options">
-                {tabLabels.map((tab, idx) => (
+                {filteredTabs.map((tab, idx) => (
                   <button
                     key={tab.key}
                     ref={el => tabRefs.current[idx] = el}
@@ -374,17 +474,27 @@ export const OneChatInput = forwardRef<OneChatInputRef, OneChatInputProps>(({
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-2 max-h-[50vh] overflow-y-auto">
-            {mockDocuments.map(doc => (
-              <Button
-                key={doc.id}
-                variant="outline"
-                className="w-full justify-start gap-2 h-auto p-3 hover:bg-muted"
-                onClick={() => handleDocumentSelect(doc.id)}
-              >
-                <FileText className="h-4 w-4 text-muted-foreground" />
-                <span>{doc.title}</span>
-              </Button>
-            ))}
+            {isLoadingDocuments ? (
+              <div className="flex justify-center py-8">
+                <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full" />
+              </div>
+            ) : userDocuments.length > 0 ? (
+              userDocuments.map(doc => (
+                <Button
+                  key={doc.id}
+                  variant="outline"
+                  className="w-full justify-start gap-2 h-auto p-3 hover:bg-muted"
+                  onClick={() => handleDocumentSelect(doc.id)}
+                >
+                  <FileText className="h-4 w-4 text-muted-foreground" />
+                  <span>{doc.title}</span>
+                </Button>
+              ))
+            ) : (
+              <div className="text-center py-6 text-muted-foreground">
+                No documents found. Create a document to get started.
+              </div>
+            )}
           </div>
         </DialogContent>
       </Dialog>
