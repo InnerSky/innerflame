@@ -60,9 +60,9 @@ export const MessageActions: React.FC<MessageActionsProps> = ({
       await navigator.clipboard.writeText(message.content);
       toast({
         title: "Copied to clipboard",
-        description: "Message content copied to clipboard",
-        variant: "success",
-        duration: 2000
+        description: "Text has been copied",
+        variant: "default",
+        duration: 1000
       });
       
       if (isMobile) {
@@ -71,7 +71,7 @@ export const MessageActions: React.FC<MessageActionsProps> = ({
     } catch (error) {
       toast({
         title: "Failed to copy",
-        description: "Could not copy the message content",
+        description: "Could not copy the text",
         variant: "destructive",
         duration: 3000
       });

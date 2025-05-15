@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { ChevronLeft, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button.js";
 import { cn } from "@/lib/utils.js";
@@ -24,6 +24,22 @@ export const ChatOverlay: React.FC = () => {
   const [messageIds, setMessageIds] = useState<string[]>([]);
   const [generatingSpotlight, setGeneratingSpotlight] = useState(false);
   const [selectedHistoryId, setSelectedHistoryId] = useState<string | null>(null);
+
+  // Scroll to bottom of messages when chat overlay opens
+  useEffect(() => {
+    if (isOpen) {
+      // Use a small timeout to ensure the chat UI is fully rendered
+      setTimeout(() => {
+        // First, check if we can access oneChatRef.current's internal messageListRef
+        // If not, directly manipulate the DOM
+        const messageContainer = document.querySelector('[data-chat-container] .overflow-y-auto');
+        if (messageContainer instanceof HTMLElement) {
+          // Set scrollTop directly without animation
+          messageContainer.scrollTop = messageContainer.scrollHeight;
+        }
+      }, 50); // Slightly longer timeout to ensure DOM is fully rendered
+    }
+  }, [isOpen]);
 
   // Create mock Documents context for OneChat
   const mockDocumentsContext = {
