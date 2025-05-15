@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button.js";
 import { ArrowUp, ChevronDown, ChevronUp } from "lucide-react";
 import { useChatState } from "@/features/chat/contexts/ChatStateContext.js";
 import { CreateMessageParams, MessageContextType, MessageSenderType, Message as MessageModel } from "@innerflame/types";
-import { MessageServiceStatic as MessageService } from "@/lib/services.js";
+import { MessageServiceStatic as MessageService, messageSubscriptionService } from "@/lib/services.js";
 import { useAuth } from "@/contexts/AuthContext.js";
 import { useToast } from "@/hooks/use-toast.ts";
 import { MessageList } from "@/features/documents/components/chat/MessageList.js";
@@ -35,6 +35,9 @@ export const CaptureHome: React.FC = () => {
   
   // Track if animations should be disabled (during message updates)
   const skipAnimationRef = useRef(false);
+
+  // Track subscription cleanup functions
+  const subscriptionCleanupRef = useRef<(() => void)[]>([]);
 
   // Detect mobile screen size
   useEffect(() => {
@@ -137,6 +140,67 @@ export const CaptureHome: React.FC = () => {
     };
     
     fetchCaptureMessages();
+
+    // Set up real-time subscriptions
+    const setupSubscriptions = () => {
+      // Subscribe to messages with context type Capture
+      const unsubscribe = messageSubscriptionService.subscribeToMessages(MessageContextType.Capture);
+
+      // Handle new messages
+      const insertHandler = messageSubscriptionService.onMessageInserted((newMessage) => {
+        // Only handle messages with context type Capture
+        if (newMessage.context_type !== MessageContextType.Capture) return;
+
+        // Add new message to state
+        setCaptureMessages(prevMessages => {
+          // Check if the message already exists
+          if (prevMessages.some(msg => msg.id === newMessage.id)) {
+            return prevMessages;
+          }
+          
+          // Add new message at the beginning (newest first)
+          return [newMessage, ...prevMessages];
+        });
+      });
+
+      // Handle updated messages
+      const updateHandler = messageSubscriptionService.onMessageUpdated((updatedMessage) => {
+        // Only handle messages with context type Capture
+        if (updatedMessage.context_type !== MessageContextType.Capture) return;
+
+        // Update the message in state
+        setCaptureMessages(prevMessages => 
+          prevMessages.map(message => 
+            message.id === updatedMessage.id ? updatedMessage : message
+          )
+        );
+
+        // Add to edited message IDs
+        setEditedMessageIds(prev => {
+          const newSet = new Set(prev);
+          newSet.add(updatedMessage.id);
+          return newSet;
+        });
+      });
+
+      // Handle deleted messages
+      const deleteHandler = messageSubscriptionService.onMessageDeleted((deletedMessage) => {
+        // Remove the message from state
+        setCaptureMessages(prevMessages => 
+          prevMessages.filter(message => message.id !== deletedMessage.id)
+        );
+      });
+
+      // Store cleanup functions
+      subscriptionCleanupRef.current = [unsubscribe, insertHandler, updateHandler, deleteHandler];
+    };
+
+    setupSubscriptions();
+
+    // Clean up subscriptions on unmount
+    return () => {
+      subscriptionCleanupRef.current.forEach(cleanup => cleanup());
+    };
   }, [user]);
 
   const handleOpenCapture = () => {

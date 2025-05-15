@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { ChevronLeft, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button.js";
 import { cn } from "@/lib/utils.js";
@@ -24,6 +24,42 @@ export const ChatOverlay: React.FC = () => {
   const [messageIds, setMessageIds] = useState<string[]>([]);
   const [generatingSpotlight, setGeneratingSpotlight] = useState(false);
   const [selectedHistoryId, setSelectedHistoryId] = useState<string | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Handle body scroll locking when overlay is open
+  useEffect(() => {
+    if (isOpen) {
+      // Prevent background scrolling
+      document.body.style.overflow = 'hidden';
+      // Add touch-action none to prevent scrolling/zooming on mobile
+      document.body.style.touchAction = 'none';
+      // Add position: fixed to prevent any background movement
+      document.body.style.position = 'fixed';
+      document.body.style.width = '100%';
+      // Store the current scroll position
+      const scrollY = window.scrollY;
+      document.body.style.top = `-${scrollY}px`;
+    } else {
+      // Re-enable scrolling when closed
+      document.body.style.overflow = '';
+      document.body.style.touchAction = '';
+      document.body.style.position = '';
+      document.body.style.width = '';
+      document.body.style.top = '';
+      // Restore scroll position
+      const scrollY = parseInt(document.body.style.top || '0', 10) * -1;
+      window.scrollTo(0, scrollY);
+    }
+
+    // Clean up when component unmounts
+    return () => {
+      document.body.style.overflow = '';
+      document.body.style.touchAction = '';
+      document.body.style.position = '';
+      document.body.style.width = '';
+      document.body.style.top = '';
+    };
+  }, [isOpen]);
 
   // Scroll to bottom of messages when chat overlay opens
   useEffect(() => {
@@ -118,14 +154,57 @@ export const ChatOverlay: React.FC = () => {
     }
   };
 
+  // Prevent touch events from propagating through the overlay
+  const handleTouchMove = (e: React.TouchEvent) => {
+    // Allow scrolling within scrollable containers inside the overlay
+    const target = e.target as HTMLElement;
+    const isScrollableContainer = target.closest('.overflow-y-auto, .overflow-auto');
+    
+    if (!isScrollableContainer) {
+      // If not in a scrollable container, prevent the event
+      e.preventDefault();
+    }
+  };
+
+  // Focus trap implementation
+  useEffect(() => {
+    if (isOpen && containerRef.current) {
+      // Focus the container when opened
+      containerRef.current.focus();
+    }
+  }, [isOpen]);
+
+  // Handle escape key press
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Escape' && !showSpotlightModal) {
+      closeChat();
+    }
+  };
+
   return (
     <>
+      {/* Overlay Backdrop - only visible when overlay is open */}
+      {isOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-[49]"
+          aria-hidden="true"
+          onClick={closeChat}
+        />
+      )}
+      
       {/* Chat Interface Overlay */}
       <div 
+        ref={containerRef}
         className={cn(
           "fixed inset-0 bg-background z-[50] transition-transform duration-300",
           isOpen ? "translate-y-0" : "translate-y-full"
         )}
+        onTouchMove={handleTouchMove}
+        onKeyDown={handleKeyDown}
+        tabIndex={-1}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="chat-overlay-title"
       >
         {/* Interface Header */}
         <header className="w-full border-b bg-background">
@@ -138,6 +217,8 @@ export const ChatOverlay: React.FC = () => {
             >
               <ChevronLeft className="h-5 w-5" />
             </Button>
+            
+            <h1 id="chat-overlay-title" className="sr-only">Chat</h1>
             
             <div className="w-8"></div> {/* Empty div for spacing */}
             
@@ -175,52 +256,61 @@ export const ChatOverlay: React.FC = () => {
 
       {/* Spotlight Modal */}
       {showSpotlightModal && (
-        <div 
-          className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center"
-          onClick={() => setShowSpotlightModal(false)}
-        >
+        <>
           <div 
-            className="bg-background rounded-lg shadow-lg w-full max-w-md mx-auto p-6 flex flex-col items-center"
+            className="fixed inset-0 bg-black/50 z-[60]"
+            onClick={() => setShowSpotlightModal(false)}
+            aria-hidden="true"
+          />
+          <div 
+            className="fixed inset-0 z-[61] flex items-center justify-center"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Sparkle Icon */}
-            <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center mb-4">
-              <Sparkles className="h-8 w-8 text-primary" />
-            </div>
-            
-            <h2 className="text-xl font-semibold mb-3 text-center">Ready to create your spotlight?</h2>
-            
-            <p className="text-center text-muted-foreground mb-6">
-              InnerFlame can now analyze your conversation and highlight meaningful insights. 
-              Create your spotlight now or continue chatting to add more context.
-            </p>
-            
-            <div className="w-full space-y-3">
-              <Button 
-                className="w-full"
-                onClick={handleGenerateSpotlight}
-                disabled={messageIds.length === 0 || generatingSpotlight}
-              >
-                {generatingSpotlight ? (
-                  <>
-                    <div className="w-4 h-4 rounded-full border-2 border-background/30 border-t-background animate-spin mr-2"></div>
-                    Generating...
-                  </>
-                ) : (
-                  'Generate my spotlight'
-                )}
-              </Button>
+            <div 
+              className="bg-background rounded-lg shadow-lg w-full max-w-md mx-auto p-6 flex flex-col items-center"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="spotlight-title"
+            >
+              {/* Sparkle Icon */}
+              <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center mb-4">
+                <Sparkles className="h-8 w-8 text-primary" />
+              </div>
               
-              <Button
-                variant="outline"
-                className="w-full"
-                onClick={() => setShowSpotlightModal(false)}
-              >
-                Continue chatting
-              </Button>
+              <h2 id="spotlight-title" className="text-xl font-semibold mb-3 text-center">Ready to create your spotlight?</h2>
+              
+              <p className="text-center text-muted-foreground mb-6">
+                InnerFlame can now analyze your conversation and highlight meaningful insights. 
+                Create your spotlight now or continue chatting to add more context.
+              </p>
+              
+              <div className="w-full space-y-3">
+                <Button 
+                  className="w-full"
+                  onClick={handleGenerateSpotlight}
+                  disabled={messageIds.length === 0 || generatingSpotlight}
+                >
+                  {generatingSpotlight ? (
+                    <>
+                      <div className="w-4 h-4 rounded-full border-2 border-background/30 border-t-background animate-spin mr-2"></div>
+                      Generating...
+                    </>
+                  ) : (
+                    'Generate my spotlight'
+                  )}
+                </Button>
+                
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => setShowSpotlightModal(false)}
+                >
+                  Continue chatting
+                </Button>
+              </div>
             </div>
           </div>
-        </div>
+        </>
       )}
     </>
   );
