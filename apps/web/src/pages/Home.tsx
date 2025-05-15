@@ -7,11 +7,26 @@ import {
 import { QuoteIcon, MessageSquare, Pen, Menu } from "lucide-react";
 import { cn } from "@/lib/utils.js";
 import { Button } from "@/components/ui/button.js";
+import { ChatStateProvider, ChatOverlay } from "@/features/chat/index.js";
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState<"capture" | "coach" | "studio">("coach");
   const [isExpanded, setIsExpanded] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+
+  // Add effect to set CSS variable for viewport height
+  useEffect(() => {
+    // Set CSS variable for viewport height to handle mobile browsers
+    const setViewportHeight = () => {
+      const vh = window.innerHeight * 0.01;
+      document.documentElement.style.setProperty('--vh', `${vh}px`);
+    };
+    
+    setViewportHeight();
+    window.addEventListener('resize', setViewportHeight);
+    
+    return () => window.removeEventListener('resize', setViewportHeight);
+  }, []);
 
   // Check if we're on mobile based on screen width
   useEffect(() => {
@@ -44,98 +59,103 @@ export default function Home() {
   }, []);
 
   return (
-    <div className="flex h-screen w-full">
-      {/* Desktop Sidebar */}
-      {!isMobile && (
-        <aside className={cn(
-          "h-full border-r bg-background transition-all duration-300 ease-in-out flex flex-col z-50",
-          isExpanded ? "w-64" : "w-16"
-        )}>
-          {/* Sidebar Toggle */}
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="self-start m-3" 
-            onClick={toggleSidebar}
-            aria-label={isExpanded ? "Collapse sidebar" : "Expand sidebar"}
-          >
-            <Menu className="h-5 w-5" />
-          </Button>
-          
-          {/* Sidebar Navigation Items */}
-          <div className="flex flex-col space-y-2 mt-6 px-2">
-            <SidebarItem 
-              isActive={activeTab === "capture"}
-              onClick={() => setActiveTab("capture")}
-              icon={<QuoteIcon className="h-5 w-5" />}
-              label="Capture"
-              isExpanded={isExpanded}
-            />
-            <SidebarItem 
-              isActive={activeTab === "coach"}
-              onClick={() => setActiveTab("coach")}
-              icon={<MessageSquare className="h-5 w-5" />}
-              label="Reflect"
-              isExpanded={isExpanded}
-            />
-            <SidebarItem 
-              isActive={activeTab === "studio"}
-              onClick={() => setActiveTab("studio")}
-              icon={<Pen className="h-5 w-5" />}
-              label="Create"
-              isExpanded={isExpanded}
-            />
-          </div>
-        </aside>
-      )}
-      
-      {/* Main Content Area */}
-      <main className="flex-1 flex flex-col h-full overflow-hidden">
-        {/* Content Area */}
-        <div className="flex-1 overflow-auto pb-16 md:pb-0">
-          {activeTab === "capture" && <CaptureHome />}
-          {activeTab === "coach" && <CoachHome />}
-          {activeTab === "studio" && <StudioHome />}
-        </div>
-      </main>
-      
-      {/* Mobile Bottom Navigation */}
-      {isMobile && (
-        <div className="fixed bottom-0 left-0 right-0 border-t bg-background z-30">
-          <div className="grid grid-cols-3 h-16">
-            <button
-              onClick={() => setActiveTab("capture")}
-              className={cn("flex flex-col items-center justify-center",
-                activeTab === "capture" ? "text-primary" : "text-muted-foreground hover:text-primary/80"
-              )}
+    <ChatStateProvider>
+      <div className="flex h-screen h-[calc(100vh-env(safe-area-inset-bottom))] w-full" style={{ height: 'calc(var(--vh, 1vh) * 100)' }}>
+        {/* Desktop Sidebar */}
+        {!isMobile && (
+          <aside className={cn(
+            "h-full border-r bg-background transition-all duration-300 ease-in-out flex flex-col z-30",
+            isExpanded ? "w-64" : "w-16"
+          )}>
+            {/* Sidebar Toggle */}
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="self-start m-3" 
+              onClick={toggleSidebar}
+              aria-label={isExpanded ? "Collapse sidebar" : "Expand sidebar"}
             >
-              <QuoteIcon className="h-5 w-5 mb-1" />
-              <span className="text-xs">Capture</span>
-            </button>
+              <Menu className="h-5 w-5" />
+            </Button>
             
-            <button
-              onClick={() => setActiveTab("coach")}
-              className={cn("flex flex-col items-center justify-center",
-                activeTab === "coach" ? "text-primary" : "text-muted-foreground hover:text-primary/80"
-              )}
-            >
-              <MessageSquare className="h-5 w-5 mb-1" />
-              <span className="text-xs">Reflect</span>
-            </button>
-            
-            <button
-              onClick={() => setActiveTab("studio")}
-              className={cn("flex flex-col items-center justify-center",
-                activeTab === "studio" ? "text-primary" : "text-muted-foreground hover:text-primary/80"
-              )}
-            >
-              <Pen className="h-5 w-5 mb-1" />
-              <span className="text-xs">Create</span>
-            </button>
+            {/* Sidebar Navigation Items */}
+            <div className="flex flex-col space-y-2 mt-6 px-2">
+              <SidebarItem 
+                isActive={activeTab === "capture"}
+                onClick={() => setActiveTab("capture")}
+                icon={<QuoteIcon className="h-5 w-5" />}
+                label="Capture"
+                isExpanded={isExpanded}
+              />
+              <SidebarItem 
+                isActive={activeTab === "coach"}
+                onClick={() => setActiveTab("coach")}
+                icon={<MessageSquare className="h-5 w-5" />}
+                label="Reflect"
+                isExpanded={isExpanded}
+              />
+              <SidebarItem 
+                isActive={activeTab === "studio"}
+                onClick={() => setActiveTab("studio")}
+                icon={<Pen className="h-5 w-5" />}
+                label="Create"
+                isExpanded={isExpanded}
+              />
+            </div>
+          </aside>
+        )}
+        
+        {/* Main Content Area */}
+        <main className="flex-1 flex flex-col overflow-hidden">
+          {/* Content Area */}
+          <div className="flex-1 overflow-auto pb-16 md:pb-0">
+            {activeTab === "capture" && <CaptureHome />}
+            {activeTab === "coach" && <CoachHome />}
+            {activeTab === "studio" && <StudioHome />}
           </div>
-        </div>
-      )}
-    </div>
+        </main>
+        
+        {/* Mobile Bottom Navigation */}
+        {isMobile && (
+          <div className="fixed bottom-0 left-0 right-0 border-t bg-background z-20">
+            <div className="grid grid-cols-3 h-16">
+              <button
+                onClick={() => setActiveTab("capture")}
+                className={cn("flex flex-col items-center justify-center",
+                  activeTab === "capture" ? "text-primary" : "text-muted-foreground hover:text-primary/80"
+                )}
+              >
+                <QuoteIcon className="h-5 w-5 mb-1" />
+                <span className="text-xs">Capture</span>
+              </button>
+              
+              <button
+                onClick={() => setActiveTab("coach")}
+                className={cn("flex flex-col items-center justify-center",
+                  activeTab === "coach" ? "text-primary" : "text-muted-foreground hover:text-primary/80"
+                )}
+              >
+                <MessageSquare className="h-5 w-5 mb-1" />
+                <span className="text-xs">Reflect</span>
+              </button>
+              
+              <button
+                onClick={() => setActiveTab("studio")}
+                className={cn("flex flex-col items-center justify-center",
+                  activeTab === "studio" ? "text-primary" : "text-muted-foreground hover:text-primary/80"
+                )}
+              >
+                <Pen className="h-5 w-5 mb-1" />
+                <span className="text-xs">Create</span>
+              </button>
+            </div>
+          </div>
+        )}
+        
+        {/* Chat Overlay */}
+        <ChatOverlay />
+      </div>
+    </ChatStateProvider>
   );
 }
 

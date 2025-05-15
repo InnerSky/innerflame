@@ -1,20 +1,11 @@
-import React, { useState, useMemo, useEffect, useRef, useCallback } from "react";
-import { ChevronLeft, X, Sparkles, BookOpen, ArrowUp } from "lucide-react";
+import React, { useState, useMemo, useEffect } from "react";
+import { BookOpen, ArrowUp } from "lucide-react";
 import { cn } from "@/lib/utils.js";
 import { Card } from "@/components/ui/card.js";
 import { Button } from "@/components/ui/button.js";
 import { useNavigate } from "react-router-dom";
 
-// Import OneChat component
-import { OneChat, OneChatRef } from "@/features/oneChat/OneChat.js";
-import { DocumentsProvider } from "@/features/documents/contexts/DocumentsContext.js";
-
-// Import SaveStatus type
-import { SaveStatus } from "@/features/documents/models/document.js";
-
-// Import HistorySummary component
-import { HistorySummary } from "@/features/history/HistorySummary.js";
-import { HistoryDetail } from "@/features/history/HistoryDetail.js";
+// Import services
 import { 
   getUserHistory, 
   groupHistoryByDate, 
@@ -22,24 +13,25 @@ import {
   HistoryItem,
   subscribeToHistoryList
 } from "@/features/history/historyService.js";
-import { createHistory } from "@/api/history/index.js";
-import { messageSubscriptionService } from "@/lib/services.js";
 import { useAuth } from "@/contexts/AuthContext.js";
+
+// Import HistoryDetail component
+import { HistoryDetail } from "@/features/history/HistoryDetail.js";
+
+// Import the ChatState context
+import { useChatState } from "@/features/chat/contexts/ChatStateContext.js";
 
 export const CoachHome: React.FC = () => {
   const [activeTab, setActiveTab] = useState<"today" | "history">("today");
-  const [showCoachInterface, setShowCoachInterface] = useState(false);
-  const [showSpotlightModal, setShowSpotlightModal] = useState(false);
-  const [messageIds, setMessageIds] = useState<string[]>([]);
   const [historyItems, setHistoryItems] = useState<HistoryItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedHistoryId, setSelectedHistoryId] = useState<string | null>(null);
-  const [generatingSpotlight, setGeneratingSpotlight] = useState(false);
-  const [hasAvailableMessages, setHasAvailableMessages] = useState(false);
   const navigate = useNavigate();
-  const oneChatRef = useRef<OneChatRef>(null);
   const { user } = useAuth();
+
+  // Get chat state
+  const { openChat, sendMessage } = useChatState();
   
   // Extract user's full name for greeting
   const userFullName = useMemo(() => {
@@ -99,186 +91,18 @@ export const CoachHome: React.FC = () => {
     };
   }, [activeTab]);
 
-  // Subscribe to message updates to keep track of available messages for spotlighting
-  useEffect(() => {
-    if (!user || !showCoachInterface) return;
-    
-    // Function to check for available messages
-    const checkAvailableMessages = () => {
-      if (oneChatRef.current) {
-        const messagesData = oneChatRef.current.getMessages();
-        // Filter out messages that already have an inhistory_id
-        const availableMessages = messagesData.messages.filter(msg => !msg.inhistory_id);
-        setHasAvailableMessages(availableMessages.length > 0);
-      }
-    };
-    
-    // Set up listener for message updates
-    const messageUpdateHandler = messageSubscriptionService.onMessageUpdated((updatedMessage) => {
-      console.log('CoachHome: Message updated:', updatedMessage.id, 'inhistory_id:', updatedMessage.inhistory_id);
-      // When a message is updated (including inhistory_id changes), recheck available messages
-      checkAvailableMessages();
-    });
-    
-    // Initial check
-    checkAvailableMessages();
-    
-    // Clean up subscription when component unmounts or when coach interface is hidden
-    return () => {
-      messageUpdateHandler();
-    };
-  }, [user, showCoachInterface]);
-
-  // Add debug effect
-  useEffect(() => {
-    console.log('CoachHome mounted - OneChat will be loaded with useOneChat hook');
-  }, []);
-
-  // Check for available messages whenever coach interface is visible
-  useEffect(() => {
-    if (!showCoachInterface || !oneChatRef.current) return;
-    
-    const checkAvailableMessages = () => {
-      if (oneChatRef.current) {
-        const messagesData = oneChatRef.current.getMessages();
-        // Filter out messages that already have an inhistory_id
-        const availableMessages = messagesData.messages.filter(msg => !msg.inhistory_id);
-        setHasAvailableMessages(availableMessages.length > 0);
-      }
-    };
-    
-    // Check initially
-    checkAvailableMessages();
-    
-    // Set up interval to check periodically (as a backup)
-    const intervalId = setInterval(checkAvailableMessages, 5000);
-    
-    return () => clearInterval(intervalId);
-  }, [showCoachInterface]);
-
-  // New effect to scroll to bottom when the modal appears
-  useEffect(() => {
-    if (showCoachInterface && oneChatRef.current) {
-      // The OneChat component doesn't directly expose scrollToBottom,
-      // but we can use a known technique to get the MessageList's scrollToBottom
-      
-      // Short timeout to ensure the component is fully rendered
-      const timer = setTimeout(() => {
-        // Find the message container by its data attribute
-        const messageContainer = document.querySelector('[data-chat-container]');
-        if (messageContainer) {
-          // Find the scrollable area within the message container
-          const scrollableElement = messageContainer.querySelector('.overflow-auto, .overflow-y-auto');
-          if (scrollableElement instanceof HTMLElement) {
-            // Immediately scroll to the bottom without animation
-            scrollableElement.scrollTop = scrollableElement.scrollHeight;
-          }
-        }
-      }, 50); // Small delay for rendering
-      
-      return () => clearTimeout(timer);
-    }
-  }, [showCoachInterface]);
-
-  // Add effect to prevent body scrolling when coach interface is visible
-  useEffect(() => {
-    if (showCoachInterface) {
-      // Save the current overflow style
-      const originalOverflow = document.body.style.overflow;
-      // Prevent scrolling on the main page
-      document.body.style.overflow = 'hidden';
-      
-      // Clean up function - restore original overflow when component unmounts or modal closes
-      return () => {
-        document.body.style.overflow = originalOverflow;
-      };
-    }
-    // No cleanup needed if modal isn't showing
-    return undefined;
-  }, [showCoachInterface]);
-
   const handleOpenCoachInterface = () => {
-    setShowCoachInterface(true);
-  };
-
-  const handleCloseCoachInterface = () => {
-    setShowCoachInterface(false);
-    setShowSpotlightModal(false);
-  };
-
-  const handleEndConversation = () => {
-    setShowCoachInterface(false);
-    setShowSpotlightModal(false);
-  };
-
-  const handleSpotlightClick = () => {
-    // Get the current message IDs from OneChat
-    if (oneChatRef.current) {
-      const messagesData = oneChatRef.current.getMessages();
-      
-      // Filter out messages that already have an inhistory_id
-      const availableMessages = messagesData.messages.filter(msg => !msg.inhistory_id);
-      const currentMessageIds = availableMessages.map(msg => msg.id);
-      
-      if (currentMessageIds.length === 0) {
-        // Show a toast or alert that there are no new messages to summarize
-        console.log("No new messages available for summarization");
-        setHasAvailableMessages(false);
-        // You could add a toast notification here
-        return;
-      }
-      
-      setHasAvailableMessages(true);
-      setMessageIds(currentMessageIds);
-      setShowSpotlightModal(true);
-    } else {
-      console.error("OneChat reference not available");
-    }
-  };
-
-  const handleGenerateSpotlight = async () => {
-    try {
-      // Show loading state
-      setGeneratingSpotlight(true);
-      
-      // Create a history entry from the message IDs
-      console.log(`CoachHome: Creating history from ${messageIds.length} messages`);
-      const result = await createHistory(messageIds);
-      console.log(`CoachHome: Created history with ID ${result.historyId}`);
-      
-      // Hide the spotlight modal
-      setShowSpotlightModal(false);
-      
-      // Show the history detail for the newly created history
-      setSelectedHistoryId(result.historyId);
-    } catch (error) {
-      console.error("Error generating spotlight:", error);
-      // You could show an error toast here
-    } finally {
-      setGeneratingSpotlight(false);
-    }
+    openChat("coach");
   };
 
   const handleMorningIntention = () => {
-    setShowCoachInterface(true);
-    
-    // Allow time for the interface to open and the OneChat component to mount
-    setTimeout(() => {
-      if (oneChatRef.current) {
-        oneChatRef.current.sendMessage("Start morning intention");
-      }
-    }, 300);
+    openChat("coach");
+    sendMessage("Start morning intention");
   };
 
   const handleEveningReflection = () => {
-    setShowCoachInterface(true);
-    
-    // Allow time for the interface to open and the OneChat component to mount
-    setTimeout(() => {
-      if (oneChatRef.current) {
-        oneChatRef.current.sendMessage("Start evening reflection");
-      }
-    }, 300);
+    openChat("coach");
+    sendMessage("Start evening reflection");
   };
 
   const handleHistoryItemClick = (historyId: string) => {
@@ -287,78 +111,10 @@ export const CoachHome: React.FC = () => {
 
   const handleCloseHistoryDetail = () => {
     setSelectedHistoryId(null);
-    // No need to manually refresh as we now have real-time subscription
-  };
-
-  // Create mock Documents context for OneChat
-  const mockDocumentsContext = useMemo(() => ({
-    // Document state
-    selectedDocument: null,
-    title: "",
-    content: "",
-    isPreviewMode: false,
-    saveStatus: 'saved' as SaveStatus,
-    lastSaved: null,
-    hasUnsavedChanges: false,
-    contentFormat: "markdown",
-    documentVersions: [],
-    
-    // Project state
-    selectedProjectId: null,
-    projectsData: {},
-    
-    // Operations
-    saveDocument: async () => {},
-    selectDocument: () => {},
-    selectProject: () => {},
-    setTitle: () => {},
-    setContent: () => {},
-    togglePreviewMode: () => {},
-    updateDocumentType: async () => {},
-    updateContentFormat: async () => {},
-    fetchDocumentVersions: async () => {},
-    handleVersionHistoryClick: () => {},
-    acceptDocumentVersion: async () => {},
-    rejectDocumentVersion: async () => {}
-  }), []);
-
-  // Render history item for a specific date
-  const renderHistoryDateCard = (date: string, items: HistoryItem[]) => {
-    const formattedDate = formatDate(date);
-    const item = items[0]; // Get the first item for the date
-    
-    // Get title or generate a fallback
-    const getTitle = () => {
-      if (item.content.title) {
-        return item.content.title;
-      }
-      
-      // Use type if available as a fallback
-      if (item.content.type) {
-        const type = item.content.type;
-        return type.charAt(0).toUpperCase() + type.slice(1) + ' reflection';
-      }
-      
-      // Default title if no other options
-      return 'Conversation';
-    };
-    
-    return (
-      <Card 
-        key={date} 
-        className="mb-4 bg-complement/5 hover:bg-complement/10 border-complement/10 transition-all duration-300 cursor-pointer"
-        onClick={() => handleHistoryItemClick(items[0].id)}
-      >
-        <div className="p-4">
-          <div className="font-medium text-lg">{getTitle()}</div>
-          <div className="text-sm text-muted-foreground mt-1">{formattedDate}</div>
-        </div>
-      </Card>
-    );
   };
 
   return (
-    <div className="flex flex-col min-h-screen w-full">
+    <div className="flex flex-col h-full w-full">
       {/* Fixed header that stays at the top */}
       <div className="sticky top-0 w-full bg-background/95 backdrop-blur-sm flex justify-center border-b z-40 shadow-sm">
         <div className="inline-flex items-center h-[60px]">
@@ -395,16 +151,16 @@ export const CoachHome: React.FC = () => {
       </div>
 
       {/* Content area */}
-      <div className="overflow-hidden">
+      <div className="flex-1 overflow-hidden">
         <div 
-          className="flex transition-transform duration-300 ease-in-out"
+          className="flex transition-transform duration-300 ease-in-out h-full"
           style={{ 
             transform: activeTab === "today" ? "translateX(0%)" : "translateX(-50%)",
             width: "200%" 
           }}
         >
           {/* Today Content */}
-          <div className="w-1/2 flex flex-col items-center px-4 overflow-y-auto pb-20">
+          <div className="w-1/2 flex flex-col items-center px-4 overflow-y-auto p-4 pb-0">
             <div className="mt-6 md:mt-10 flex flex-col items-center w-full max-w-md">
               {/* Flame Character */}
               <div className="w-20 h-20 flex items-center justify-center mb-6">
@@ -475,7 +231,7 @@ export const CoachHome: React.FC = () => {
           </div>
           
           {/* History Content */}
-          <div className="w-1/2 flex flex-col items-center px-4 py-6 overflow-y-auto pb-20">
+          <div className="w-1/2 flex flex-col items-center px-4 overflow-y-auto p-4 pb-0">
             <div className="w-full max-w-3xl">
               {/* Loading state */}
               {isLoading && (
@@ -563,109 +319,6 @@ export const CoachHome: React.FC = () => {
           </div>
         </div>
       </div>
-
-      {/* Coach Interface - Slide up */}
-      <div 
-        className={cn(
-          "fixed inset-0 bg-background z-[40] transition-transform duration-300",
-          showCoachInterface ? "translate-y-0" : "translate-y-full"
-        )}
-      >
-        {/* Coach Interface Header */}
-        <header className="w-full border-b bg-background">
-          <div className="flex items-center justify-between h-14 px-4">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleCloseCoachInterface}
-              aria-label="Go back"
-            >
-              <ChevronLeft className="h-5 w-5" />
-            </Button>
-            
-            <div className="w-8"></div> {/* Empty div for spacing */}
-            
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleSpotlightClick}
-              aria-label="Create spotlight"
-              className={cn(
-                "transition-colors",
-                hasAvailableMessages
-                  ? "text-primary hover:text-primary/80"
-                  : "text-muted-foreground cursor-not-allowed opacity-50"
-              )}
-              disabled={!hasAvailableMessages}
-            >
-              <Sparkles className="h-5 w-5" />
-            </Button>
-          </div>
-        </header>
-        
-        {/* OneChat component wrapped in DocumentsProvider */}
-        <div className="h-[calc(100dvh-3.5rem)] flex justify-center">
-          <div className="w-full max-w-[750px] pb-safe">
-            <DocumentsProvider value={mockDocumentsContext}>
-              <OneChat 
-                ref={oneChatRef}
-                isStandalone={true}
-                viewMode="coach"
-              />
-            </DocumentsProvider>
-          </div>
-        </div>
-      </div>
-
-      {/* Spotlight Modal */}
-      {showSpotlightModal && (
-        <div 
-          className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center"
-          onClick={() => setShowSpotlightModal(false)}
-        >
-          <div 
-            className="bg-background rounded-lg shadow-lg w-full max-w-md mx-auto p-6 flex flex-col items-center"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Sparkle Icon */}
-            <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center mb-4">
-              <Sparkles className="h-8 w-8 text-primary" />
-            </div>
-            
-            <h2 className="text-xl font-semibold mb-3 text-center">Ready to create your spotlight?</h2>
-            
-            <p className="text-center text-muted-foreground mb-6">
-              InnerFlame can now analyze your conversation and highlight meaningful insights. 
-              Create your spotlight now or continue chatting to add more context.
-            </p>
-            
-            <div className="w-full space-y-3">
-              <Button 
-                className="w-full"
-                onClick={handleGenerateSpotlight}
-                disabled={messageIds.length === 0 || generatingSpotlight}
-              >
-                {generatingSpotlight ? (
-                  <>
-                    <div className="w-4 h-4 rounded-full border-2 border-background/30 border-t-background animate-spin mr-2"></div>
-                    Generating...
-                  </>
-                ) : (
-                  'Generate my spotlight'
-                )}
-              </Button>
-              
-              <Button
-                variant="outline"
-                className="w-full"
-                onClick={() => setShowSpotlightModal(false)}
-              >
-                Continue chatting
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* History Detail Modal */}
       {selectedHistoryId && (
