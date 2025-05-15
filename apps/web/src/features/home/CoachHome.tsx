@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from "react";
-import { Send, ChevronLeft, X, Sparkles, BookOpen } from "lucide-react";
+import { ChevronLeft, X, Sparkles, BookOpen, ArrowUp } from "lucide-react";
 import { cn } from "@/lib/utils.js";
 import { Card } from "@/components/ui/card.js";
 import { Button } from "@/components/ui/button.js";
@@ -180,6 +180,23 @@ export const CoachHome: React.FC = () => {
     }
   }, [showCoachInterface]);
 
+  // Add effect to prevent body scrolling when coach interface is visible
+  useEffect(() => {
+    if (showCoachInterface) {
+      // Save the current overflow style
+      const originalOverflow = document.body.style.overflow;
+      // Prevent scrolling on the main page
+      document.body.style.overflow = 'hidden';
+      
+      // Clean up function - restore original overflow when component unmounts or modal closes
+      return () => {
+        document.body.style.overflow = originalOverflow;
+      };
+    }
+    // No cleanup needed if modal isn't showing
+    return undefined;
+  }, [showCoachInterface]);
+
   const handleOpenCoachInterface = () => {
     setShowCoachInterface(true);
   };
@@ -341,10 +358,10 @@ export const CoachHome: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-[100dvh] w-full">
+    <div className="flex flex-col min-h-screen w-full">
       {/* Fixed header that stays at the top */}
-                    <div className="sticky top-0 w-full bg-background/95 backdrop-blur-sm flex justify-center border-b z-40 shadow-sm">
-          <div className="inline-flex items-center h-[60px]">
+      <div className="sticky top-0 w-full bg-background/95 backdrop-blur-sm flex justify-center border-b z-40 shadow-sm">
+        <div className="inline-flex items-center h-[60px]">
           <button
             onClick={() => setActiveTab("today")}
             className={cn(
@@ -377,17 +394,17 @@ export const CoachHome: React.FC = () => {
         </div>
       </div>
 
-      {/* Content area with padding-top to account for fixed header */}
-      <div className="flex-1 overflow-hidden pt-[70px] md:pt-[60px]">
+      {/* Content area */}
+      <div className="overflow-hidden">
         <div 
-          className="flex h-full transition-transform duration-300 ease-in-out"
+          className="flex transition-transform duration-300 ease-in-out"
           style={{ 
             transform: activeTab === "today" ? "translateX(0%)" : "translateX(-50%)",
             width: "200%" 
           }}
         >
-                      {/* Today Content */}
-          <div className="w-1/2 h-full flex flex-col items-center px-4 overflow-y-auto pb-20">
+          {/* Today Content */}
+          <div className="w-1/2 flex flex-col items-center px-4 overflow-y-auto pb-20">
             <div className="mt-6 md:mt-10 flex flex-col items-center w-full max-w-md">
               {/* Flame Character */}
               <div className="w-20 h-20 flex items-center justify-center mb-6">
@@ -409,9 +426,9 @@ export const CoachHome: React.FC = () => {
                 >
                   <div className="flex-1 text-muted-foreground text-sm">Message InnerFlame</div>
                   <button 
-                    className="flex justify-center items-center h-8 w-8 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+                    className="flex justify-center items-center h-8 w-8 min-h-[32px] min-w-[32px] rounded-full bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
                   >
-                    <Send className="h-4 w-4" />
+                    <ArrowUp className="h-4 w-4" />
                   </button>
                 </div>
               </div>
@@ -458,7 +475,7 @@ export const CoachHome: React.FC = () => {
           </div>
           
           {/* History Content */}
-          <div className="w-1/2 h-full flex flex-col items-center px-4 py-6 overflow-y-auto pb-20">
+          <div className="w-1/2 flex flex-col items-center px-4 py-6 overflow-y-auto pb-20">
             <div className="w-full max-w-3xl">
               {/* Loading state */}
               {isLoading && (
@@ -550,7 +567,7 @@ export const CoachHome: React.FC = () => {
       {/* Coach Interface - Slide up */}
       <div 
         className={cn(
-          "fixed inset-0 bg-background z-50 transition-transform duration-300",
+          "fixed inset-0 bg-background z-[40] transition-transform duration-300",
           showCoachInterface ? "translate-y-0" : "translate-y-full"
         )}
       >
@@ -587,14 +604,16 @@ export const CoachHome: React.FC = () => {
         </header>
         
         {/* OneChat component wrapped in DocumentsProvider */}
-        <div className="h-[calc(100vh-3.5rem)]">
-          <DocumentsProvider value={mockDocumentsContext}>
-            <OneChat 
-              ref={oneChatRef}
-              isStandalone={true}
-              viewMode="coach"
-            />
-          </DocumentsProvider>
+        <div className="h-[calc(100dvh-3.5rem)] flex justify-center">
+          <div className="w-full max-w-[750px] pb-safe">
+            <DocumentsProvider value={mockDocumentsContext}>
+              <OneChat 
+                ref={oneChatRef}
+                isStandalone={true}
+                viewMode="coach"
+              />
+            </DocumentsProvider>
+          </div>
         </div>
       </div>
 

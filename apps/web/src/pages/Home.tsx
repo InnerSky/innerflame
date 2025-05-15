@@ -4,7 +4,7 @@ import {
   CoachHome, 
   StudioHome
 } from "@/features/home/index.js";
-import { QuoteIcon, MessageSquare, FileEdit, Menu } from "lucide-react";
+import { QuoteIcon, MessageSquare, Pen, Menu } from "lucide-react";
 import { cn } from "@/lib/utils.js";
 import { Button } from "@/components/ui/button.js";
 
@@ -81,8 +81,8 @@ export default function Home() {
             <SidebarItem 
               isActive={activeTab === "studio"}
               onClick={() => setActiveTab("studio")}
-              icon={<FileEdit className="h-5 w-5" />}
-              label="Studio"
+              icon={<Pen className="h-5 w-5" />}
+              label="Create"
               isExpanded={isExpanded}
             />
           </div>
@@ -101,7 +101,7 @@ export default function Home() {
       
       {/* Mobile Bottom Navigation */}
       {isMobile && (
-        <div className="fixed bottom-0 left-0 right-0 border-t bg-background z-50">
+        <div className="fixed bottom-0 left-0 right-0 border-t bg-background z-30">
           <div className="grid grid-cols-3 h-16">
             <button
               onClick={() => setActiveTab("capture")}
@@ -129,8 +129,8 @@ export default function Home() {
                 activeTab === "studio" ? "text-primary" : "text-muted-foreground hover:text-primary/80"
               )}
             >
-              <FileEdit className="h-5 w-5 mb-1" />
-              <span className="text-xs">Studio</span>
+              <Pen className="h-5 w-5 mb-1" />
+              <span className="text-xs">Create</span>
             </button>
           </div>
         </div>

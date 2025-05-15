@@ -44,9 +44,11 @@ export const CoachPage: React.FC = () => {
       </header>
       
       {/* Main Content */}
-      <main className="flex-1 overflow-auto p-4">
-        <div className="flex items-center justify-center h-full">
-          <p className="text-lg text-muted-foreground">Coaching session content will go here</p>
+      <main className="flex-1 overflow-auto p-4 flex justify-center">
+        <div className="w-full max-w-[750px]">
+          <div className="flex items-center justify-center h-full">
+            <p className="text-lg text-muted-foreground">Coaching session content will go here</p>
+          </div>
         </div>
       </main>
     </div>
