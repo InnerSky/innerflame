@@ -14,6 +14,7 @@ import { ChevronRight, CreditCard, Moon, Sun, User, UserCog, Laptop, MonitorSmar
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
   DialogContent,
@@ -30,6 +31,7 @@ export default function Settings() {
   const { user, signOut } = useAuth();
   const { theme, setTheme } = useTheme();
   const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState("profile");
   const [profileForm, setProfileForm] = useState({
     name: user?.user_metadata?.full_name || user?.user_metadata?.name || "",
     email: user?.email || "",
@@ -145,6 +147,11 @@ export default function Settings() {
     }
   };
 
+  // Function to handle tab change
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+  };
+
   return (
     <div className="container mx-auto py-10 px-4 sm:px-6 max-w-5xl">
       <div className="mb-8">
@@ -154,50 +161,49 @@ export default function Settings() {
         </p>
       </div>
 
-      <Tabs defaultValue="profile" className="w-full">
-        <TabsList className="grid grid-cols-5 mb-8">
-          <TabsTrigger value="profile" className="flex items-center gap-2">
+      <Tabs defaultValue="profile" className="w-full" onValueChange={handleTabChange}>
+        <TabsList className="!h-auto !p-1 mb-8 bg-muted rounded-lg flex w-full">
+          <TabsTrigger 
+            value="profile" 
+            className="!h-auto !py-2 flex-1"
+          >
             <User className="h-4 w-4" />
-            <span className="hidden sm:inline">Profile</span>
+            <span className={`ml-2 ${
+              activeTab === "profile" ? "inline" : "hidden sm:inline"
+            }`}>
+              Profile
+            </span>
           </TabsTrigger>
-          <TabsTrigger value="appearance" className="flex items-center gap-2">
+          <TabsTrigger 
+            value="appearance" 
+            className="!h-auto !py-2 flex-1"
+          >
             <Sun className="h-4 w-4" />
-            <span className="hidden sm:inline">Appearance</span>
+            <span className={`ml-2 ${
+              activeTab === "appearance" ? "inline" : "hidden sm:inline"
+            }`}>
+              Appearance
+            </span>
           </TabsTrigger>
-          <TabsTrigger value="notifications" className="flex items-center gap-2">
-            <Bell className="h-4 w-4" />
-            <span className="hidden sm:inline">Notifications</span>
-          </TabsTrigger>
-          <TabsTrigger value="billing" className="flex items-center gap-2">
-            <CreditCard className="h-4 w-4" />
-            <span className="hidden sm:inline">Billing</span>
-          </TabsTrigger>
-          <TabsTrigger value="account" className="flex items-center gap-2">
+          <TabsTrigger 
+            value="account" 
+            className="!h-auto !py-2 flex-1"
+          >
             <UserCog className="h-4 w-4" />
-            <span className="hidden sm:inline">Account</span>
+            <span className={`ml-2 ${
+              activeTab === "account" ? "inline" : "hidden sm:inline"
+            }`}>
+              Account
+            </span>
           </TabsTrigger>
         </TabsList>
 
         {/* Profile Tab */}
         <TabsContent value="profile">
           <Card>
-            <CardHeader>
-              <CardTitle>Profile</CardTitle>
-              <CardDescription>
-                Update your personal information and how others see you on the platform.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="flex flex-col sm:flex-row gap-6 items-start">
-                <div className="flex flex-col items-center gap-2">
-                  <Avatar className="h-24 w-24">
-                    <AvatarImage src={user?.user_metadata?.avatar_url} />
-                    <AvatarFallback>{profileForm.name.charAt(0)}</AvatarFallback>
-                  </Avatar>
-                  <Button variant="outline" size="sm">Change Avatar</Button>
-                </div>
-                
-                <div className="grid gap-4 flex-1">
+            <CardContent className="space-y-6 pt-6">
+              <div className="w-full">
+                <div className="grid gap-4 w-full">
                   <div className="grid gap-2">
                     <Label htmlFor="name">Display Name</Label>
                     <Input 
@@ -205,6 +211,7 @@ export default function Settings() {
                       name="name" 
                       value={profileForm.name} 
                       onChange={handleProfileChange} 
+                      className="text-sm"
                     />
                   </div>
                   <div className="grid gap-2">
@@ -216,23 +223,30 @@ export default function Settings() {
                       value={profileForm.email} 
                       onChange={handleProfileChange} 
                       disabled 
+                      className="text-sm"
                     />
                   </div>
                   <div className="grid gap-2">
-                    <Label htmlFor="bio">Biography</Label>
-                    <Input 
+                    <Label htmlFor="bio">About you</Label>
+                    <Textarea 
                       id="bio" 
                       name="bio" 
                       value={profileForm.bio} 
                       onChange={handleProfileChange} 
                       placeholder="Tell us a bit about yourself"
+                      rows={4}
+                      className="text-sm"
                     />
                   </div>
                 </div>
               </div>
               
               <div className="flex justify-end">
-                <Button onClick={handleSaveProfile} disabled={isSaving}>
+                <Button 
+                  onClick={handleSaveProfile} 
+                  disabled={isSaving}
+                  className="min-w-28 h-10 md:h-10"
+                >
                   {isSaving ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -257,13 +271,7 @@ export default function Settings() {
         {/* Appearance Tab */}
         <TabsContent value="appearance">
           <Card>
-            <CardHeader>
-              <CardTitle>Appearance</CardTitle>
-              <CardDescription>
-                Customize how InnerFlame looks for you.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent className="space-y-6 pt-6">
               <div className="space-y-4">
                 <div className="space-y-4">
                   <div className="space-y-2">
@@ -333,99 +341,6 @@ export default function Settings() {
                   </div>
                 </div>
               </div>
-              
-              <div className="flex justify-end">
-                <Button>Save Preferences</Button>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Notifications Tab */}
-        <TabsContent value="notifications">
-          <Card>
-            <CardHeader>
-              <CardTitle>Notifications</CardTitle>
-              <CardDescription>
-                Manage your notification preferences and communication settings.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-4">
-                <h3 className="font-medium">Email Notifications</h3>
-                
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium">Newsletter</p>
-                    <p className="text-sm text-muted-foreground">Receive our weekly newsletter with founder tips and resources</p>
-                  </div>
-                  <Switch defaultChecked />
-                </div>
-                
-                <Separator />
-                
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium">Updates & Promotions</p>
-                    <p className="text-sm text-muted-foreground">Receive updates about new features and special offers</p>
-                  </div>
-                  <Switch />
-                </div>
-              </div>
-
-              <div className="flex justify-end">
-                <Button>Save Preferences</Button>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Billing Tab */}
-        <TabsContent value="billing">
-          <Card>
-            <CardHeader>
-              <CardTitle>Billing</CardTitle>
-              <CardDescription>
-                Manage your subscription and payment information.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="rounded-lg border p-4">
-                <div className="flex justify-between items-center">
-                  <div>
-                    <h3 className="font-medium">Free Plan</h3>
-                    <p className="text-sm text-muted-foreground">You are currently on the free plan</p>
-                  </div>
-                  <Button variant="outline">Upgrade</Button>
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <h3 className="font-medium">Payment Methods</h3>
-                <div className="rounded-lg border p-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <div className="rounded-md bg-muted p-2">
-                        <CreditCard className="h-5 w-5" />
-                      </div>
-                      <div>
-                        <p className="font-medium">No payment methods</p>
-                        <p className="text-sm text-muted-foreground">Add a payment method to upgrade your plan</p>
-                      </div>
-                    </div>
-                    <Button variant="ghost" size="sm">
-                      <ChevronRight className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <h3 className="font-medium">Billing History</h3>
-                <div className="rounded-lg border p-4 text-center">
-                  <p className="text-sm text-muted-foreground">No billing history available</p>
-                </div>
-              </div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -433,13 +348,7 @@ export default function Settings() {
         {/* Account Tab */}
         <TabsContent value="account">
           <Card>
-            <CardHeader>
-              <CardTitle>Account</CardTitle>
-              <CardDescription>
-                Manage your account settings and security preferences.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent className="space-y-6 pt-6">
               <div className="pt-4">
                 <Dialog>
                   <DialogTrigger asChild>
@@ -472,6 +381,7 @@ export default function Settings() {
                         variant="destructive"
                         onClick={handleDeleteAccount}
                         disabled={deleteConfirm !== 'DELETE_ALL_DATA_FOREVER' || isDeleting}
+                        className="h-10 md:h-10"
                       >
                         {isDeleting ? (
                           <>

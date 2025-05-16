@@ -4,15 +4,23 @@ import {
   CoachHome, 
   StudioHome
 } from "@/features/home/index.js";
-import { QuoteIcon, MessageSquare, Pen, Menu } from "lucide-react";
+import { QuoteIcon, MessageSquare, Pen, Menu, Settings as SettingsIcon } from "lucide-react";
 import { cn } from "@/lib/utils.js";
 import { Button } from "@/components/ui/button.js";
 import { ChatStateProvider, ChatOverlay } from "@/features/chat/index.js";
+import Settings from "@/pages/Settings.js";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog.js";
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState<"capture" | "coach" | "studio">("coach");
   const [isExpanded, setIsExpanded] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
 
   // Add effect to set CSS variable for viewport height
   useEffect(() => {
@@ -94,11 +102,15 @@ export default function Home() {
                 label="Reflect"
                 isExpanded={isExpanded}
               />
+            </div>
+            
+            {/* Settings Button at bottom of sidebar */}
+            <div className="mt-auto mb-6 px-2">
               <SidebarItem 
-                isActive={activeTab === "studio"}
-                onClick={() => setActiveTab("studio")}
-                icon={<Pen className="h-5 w-5" />}
-                label="Create"
+                isActive={false}
+                onClick={() => setShowSettings(true)}
+                icon={<SettingsIcon className="h-5 w-5" />}
+                label="Settings"
                 isExpanded={isExpanded}
               />
             </div>
@@ -139,14 +151,15 @@ export default function Home() {
                 <span className="text-xs">Reflect</span>
               </button>
               
+              {/* Settings button in mobile nav */}
               <button
-                onClick={() => setActiveTab("studio")}
+                onClick={() => setShowSettings(true)}
                 className={cn("flex flex-col items-center justify-center",
-                  activeTab === "studio" ? "text-primary" : "text-muted-foreground hover:text-primary/80"
+                  "text-muted-foreground hover:text-primary/80"
                 )}
               >
-                <Pen className="h-5 w-5 mb-1" />
-                <span className="text-xs">Create</span>
+                <SettingsIcon className="h-5 w-5 mb-1" />
+                <span className="text-xs">Settings</span>
               </button>
             </div>
           </div>
@@ -154,6 +167,17 @@ export default function Home() {
         
         {/* Chat Overlay */}
         <ChatOverlay />
+        
+        {/* Settings Modal */}
+        <Dialog open={showSettings} onOpenChange={setShowSettings}>
+          <DialogContent className="w-full h-full max-w-full p-0 flex flex-col items-start justify-start sm:max-w-[min(calc(100%-100px),750px)] sm:rounded-lg sm:h-auto sm:max-h-[calc(100vh-100px)] overflow-hidden">
+            <div className="overflow-y-auto w-full h-full flex-1">
+              <div className="h-full">
+                <Settings />
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </ChatStateProvider>
   );

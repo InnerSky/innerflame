@@ -7,6 +7,7 @@ import { DocumentsProvider } from "@/features/documents/contexts/DocumentsContex
 import { SaveStatus } from "@/features/documents/models/document.js";
 import { useChatState } from "../contexts/ChatStateContext.js";
 import { createHistory } from "@/api/history/index.js";
+import { HistoryDetail } from "@/features/history/HistoryDetail.js";
 
 // Map our app's view modes to OneChat's supported view modes
 const mapViewMode = (mode: "capture" | "coach" | "studio"): "capture" | "coach" | "ask" | "document" => {
@@ -311,6 +312,14 @@ export const ChatOverlay: React.FC = () => {
             </div>
           </div>
         </>
+      )}
+
+      {/* History Detail */}
+      {selectedHistoryId && (
+        <HistoryDetail 
+          historyId={selectedHistoryId} 
+          onClose={() => setSelectedHistoryId(null)} 
+        />
       )}
     </>
   );

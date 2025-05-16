@@ -417,7 +417,7 @@ export const CaptureHome: React.FC = () => {
       "flex flex-col h-full w-full p-4 pb-0",
       !showCaptures && "justify-center"
     )}>
-      <div className="max-w-md w-full mx-auto flex flex-col min-h-0">
+      <div className="max-w-[620px] w-full mx-auto flex flex-col min-h-0">
         <div className={cn(
           "transition-all duration-300 ease-in-out overflow-hidden", 
           showCaptures ? "max-h-0 opacity-0 mb-0" : "max-h-[200px] opacity-100 mb-6"

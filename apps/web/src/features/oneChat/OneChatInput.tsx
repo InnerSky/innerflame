@@ -242,6 +242,27 @@ export const OneChatInput = forwardRef<OneChatInputRef, OneChatInputProps>(({
     }
   }, [currentMode]);
 
+  // Add effect to auto-resize textarea based on content
+  useEffect(() => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+    
+    // Function to adjust height
+    const adjustHeight = () => {
+      // Reset height to calculate proper scrollHeight
+      textarea.style.height = 'auto';
+      
+      // Calculate new height (capped at 288px which is our max-h-[288px])
+      const newHeight = Math.min(textarea.scrollHeight, 288);
+      
+      // Set the new height
+      textarea.style.height = `${newHeight}px`;
+    };
+    
+    // Adjust height when message changes
+    adjustHeight();
+  }, [message]);
+
   return (
     <div className={`flex flex-col mt-auto transition-all duration-200`}>
       {/* Card-like container with pronounced edge */}
@@ -283,14 +304,8 @@ export const OneChatInput = forwardRef<OneChatInputRef, OneChatInputProps>(({
                   </Button>
                 </div>
               ) : (
-                <Button 
-                  variant="ghost" 
-                  className="h-6 min-h-0 text-xs leading-none text-muted-foreground/60 hover:text-foreground flex items-center gap-1.5 rounded-md px-2 py-0.5 border border-muted-foreground/30 hover:border-muted-foreground/50 bg-transparent hover:bg-background/60"
-                  onClick={() => handleModeChange('document')}
-                >
-                  <Pen className="h-3 w-3" />
-                  <span className="leading-none">work on a document</span>
-                </Button>
+                // Hide the "work on a document" button
+                null
               )}
             </div>
             <div className="relative w-full">
@@ -302,16 +317,14 @@ export const OneChatInput = forwardRef<OneChatInputRef, OneChatInputProps>(({
                   onKeyDown={handleKeyDown}
                   onFocus={handleFocus}
                   onBlur={handleBlur}
-                  placeholder={currentMode === 'coach' ? "Ask your coach a question..." : 
+                  placeholder={currentMode === 'coach' ? "Share thoughts for reflection..." : 
                               currentMode === 'document' ? "Ask about your documents..." : 
                               currentMode === 'ask' ? "Ask InnerFlame anything..." : 
                               "Capture your thoughts..."}
                   className="w-full min-h-[72px] max-h-[288px] resize-none overflow-y-auto border-0 focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 shadow-none"
                   style={{
-                    height: 'auto',
-                    overflowY: message.split('\n').length > 10 ? 'scroll' : 'hidden'
+                    overflowY: 'auto'
                   }}
-                  rows={Math.min(Math.max(message.split('\n').length || 3, 3), 12)}
                   disabled={isLoading || isDisabled}
                 />
               </div>

@@ -277,7 +277,7 @@ export function MessageItem({
       <div
         className={`p-3 rounded-lg relative group ${
           isUserMessage
-            ? 'bg-primary/10 ml-8 mr-0 pl-2'
+            ? 'bg-complement/15 ml-8 mr-0 pl-2'
             : 'bg-secondary/20 mr-8 ml-0 pr-2'
         }`}
       >

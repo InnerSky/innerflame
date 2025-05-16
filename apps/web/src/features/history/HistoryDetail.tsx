@@ -335,7 +335,7 @@ export function HistoryDetail({ historyId, onClose }: HistoryDetailProps) {
             </p>
           </div>
         ) : (
-          <div className="py-6 px-4 md:px-6">
+          <div className="py-6 px-4 md:px-6 max-w-[680px] mx-auto">
             {activeTab === 'overview' && (
               <>
                 {/* Meta information - Title for overview comes from formattedDate */}
