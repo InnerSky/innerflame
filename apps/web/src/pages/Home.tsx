@@ -9,6 +9,9 @@ import { cn } from "@/lib/utils.js";
 import { Button } from "@/components/ui/button.js";
 import { ChatStateProvider, ChatOverlay } from "@/features/chat/index.js";
 import Settings from "@/pages/Settings.js";
+import { useAuth } from "@/contexts/AuthContext.js";
+import { AuthModal } from "@/components/auth/AuthModal.js";
+import { AuthGoogleButtons } from "@/components/auth/AuthGoogleButtons.js";
 import {
   Dialog,
   DialogContent,
@@ -21,6 +24,7 @@ export default function Home() {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const { user, isAnonymous, loading } = useAuth();
 
   // Add effect to set CSS variable for viewport height
   useEffect(() => {
@@ -65,6 +69,27 @@ export default function Home() {
       setIsExpanded(storedState === 'true');
     }
   }, []);
+
+  // If user is anonymous (and not loading), force them to authenticate
+  if (!loading && user && isAnonymous) {
+    return (
+      <Dialog open={true} onOpenChange={() => {}}>
+        <DialogContent className="sm:max-w-[425px]" onPointerDownOutside={(e) => e.preventDefault()}>
+          <DialogHeader>
+            <DialogTitle className="text-center text-2xl font-bold">
+              Create an Account
+            </DialogTitle>
+          </DialogHeader>
+          <div className="mt-4">
+            <p className="text-center mb-4 text-muted-foreground">
+              Please sign in or create an account to continue using InnerFlame.
+            </p>
+            <AuthGoogleButtons />
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   return (
     <ChatStateProvider>

@@ -29,11 +29,23 @@ export const MessageEditor: React.FC<MessageEditorProps> = ({
         // Place cursor at the end
         const length = textareaRef.current.value.length;
         textareaRef.current.setSelectionRange(length, length);
+        
+        // Auto-resize textarea to fit content without scrollbars
+        textareaRef.current.style.height = 'auto';
+        textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px';
       }
     }, 50);
     
     return () => clearTimeout(timer);
   }, []);
+  
+  // Auto-resize textarea whenever content changes
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px';
+    }
+  }, [editedContent]);
   
   const handleSave = async () => {
     if (editedContent.trim() === '') return;
@@ -62,12 +74,13 @@ export const MessageEditor: React.FC<MessageEditorProps> = ({
         value={editedContent}
         onChange={(e) => setEditedContent(e.target.value)}
         onKeyDown={handleKeyDown}
-        className="min-h-[100px] max-h-[240px] resize-none font-inherit p-2 text-sm w-full overflow-y-auto"
+        className="resize-none font-inherit p-2 text-sm w-full border-none overflow-visible"
         style={{
+          minHeight: '100px',
           height: 'auto',
-          overflowY: editedContent.split('\n').length > 10 ? 'scroll' : 'hidden'
+          maxHeight: 'none',
+          overflow: 'visible'
         }}
-        rows={Math.min(editedContent.split('\n').length || 1, 10)}
         placeholder="Edit your message..."
         disabled={isLoading}
         aria-label="Edit message"

@@ -35,7 +35,7 @@ export const CoachHome: React.FC = () => {
   
   // Extract user's full name for greeting
   const userFullName = useMemo(() => {
-    if (!user) return 'there';
+    if (!user) return 'Hi';
     
     // Use user metadata if available, or fall back to email/id
     const metadata = user.user_metadata;
@@ -52,7 +52,7 @@ export const CoachHome: React.FC = () => {
         .join(' ');
     }
     
-    return 'there'; // Fallback
+    return 'Hi'; // Fallback
   }, [user]);
   
   // Setup real-time subscription when tab changes to history

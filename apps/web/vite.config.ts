@@ -20,7 +20,7 @@ export default defineConfig(({ mode }) => {
           name: 'InnerFlame',
           short_name: 'InnerFlame',
           description: 'Strategic business planning assistant',
-          theme_color: '#ffffff',
+          theme_color: '#212121',
           icons: [
             {
               src: '/icons/icon-192x192.png',
