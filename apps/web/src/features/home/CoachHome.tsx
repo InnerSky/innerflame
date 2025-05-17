@@ -160,14 +160,14 @@ export const CoachHome: React.FC = () => {
           }}
         >
           {/* Today Content */}
-          <div className="w-1/2 flex flex-col items-center px-4 overflow-y-auto p-4 pb-0">
-            <div className="mt-6 md:mt-10 flex flex-col items-center w-full max-w-md">
+          <div className="w-1/2 flex flex-col items-center justify-center px-4 overflow-y-auto p-4 pb-0">
+            <div className="flex flex-col items-center w-full max-w-md">
               {/* Flame Character */}
-              <div className="w-20 h-20 flex items-center justify-center mb-6">
+              <div className="w-24 h-24 flex items-center justify-center mb-6">
                 <img 
-                  src="/images/Logo_512x512.png" 
-                  alt="InnerFlame Logo" 
-                  className="w-20 h-20 object-contain drop-shadow-md"
+                  src="/images/self-reflection.png" 
+                  alt="Self Reflection" 
+                  className="w-24 h-24 object-contain drop-shadow-md"
                 />
               </div>
               

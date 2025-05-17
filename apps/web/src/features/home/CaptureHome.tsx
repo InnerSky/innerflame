@@ -422,6 +422,13 @@ export const CaptureHome: React.FC = () => {
           "transition-all duration-300 ease-in-out overflow-hidden", 
           showCaptures ? "max-h-0 opacity-0 mb-0" : "max-h-[200px] opacity-100 mb-6"
         )}>
+          <div className="w-28 h-28 flex items-center justify-center mx-auto mb-4">
+            <img 
+              src="/images/capture ideas.png" 
+              alt="Capture Ideas" 
+              className="w-28 h-28 object-contain drop-shadow-md"
+            />
+          </div>
           <h1 className="text-2xl font-bold mb-4 text-center">Capture Your Thoughts</h1>
           <p className="text-muted-foreground text-center">
             Jot down your ideas, thoughts, and observations to reflect on later.
